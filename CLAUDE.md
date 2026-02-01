@@ -1,133 +1,93 @@
-# CLAUDE.md - Social Slash
+# CLAUDE.md
 
-This file provides guidance to Claude Code when working with this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-Social Slash is a standalone package of social media automation slash commands for Claude Code. It enables posting to 13 platforms with optional AI enhancement.
+Social Slash is a standalone Claude Code slash command package for social media automation. It posts to 13 platforms via Late SDK with optional AI content enhancement using Gemini or Anthropic.
 
-## Technology Stack
+## Build Commands
 
-- **Language**: Python 3.10+, PowerShell (commands)
-- **SDK**: Late SDK (`late-sdk>=1.2.17`)
-- **AI**: Google Gemini, Anthropic Claude (optional)
-- **Platforms**: LinkedIn, TikTok, Instagram, YouTube, Twitter, Facebook, Pinterest, Threads, Bluesky, Reddit, Snapchat, Telegram, Google Business
-
-## Architecture
-
-```
-Claude Code Slash Command → PowerShell Wrapper → Python Backend → Late SDK → Platform
-                                    ↓
-                            AI Enhancement (optional)
-```
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `.claude/commands/posting/post.ps1` | Main `/social:post` command |
-| `lib/posting/poster.py` | Core posting orchestration |
-| `lib/api_clients/late_client.py` | Late SDK wrapper |
-| `lib/ai/gemini_client.py` | Gemini AI integration |
-| `lib/ai/anthropic_client.py` | Claude AI integration |
-| `data/platform_templates.json` | Platform configurations |
-
-## Commands
-
-### /social:post
-Main posting command with full options.
-
-```powershell
-/social:post -Content "text" -Platforms linkedin
-/social:post -Content "text" -Platforms linkedin,twitter -Enhance
-/social:post -Content "text" -Platforms linkedin -DryRun
-```
-
-### /social:multi-post
-Convenience for multi-platform posting.
-
-```powershell
-/social:multi-post -Content "text"  # Defaults to linkedin,twitter,threads
-```
-
-### /social:schedule
-Schedule posts for future.
-
-```powershell
-/social:schedule -Content "text" -Platforms linkedin -At "tomorrow 9am"
-```
-
-## Environment Variables
-
-```env
-LATE_API_KEY=required
-GOOGLE_API_KEY=optional (for Gemini)
-ANTHROPIC_API_KEY=optional (for Claude)
+```bash
+pip install -r requirements.txt              # Install all dependencies
+pip install -e .                             # Install package in development mode
+pip install -e ".[ai]"                       # Install with AI enhancement support
+pip install -e ".[all]"                      # Install all optional dependencies
 ```
 
 ## Testing
 
-### Dry Run Mode
-Always test with `-DryRun` first:
-```powershell
+```bash
+pytest tests/                                # Run all tests
+python lib/posting/poster.py --dry-run       # Test posting without publishing
+
+# Dry run from slash command
 /social:post -Content "Test" -Platforms linkedin -DryRun
 ```
 
-### Python Direct
-```bash
-python lib/posting/poster.py --content "Test" --platforms linkedin --dry-run
+No test files exist yet - the `tests/` directory is empty.
+
+## Architecture
+
+### Request Flow
+
+```
+/social:post (PowerShell)
+       ↓
+post.ps1 → Builds CLI args, finds Python
+       ↓
+poster.py (Poster class)
+       ↓
+    ┌──────────────────────┐
+    │  Optional AI Step    │
+    │  gemini_client.py OR │
+    │  anthropic_client.py │
+    └──────────────────────┘
+       ↓
+late_client.py → Late SDK
+       ↓
+Platform API → Posted content
 ```
 
-## Common Tasks
+### Core Components
 
-### Add a new platform
-1. Add platform config to `data/platform_templates.json`
-2. Add to `SUPPORTED_PLATFORMS` in `lib/api_clients/late_client.py`
-3. Add to `ValidateSet` in `.claude/commands/posting/post.ps1`
+**Slash Commands** (`.claude/commands/posting/`)
+- `post.ps1` - Main `/social:post` command with all options
+- `multi-post.ps1` - Convenience wrapper for multi-platform posting
+- `schedule.ps1` - Future scheduling wrapper
 
-### Modify AI enhancement
-1. Edit prompts in `lib/ai/gemini_client.py` or `anthropic_client.py`
-2. Adjust `enhance_content()` method parameters
+**Python Backend** (`lib/`)
+- `posting/poster.py` - Main orchestrator, handles AI enhancement + distribution
+- `api_clients/late_client.py` - Late SDK wrapper with account caching
+- `ai/gemini_client.py` - Gemini 2.0 Flash content enhancement
+- `ai/anthropic_client.py` - Claude AI content enhancement
+- `tools/social_tools.py` - Social media tools database (SDKs, schedulers, etc.)
 
-### Add new command
-1. Create `.claude/commands/<category>/<name>.ps1`
-2. Add Python backend in `lib/<category>/` if needed
-3. Document in README.md
+**Configuration** (`data/`)
+- `platform_templates.json` - Per-platform settings (char limits, best times, content types)
+- `queue_config.json` - Queue/scheduling settings
 
-## Development Patterns
+## Key Directories
 
-### Error Handling
-Use bracketed log levels:
-```python
-print("[SUCCESS] Operation completed")
-print("[INFO] Processing...")
-print("[ERROR] Something failed")
-```
+- `.claude/commands/` - PowerShell slash command definitions
+- `lib/posting/` - Core posting orchestration
+- `lib/api_clients/` - External API wrappers
+- `lib/ai/` - AI enhancement clients
+- `lib/tools/` - Social media tools database
+- `data/` - JSON configuration files
 
-### API Client Pattern
-```python
-class Client:
-    def __init__(self, api_key=None):
-        self.api_key = api_key or os.getenv('API_KEY_NAME')
-        if not self.api_key:
-            raise ValueError("API key required")
-```
+## File Locations
 
-### PowerShell Command Pattern
-```powershell
-param(
-    [Parameter(Mandatory=$true)]
-    [string]$Content,
-    [switch]$DryRun
-)
-# Build args, call Python, handle exit code
-```
+- **Platform Config**: `data/platform_templates.json`
+- **Environment Template**: `.env.example`
 
-## Deployment
+## Notes
 
-This is a standalone package. To use in another project:
-
-1. Clone or copy to project
-2. Install requirements: `pip install -r requirements.txt`
-3. Set environment variables
-4. Add `.claude/commands/` to Claude Code path
+- PowerShell commands call Python backend via subprocess - exit codes propagate
+- AI clients lazy-load (`_init_ai_client`) to avoid import errors when AI packages aren't installed
+- Late SDK client caches account IDs in `_account_cache` to avoid repeated API calls
+- Console output uses bracketed prefixes: `[SUCCESS]`, `[INFO]`, `[ERROR]`, `[WARNING]`
+- Supported platforms are defined in `LateDistributionClient.SUPPORTED_PLATFORMS` (must match `ValidateSet` in post.ps1)
+- Gemini uses `gemini-2.0-flash-exp` model for content enhancement
+- Platform char limits and best practices in `data/platform_templates.json` inform AI enhancement prompts
+- `lib/tools/social_tools.py` is a reference database - not used in core posting flow

@@ -34,11 +34,25 @@ class Poster:
     - Scheduling
     """
 
-    def __init__(self):
-        """Initialize the poster with Late client and optional AI clients."""
-        self.late_client = LateDistributionClient()
+    def __init__(self, skip_late_init: bool = False):
+        """Initialize the poster with Late client and optional AI clients.
+
+        Args:
+            skip_late_init: If True, skip Late client initialization (for dry-run mode)
+        """
+        self._late_client = None
+        self._skip_late_init = skip_late_init
         self.ai_client = None
         self._ai_provider = None
+
+    @property
+    def late_client(self) -> LateDistributionClient:
+        """Lazy-initialize Late client on first access."""
+        if self._late_client is None:
+            if self._skip_late_init:
+                raise RuntimeError("Late client not initialized (dry-run mode)")
+            self._late_client = LateDistributionClient()
+        return self._late_client
 
     def _init_ai_client(self, provider: str = "gemini"):
         """
@@ -272,7 +286,7 @@ Examples:
         media_urls = [u.strip() for u in args.media.split(',')]
 
     # Create poster and execute
-    poster = Poster()
+    poster = Poster(skip_late_init=args.dry_run)
 
     result = poster.post(
         content=args.content,

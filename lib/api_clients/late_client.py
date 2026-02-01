@@ -56,15 +56,16 @@ class LateDistributionClient:
         self.client = Late(api_key=self.api_key)
         self._account_cache: Dict[str, str] = {}
 
-    def get_accounts(self) -> List[Dict[str, Any]]:
+    def get_accounts(self) -> List[Any]:
         """
         Get all connected social media accounts.
 
         Returns:
-            List of account dictionaries with id, platform, name, etc.
+            List of SocialAccount objects with id, platform, name, etc.
         """
         try:
-            accounts = self.client.accounts.list()
+            response = self.client.accounts.list()
+            accounts = response.accounts if hasattr(response, 'accounts') else []
             print(f"[INFO] Found {len(accounts)} connected accounts")
             return accounts
         except Exception as e:
@@ -84,6 +85,13 @@ class LateDistributionClient:
         """
         platform = platform.lower()
 
+        # Normalize platform names
+        platform_map = {
+            'google_business': 'googlebusiness',
+            'x': 'twitter',
+        }
+        platform = platform_map.get(platform, platform)
+
         # Check cache first
         if platform in self._account_cache:
             return self._account_cache[platform]
@@ -92,8 +100,9 @@ class LateDistributionClient:
         accounts = self.get_accounts()
 
         for account in accounts:
-            account_platform = account.get('platform', '').lower()
-            account_id = account.get('id')
+            # Handle SocialAccount objects from Late SDK
+            account_platform = getattr(account, 'platform', '').lower()
+            account_id = getattr(account, 'field_id', None)
 
             # Cache all accounts while we're at it
             if account_platform and account_id:
@@ -107,6 +116,7 @@ class LateDistributionClient:
         platform: str,
         media_urls: Optional[List[str]] = None,
         scheduled_for: Optional[str] = None,
+        publish_now: bool = True,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -117,6 +127,7 @@ class LateDistributionClient:
             platform: Target platform (e.g., 'linkedin')
             media_urls: Optional list of media URLs to attach
             scheduled_for: Optional ISO datetime for scheduling
+            publish_now: If True, publish immediately (default True)
             **kwargs: Additional platform-specific parameters
 
         Returns:
@@ -124,51 +135,64 @@ class LateDistributionClient:
         """
         platform = platform.lower()
 
+        # Normalize platform names for Late SDK
+        platform_map = {
+            'google_business': 'googlebusiness',
+            'x': 'twitter',
+        }
+        late_platform = platform_map.get(platform, platform)
+
         if platform not in self.SUPPORTED_PLATFORMS:
             raise ValueError(
                 f"Unsupported platform: {platform}. "
                 f"Supported: {', '.join(self.SUPPORTED_PLATFORMS)}"
             )
 
-        # Get account ID for platform
+        # Verify account is connected
         account_id = self.get_account_id(platform)
-
         if not account_id:
             raise ValueError(
                 f"No {platform} account connected. "
                 f"Connect an account at https://app.getlate.dev"
             )
 
-        # Build post payload
-        payload = {
-            'account_id': account_id,
-            'content': content,
-        }
-
-        if media_urls:
-            payload['media'] = media_urls
-
-        if scheduled_for:
-            payload['scheduled_for'] = scheduled_for
-
-        # Add any additional kwargs
-        payload.update(kwargs)
-
         try:
             print(f"[INFO] Posting to {platform}...")
-            result = self.client.posts.create(**payload)
 
-            post_id = result.get('id', 'unknown')
-            status = result.get('status', 'unknown')
+            # Late SDK requires platforms as list of dicts with platform and accountId
+            platforms_payload = [{
+                "platform": late_platform,
+                "accountId": account_id
+            }]
+
+            result = self.client.posts.create(
+                content=content,
+                platforms=platforms_payload,
+                media_items=media_urls,
+                scheduled_for=scheduled_for,
+                publish_now=publish_now if not scheduled_for else False,
+                **kwargs
+            )
+
+            # Handle response object
+            post_id = getattr(result, 'field_id', None) or getattr(result, 'id', 'unknown')
+            status = getattr(result, 'status', 'unknown')
 
             print(f"[SUCCESS] Posted to {platform}")
             print(f"  Post ID: {post_id}")
             print(f"  Status: {status}")
 
-            if result.get('url'):
-                print(f"  URL: {result['url']}")
+            post_url = getattr(result, 'url', None)
+            if post_url:
+                print(f"  URL: {post_url}")
 
-            return result
+            # Convert response to dict for consistency
+            if hasattr(result, 'model_dump'):
+                return result.model_dump()
+            elif hasattr(result, 'dict'):
+                return result.dict()
+            else:
+                return {'id': post_id, 'status': status, 'url': post_url}
 
         except Exception as e:
             print(f"[ERROR] Failed to post to {platform}: {e}")

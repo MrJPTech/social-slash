@@ -26,7 +26,7 @@ class GeminiClient:
     Uses Gemini 2.0 Flash for fast, cost-effective content optimization.
     """
 
-    MODEL = "gemini-2.0-flash-exp"
+    MODEL = "gemini-2.0-flash"
 
     def __init__(self, api_key: Optional[str] = None):
         """
