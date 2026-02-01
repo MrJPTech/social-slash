@@ -1,0 +1,191 @@
+{
+  "platforms": {
+    "linkedin": {
+      "char_limit": 3000,
+      "optimal_length": 1300,
+      "hashtag_limit": 5,
+      "best_times": ["08:00", "12:00", "17:00"],
+      "best_days": ["tuesday", "wednesday", "thursday"],
+      "best_practices": [
+        "Use professional tone",
+        "Include call-to-action",
+        "Tag relevant connections",
+        "Use line breaks for readability"
+      ],
+      "content_types": ["text", "image", "video", "document", "article"]
+    },
+    "tiktok": {
+      "char_limit": 2200,
+      "optimal_length": 150,
+      "hashtag_limit": 5,
+      "best_times": ["12:00", "15:00", "19:00"],
+      "best_days": ["tuesday", "thursday", "friday"],
+      "best_practices": [
+        "Use trending sounds",
+        "Keep captions short",
+        "Use relevant hashtags",
+        "Engage with trends"
+      ],
+      "content_types": ["video"]
+    },
+    "instagram": {
+      "char_limit": 2200,
+      "optimal_length": 150,
+      "hashtag_limit": 30,
+      "best_times": ["11:00", "13:00", "19:00"],
+      "best_days": ["monday", "wednesday", "friday"],
+      "best_practices": [
+        "Use high-quality visuals",
+        "Write engaging captions",
+        "Use relevant hashtags",
+        "Include call-to-action"
+      ],
+      "content_types": ["image", "video", "carousel", "reel", "story"]
+    },
+    "youtube": {
+      "title_limit": 100,
+      "description_limit": 5000,
+      "optimal_title": 60,
+      "hashtag_limit": 15,
+      "best_times": ["14:00", "16:00", "21:00"],
+      "best_days": ["thursday", "friday", "saturday"],
+      "best_practices": [
+        "Use keyword-rich titles",
+        "Write detailed descriptions",
+        "Add timestamps",
+        "Include cards and end screens"
+      ],
+      "content_types": ["video", "short", "live"]
+    },
+    "twitter": {
+      "char_limit": 280,
+      "optimal_length": 100,
+      "hashtag_limit": 2,
+      "best_times": ["09:00", "12:00", "17:00"],
+      "best_days": ["wednesday", "thursday", "friday"],
+      "best_practices": [
+        "Keep it concise",
+        "Use threads for longer content",
+        "Engage with mentions",
+        "Use visuals when possible"
+      ],
+      "content_types": ["text", "image", "video", "poll"]
+    },
+    "facebook": {
+      "char_limit": 63206,
+      "optimal_length": 80,
+      "hashtag_limit": 3,
+      "best_times": ["09:00", "13:00", "16:00"],
+      "best_days": ["wednesday", "thursday", "friday"],
+      "best_practices": [
+        "Use engaging visuals",
+        "Ask questions",
+        "Post native videos",
+        "Use Facebook Live"
+      ],
+      "content_types": ["text", "image", "video", "link", "live", "story"]
+    },
+    "pinterest": {
+      "title_limit": 100,
+      "description_limit": 500,
+      "optimal_description": 200,
+      "hashtag_limit": 20,
+      "best_times": ["20:00", "21:00", "22:00"],
+      "best_days": ["saturday", "sunday"],
+      "best_practices": [
+        "Use vertical images (2:3)",
+        "Write keyword-rich descriptions",
+        "Create idea pins",
+        "Organize into boards"
+      ],
+      "content_types": ["image", "video", "idea_pin"]
+    },
+    "threads": {
+      "char_limit": 500,
+      "optimal_length": 200,
+      "hashtag_limit": 0,
+      "best_times": ["08:00", "12:00", "20:00"],
+      "best_days": ["monday", "wednesday", "friday"],
+      "best_practices": [
+        "Be conversational",
+        "Share authentic content",
+        "Engage with comments",
+        "Cross-post from Instagram"
+      ],
+      "content_types": ["text", "image", "video"]
+    },
+    "bluesky": {
+      "char_limit": 300,
+      "optimal_length": 150,
+      "hashtag_limit": 0,
+      "best_times": ["09:00", "12:00", "18:00"],
+      "best_days": ["monday", "tuesday", "wednesday"],
+      "best_practices": [
+        "Be authentic",
+        "Engage with community",
+        "Share original thoughts",
+        "Use alt text for images"
+      ],
+      "content_types": ["text", "image"]
+    },
+    "reddit": {
+      "title_limit": 300,
+      "text_limit": 40000,
+      "optimal_title": 60,
+      "best_times": ["06:00", "08:00", "12:00"],
+      "best_days": ["monday", "saturday", "sunday"],
+      "best_practices": [
+        "Follow subreddit rules",
+        "Provide value first",
+        "Avoid self-promotion",
+        "Engage in comments"
+      ],
+      "content_types": ["text", "image", "video", "link", "poll"]
+    },
+    "snapchat": {
+      "video_limit": 60,
+      "story_limit": 10,
+      "best_times": ["22:00", "23:00"],
+      "best_days": ["friday", "saturday"],
+      "best_practices": [
+        "Use vertical video",
+        "Be authentic",
+        "Use AR filters",
+        "Post regularly to stories"
+      ],
+      "content_types": ["image", "video", "story"]
+    },
+    "telegram": {
+      "char_limit": 4096,
+      "optimal_length": 200,
+      "best_times": ["09:00", "18:00", "21:00"],
+      "best_days": ["monday", "wednesday", "friday"],
+      "best_practices": [
+        "Use formatting (bold, italic)",
+        "Include relevant media",
+        "Use inline buttons",
+        "Schedule broadcasts"
+      ],
+      "content_types": ["text", "image", "video", "document", "poll"]
+    },
+    "google_business": {
+      "char_limit": 1500,
+      "optimal_length": 300,
+      "best_times": ["10:00", "14:00"],
+      "best_days": ["tuesday", "wednesday", "thursday"],
+      "best_practices": [
+        "Include business updates",
+        "Add photos of products/services",
+        "Respond to reviews",
+        "Post offers and events"
+      ],
+      "content_types": ["text", "image", "offer", "event"]
+    }
+  },
+  "global_settings": {
+    "default_timezone": "UTC",
+    "retry_attempts": 3,
+    "retry_delay_seconds": 5,
+    "rate_limit_per_minute": 60
+  }
+}

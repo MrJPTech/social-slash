@@ -1,0 +1,25 @@
+# Social Slash - Python Dependencies
+
+# Core - Late SDK for social media distribution
+late-sdk>=1.2.17
+
+# AI Enhancement (optional)
+anthropic>=0.40.0
+google-generativeai>=0.8.0
+
+# HTTP Client
+requests>=2.31.0
+httpx>=0.27.0
+
+# Browser Automation (for engagement features)
+playwright>=1.48.0
+
+# Configuration
+python-dotenv>=1.0.0
+
+# Data Validation
+pydantic>=2.0.0
+
+# Development
+pytest>=7.4.0
+black>=24.0.0

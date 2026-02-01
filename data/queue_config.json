@@ -1,0 +1,39 @@
+{
+  "queue_settings": {
+    "max_queue_size": 100,
+    "default_priority": "normal",
+    "priorities": ["low", "normal", "high", "urgent"],
+    "batch_size": 10,
+    "processing_interval_seconds": 60
+  },
+  "time_slots": {
+    "linkedin": {
+      "weekday": ["08:00", "12:00", "17:00"],
+      "weekend": ["10:00", "14:00"]
+    },
+    "twitter": {
+      "weekday": ["09:00", "12:00", "17:00", "21:00"],
+      "weekend": ["10:00", "15:00", "20:00"]
+    },
+    "instagram": {
+      "weekday": ["11:00", "13:00", "19:00"],
+      "weekend": ["10:00", "14:00", "20:00"]
+    },
+    "default": {
+      "weekday": ["09:00", "12:00", "18:00"],
+      "weekend": ["11:00", "16:00"]
+    }
+  },
+  "retry_config": {
+    "max_retries": 3,
+    "initial_delay_seconds": 5,
+    "backoff_multiplier": 2,
+    "max_delay_seconds": 300
+  },
+  "notification_settings": {
+    "on_success": true,
+    "on_failure": true,
+    "on_queue_full": true,
+    "channels": ["console", "webhook"]
+  }
+}
