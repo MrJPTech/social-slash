@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     /social:post - Claude Code slash command for social media posting
-    Supports 13 platforms with optional AI enhancement
+    Supports 13 platforms with optional AI enhancement and platform-specific options
 
 .PARAMETER Content
     The content/text to post
@@ -30,6 +30,39 @@
 .PARAMETER Json
     Output results as JSON
 
+.PARAMETER RedditTitle
+    Reddit post title (auto-generated from first line if not provided)
+
+.PARAMETER IgType
+    Instagram content type: story, post, or reel
+
+.PARAMETER IgFirstComment
+    Instagram first comment to post after publishing
+
+.PARAMETER IgCollaborators
+    Instagram collaborator usernames (comma-separated, max 3)
+
+.PARAMETER IgNoFeed
+    For Instagram reels, don't show on main feed
+
+.PARAMETER LiFirstComment
+    LinkedIn first comment to post after publishing
+
+.PARAMETER LiNoLinkPreview
+    Disable link preview card on LinkedIn
+
+.PARAMETER ThreadsAutoThread
+    Auto-break long content into threaded Threads replies
+
+.PARAMETER ThreadsNumber
+    Add numbering to Threads posts (1/n, 2/n...)
+
+.PARAMETER TwitterThread
+    Auto-break long content into tweet thread
+
+.PARAMETER PlatformOptions
+    Raw JSON string with advanced platform-specific options
+
 .EXAMPLE
     /social:post -Content "Lock in developers" -Platforms linkedin
 
@@ -41,6 +74,21 @@
 
 .EXAMPLE
     /social:post -Content "Multi" -Platforms linkedin,twitter,threads -Enhance -AIProvider anthropic
+
+.EXAMPLE
+    /social:post -Content "Behind the scenes!" -Platforms instagram -IgType story
+
+.EXAMPLE
+    /social:post -Content "Check this out!" -Platforms instagram -IgFirstComment "Links in bio!"
+
+.EXAMPLE
+    /social:post -Content "Big announcement" -Platforms linkedin -LiFirstComment "DM for details"
+
+.EXAMPLE
+    /social:post -Content "My Title`n`nPost body here" -Platforms reddit
+
+.EXAMPLE
+    /social:post -Content "Post body" -Platforms reddit -RedditTitle "My Custom Title"
 #>
 
 param(
@@ -64,7 +112,36 @@ param(
 
     [switch]$DryRun,
 
-    [switch]$Json
+    [switch]$Json,
+
+    # Reddit options
+    [string]$RedditTitle,
+
+    # Instagram options
+    [ValidateSet("story", "post", "reel")]
+    [string]$IgType,
+
+    [string]$IgFirstComment,
+
+    [string]$IgCollaborators,
+
+    [switch]$IgNoFeed,
+
+    # LinkedIn options
+    [string]$LiFirstComment,
+
+    [switch]$LiNoLinkPreview,
+
+    # Threads options
+    [switch]$ThreadsAutoThread,
+
+    [switch]$ThreadsNumber,
+
+    # Twitter options
+    [switch]$TwitterThread,
+
+    # Advanced: Raw JSON platform options
+    [string]$PlatformOptions
 )
 
 # Get project root (3 levels up from this script)
@@ -131,6 +208,64 @@ if ($DryRun) {
 
 if ($Json) {
     $args += "--json"
+}
+
+# Platform-specific options
+
+# Reddit
+if ($RedditTitle) {
+    $args += "--reddit-title"
+    $args += $RedditTitle
+}
+
+# Instagram
+if ($IgType) {
+    $args += "--ig-type"
+    $args += $IgType
+}
+
+if ($IgFirstComment) {
+    $args += "--ig-first-comment"
+    $args += $IgFirstComment
+}
+
+if ($IgCollaborators) {
+    $args += "--ig-collaborators"
+    $args += $IgCollaborators
+}
+
+if ($IgNoFeed) {
+    $args += "--ig-no-feed"
+}
+
+# LinkedIn
+if ($LiFirstComment) {
+    $args += "--li-first-comment"
+    $args += $LiFirstComment
+}
+
+if ($LiNoLinkPreview) {
+    $args += "--li-no-link-preview"
+}
+
+# Threads
+if ($ThreadsAutoThread) {
+    $args += "--threads-auto-thread"
+}
+
+if ($ThreadsNumber) {
+    $args += "--threads-number"
+}
+
+# Twitter
+if ($TwitterThread) {
+    $args += "--twitter-thread"
+}
+
+# Advanced: Raw JSON
+if ($PlatformOptions) {
+    $args += "--platform-options"
+    $args += $PlatformOptions
 }
 
 # Display command info

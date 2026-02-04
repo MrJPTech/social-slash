@@ -64,3 +64,11 @@ service-account.json
 *.pyc
 *.pyo
 .mypy_cache/
+
+# Runtime databases
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+
+# Windows artifacts
+nul

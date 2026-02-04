@@ -21,6 +21,14 @@ from typing import Dict, List, Optional, Any
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api_clients.late_client import LateDistributionClient
+from models.platform_options import (
+    PlatformOptions,
+    InstagramOptions,
+    LinkedInOptions,
+    ThreadsOptions,
+    TwitterOptions,
+    RedditOptions,
+)
 
 
 class Poster:
@@ -134,7 +142,8 @@ class Poster:
         ai_provider: str = "gemini",
         media_urls: Optional[List[str]] = None,
         schedule: Optional[str] = None,
-        dry_run: bool = False
+        dry_run: bool = False,
+        platform_options: Optional[PlatformOptions] = None
     ) -> Dict[str, Any]:
         """
         Post content to specified platforms.
@@ -147,16 +156,37 @@ class Poster:
             media_urls: Optional list of media URLs to attach
             schedule: Optional ISO datetime for scheduling
             dry_run: If True, simulate without actually posting
+            platform_options: Optional platform-specific options (Instagram story,
+                LinkedIn first comment, Reddit title, etc.)
 
         Returns:
             Dictionary with results and summary
         """
         original_content = content
 
+        # Validate platform options if provided
+        if platform_options:
+            warnings = platform_options.validate_for_platforms(platforms)
+            for warning in warnings:
+                print(f"[WARNING] {warning}")
+
         # Enhance content if requested
         if enhance:
             # Use first platform for enhancement context
             content = self.enhance_content(content, platforms[0], ai_provider)
+
+        # Build platform-specific data for dry-run display
+        platform_data_summary = {}
+        if platform_options:
+            for platform in platforms:
+                data = platform_options.get_platform_data(platform)
+                if data:
+                    platform_data_summary[platform] = data
+
+            # Get Reddit title if posting to Reddit
+            if 'reddit' in [p.lower() for p in platforms]:
+                reddit_title = platform_options.get_reddit_title(content)
+                platform_data_summary['reddit_title'] = reddit_title
 
         # Dry run mode
         if dry_run:
@@ -167,41 +197,51 @@ class Poster:
                 "platforms": platforms,
                 "media": media_urls,
                 "schedule": schedule,
+                "platform_options": platform_data_summary,
                 "would_post": True
             }
 
         # Single platform posting
         if len(platforms) == 1:
+            platform = platforms[0]
             try:
+                # Build platform-specific parameters
+                post_kwargs = self._build_post_kwargs(
+                    platform, content, platform_options
+                )
+
                 result = self.late_client.post_to_platform(
                     content=content,
-                    platform=platforms[0],
+                    platform=platform,
                     media_urls=media_urls,
-                    scheduled_for=schedule
+                    scheduled_for=schedule,
+                    **post_kwargs
                 )
                 return {
                     "status": "success",
-                    "platform": platforms[0],
+                    "platform": platform,
                     "post_id": result.get('id'),
                     "url": result.get('url'),
                     "content": content,
                     "enhanced": enhance,
-                    "scheduled": schedule is not None
+                    "scheduled": schedule is not None,
+                    "platform_options": platform_data_summary.get(platform)
                 }
             except Exception as e:
                 return {
                     "status": "error",
-                    "platform": platforms[0],
+                    "platform": platform,
                     "error": str(e),
                     "content": content
                 }
 
-        # Multi-platform distribution
-        result = self.late_client.distribute_multi_platform(
+        # Multi-platform distribution with platform-specific options
+        result = self._distribute_with_options(
             content=content,
             platforms=platforms,
             media_urls=media_urls,
-            scheduled_for=schedule
+            scheduled_for=schedule,
+            platform_options=platform_options
         )
 
         return {
@@ -210,8 +250,194 @@ class Poster:
             "summary": result['summary'],
             "content": content,
             "enhanced": enhance,
-            "scheduled": schedule is not None
+            "scheduled": schedule is not None,
+            "platform_options": platform_data_summary
         }
+
+    def _build_post_kwargs(
+        self,
+        platform: str,
+        content: str,
+        options: Optional[PlatformOptions]
+    ) -> Dict[str, Any]:
+        """
+        Build platform-specific kwargs for late_client.post_to_platform().
+
+        Args:
+            platform: Target platform name
+            content: Post content (for Reddit title extraction)
+            options: Platform options container
+
+        Returns:
+            Dictionary of kwargs to pass to post_to_platform
+        """
+        kwargs = {}
+
+        if not options:
+            return kwargs
+
+        platform = platform.lower()
+
+        # Get platform-specific data
+        platform_data = options.get_platform_data(platform)
+        if platform_data:
+            kwargs['platform_specific_data'] = platform_data
+
+        # Handle Reddit title (passed as top-level param, not platformSpecificData)
+        if platform == 'reddit':
+            kwargs['title'] = options.get_reddit_title(content)
+
+        return kwargs
+
+    def _distribute_with_options(
+        self,
+        content: str,
+        platforms: List[str],
+        media_urls: Optional[List[str]],
+        scheduled_for: Optional[str],
+        platform_options: Optional[PlatformOptions]
+    ) -> Dict[str, Any]:
+        """
+        Distribute to multiple platforms with individual platform options.
+
+        Unlike distribute_multi_platform, this posts to each platform
+        individually to support different platform-specific options.
+
+        Args:
+            content: Post content
+            platforms: List of target platforms
+            media_urls: Optional media URLs
+            scheduled_for: Optional schedule datetime
+            platform_options: Platform-specific options
+
+        Returns:
+            Dictionary with results and summary
+        """
+        results = {}
+        successful = 0
+        failed = 0
+
+        print(f"[INFO] Distributing to {len(platforms)} platforms...")
+
+        for platform in platforms:
+            try:
+                post_kwargs = self._build_post_kwargs(
+                    platform, content, platform_options
+                )
+
+                result = self.late_client.post_to_platform(
+                    content=content,
+                    platform=platform,
+                    media_urls=media_urls,
+                    scheduled_for=scheduled_for,
+                    **post_kwargs
+                )
+                results[platform] = {
+                    'success': True,
+                    'data': result
+                }
+                successful += 1
+
+            except Exception as e:
+                results[platform] = {
+                    'success': False,
+                    'error': str(e)
+                }
+                failed += 1
+
+        summary = {
+            'total': len(platforms),
+            'successful': successful,
+            'failed': failed
+        }
+
+        print(f"\n[SUMMARY] Distribution complete")
+        print(f"  Successful: {successful}/{len(platforms)}")
+        print(f"  Failed: {failed}/{len(platforms)}")
+
+        return {
+            'results': results,
+            'summary': summary
+        }
+
+
+def _build_platform_options(args) -> Optional[PlatformOptions]:
+    """
+    Build PlatformOptions from CLI arguments.
+
+    Args:
+        args: Parsed argparse namespace
+
+    Returns:
+        PlatformOptions object or None if no options specified
+    """
+    has_options = False
+
+    # Build Instagram options
+    instagram = None
+    if any([args.ig_type, args.ig_first_comment, args.ig_collaborators, args.ig_no_feed]):
+        collaborators = None
+        if args.ig_collaborators:
+            collaborators = [c.strip() for c in args.ig_collaborators.split(',')]
+
+        instagram = InstagramOptions(
+            content_type=args.ig_type,
+            first_comment=args.ig_first_comment,
+            share_to_feed=not args.ig_no_feed,
+            collaborators=collaborators
+        )
+        has_options = True
+
+    # Build LinkedIn options
+    linkedin = None
+    if any([args.li_first_comment, args.li_no_link_preview]):
+        linkedin = LinkedInOptions(
+            first_comment=args.li_first_comment,
+            disable_link_preview=args.li_no_link_preview
+        )
+        has_options = True
+
+    # Build Threads options
+    threads = None
+    if any([args.threads_auto_thread, args.threads_number]):
+        threads = ThreadsOptions(
+            auto_thread=args.threads_auto_thread,
+            thread_number=args.threads_number
+        )
+        has_options = True
+
+    # Build Twitter options
+    twitter = None
+    if args.twitter_thread:
+        twitter = TwitterOptions(auto_thread=True)
+        has_options = True
+
+    # Build Reddit options
+    reddit = None
+    if args.reddit_title:
+        reddit = RedditOptions(title=args.reddit_title)
+        has_options = True
+
+    # Parse raw JSON platform options
+    raw_platform_data = None
+    if args.platform_options:
+        try:
+            raw_platform_data = json.loads(args.platform_options)
+            has_options = True
+        except json.JSONDecodeError as e:
+            print(f"[WARNING] Invalid --platform-options JSON: {e}")
+
+    if not has_options:
+        return None
+
+    return PlatformOptions(
+        instagram=instagram,
+        linkedin=linkedin,
+        threads=threads,
+        twitter=twitter,
+        reddit=reddit,
+        raw_platform_data=raw_platform_data
+    )
 
 
 def main():
@@ -225,6 +451,19 @@ Examples:
   python poster.py --content "New video!" --platforms tiktok,instagram --enhance
   python poster.py --content "Test post" --platforms linkedin --dry-run
   python poster.py --content "Scheduled" --platforms twitter --schedule "2024-12-01T10:00:00Z"
+
+Platform-Specific Examples:
+  # Reddit with explicit title
+  python poster.py --content "Post body" --platforms reddit --reddit-title "My Title"
+
+  # Instagram story with first comment
+  python poster.py --content "Check this!" --platforms instagram --ig-type story --ig-first-comment "Links in bio!"
+
+  # LinkedIn with first comment
+  python poster.py --content "Announcement" --platforms linkedin --li-first-comment "DM for details"
+
+  # Threads auto-threading
+  python poster.py --content "Long content..." --platforms threads --threads-auto-thread
         """
     )
 
@@ -275,6 +514,77 @@ Examples:
         help='Output results as JSON'
     )
 
+    # ==========================================================================
+    # Platform-Specific Options
+    # ==========================================================================
+
+    # Reddit options
+    reddit_group = parser.add_argument_group('Reddit Options')
+    reddit_group.add_argument(
+        '--reddit-title',
+        help='Post title (auto-generated from first line if not provided)'
+    )
+
+    # Instagram options
+    ig_group = parser.add_argument_group('Instagram Options')
+    ig_group.add_argument(
+        '--ig-type',
+        choices=['story', 'post', 'reel'],
+        help='Content type (default: auto-detect from media)'
+    )
+    ig_group.add_argument(
+        '--ig-first-comment',
+        help='First comment to post after publishing'
+    )
+    ig_group.add_argument(
+        '--ig-collaborators',
+        help='Collaborator usernames (comma-separated, max 3)'
+    )
+    ig_group.add_argument(
+        '--ig-no-feed',
+        action='store_true',
+        help='For reels, do not show on main feed'
+    )
+
+    # LinkedIn options
+    li_group = parser.add_argument_group('LinkedIn Options')
+    li_group.add_argument(
+        '--li-first-comment',
+        help='First comment to post after publishing'
+    )
+    li_group.add_argument(
+        '--li-no-link-preview',
+        action='store_true',
+        help='Disable link preview card'
+    )
+
+    # Threads options
+    threads_group = parser.add_argument_group('Threads Options')
+    threads_group.add_argument(
+        '--threads-auto-thread',
+        action='store_true',
+        help='Auto-break long content into threaded replies'
+    )
+    threads_group.add_argument(
+        '--threads-number',
+        action='store_true',
+        help='Add numbering to thread posts (1/n, 2/n...)'
+    )
+
+    # Twitter options
+    twitter_group = parser.add_argument_group('Twitter/X Options')
+    twitter_group.add_argument(
+        '--twitter-thread',
+        action='store_true',
+        help='Auto-break long content into tweet thread'
+    )
+
+    # Advanced: Raw JSON platform options
+    parser.add_argument(
+        '--platform-options',
+        help='JSON string with raw platform-specific options (advanced)'
+    )
+
     args = parser.parse_args()
 
     # Parse platforms
@@ -284,6 +594,9 @@ Examples:
     media_urls = None
     if args.media:
         media_urls = [u.strip() for u in args.media.split(',')]
+
+    # Build platform-specific options
+    platform_options = _build_platform_options(args)
 
     # Create poster and execute
     poster = Poster(skip_late_init=args.dry_run)
@@ -295,7 +608,8 @@ Examples:
         ai_provider=args.ai_provider,
         media_urls=media_urls,
         schedule=args.schedule,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        platform_options=platform_options
     )
 
     # Output results
@@ -312,6 +626,19 @@ Examples:
                 print(f"  Media: {len(result['media'])} files")
             if result.get('schedule'):
                 print(f"  Scheduled for: {result['schedule']}")
+
+            # Display platform-specific options
+            platform_opts = result.get('platform_options', {})
+            if platform_opts:
+                print("\n  Platform Options:")
+                for platform, opts in platform_opts.items():
+                    if platform == 'reddit_title':
+                        print(f"    Reddit Title: {opts}")
+                    elif isinstance(opts, dict):
+                        print(f"    {platform.title()}:")
+                        for key, val in opts.items():
+                            print(f"      - {key}: {val}")
+
             print("\n  No actual post was made.")
 
         elif status == 'success':

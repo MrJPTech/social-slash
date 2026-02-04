@@ -117,6 +117,8 @@ class LateDistributionClient:
         media_urls: Optional[List[str]] = None,
         scheduled_for: Optional[str] = None,
         publish_now: bool = True,
+        title: Optional[str] = None,
+        platform_specific_data: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -128,6 +130,9 @@ class LateDistributionClient:
             media_urls: Optional list of media URLs to attach
             scheduled_for: Optional ISO datetime for scheduling
             publish_now: If True, publish immediately (default True)
+            title: Optional post title (required for Reddit, optional for YouTube/Pinterest)
+            platform_specific_data: Optional dict with platform-specific options
+                (maps to Late SDK's platformSpecificData field)
             **kwargs: Additional platform-specific parameters
 
         Returns:
@@ -165,14 +170,26 @@ class LateDistributionClient:
                 "accountId": account_id
             }]
 
-            result = self.client.posts.create(
-                content=content,
-                platforms=platforms_payload,
-                media_items=media_urls,
-                scheduled_for=scheduled_for,
-                publish_now=publish_now if not scheduled_for else False,
-                **kwargs
-            )
+            # Add platform-specific data if provided
+            if platform_specific_data:
+                platforms_payload[0]["platformSpecificData"] = platform_specific_data
+                print(f"[INFO] Platform-specific options: {list(platform_specific_data.keys())}")
+
+            # Build create params
+            create_params = {
+                "content": content,
+                "platforms": platforms_payload,
+                "media_items": media_urls,
+                "scheduled_for": scheduled_for,
+                "publish_now": publish_now if not scheduled_for else False,
+            }
+
+            # Add title if provided (for Reddit, YouTube, Pinterest)
+            if title:
+                create_params["title"] = title
+                print(f"[INFO] Post title: {title[:50]}{'...' if len(title) > 50 else ''}")
+
+            result = self.client.posts.create(**create_params, **kwargs)
 
             # Handle response object
             post_id = getattr(result, 'field_id', None) or getattr(result, 'id', 'unknown')

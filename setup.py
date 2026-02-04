@@ -49,8 +49,15 @@ setup(
         "browser": [
             "playwright>=1.48.0",
         ],
+        "engagement": [
+            "fastapi>=0.109.0",
+            "uvicorn>=0.27.0",
+            "aiohttp>=3.9.0",
+            "aiosqlite>=0.19.0",
+        ],
         "dev": [
             "pytest>=7.4.0",
+            "pytest-asyncio>=0.23.0",
             "black>=24.0.0",
             "mypy>=1.0.0",
         ],
@@ -58,13 +65,21 @@ setup(
             "anthropic>=0.40.0",
             "google-generativeai>=0.8.0",
             "playwright>=1.48.0",
+            "fastapi>=0.109.0",
+            "uvicorn>=0.27.0",
+            "aiohttp>=3.9.0",
+            "aiosqlite>=0.19.0",
             "pytest>=7.4.0",
+            "pytest-asyncio>=0.23.0",
             "black>=24.0.0",
         ],
     },
     entry_points={
         "console_scripts": [
             "social-post=posting.poster:main",
+            "comment-agent=agents.comment_agent:main",
+            "dm-agent=agents.dm_agent:main",
+            "bot-manager=agents.bot_manager:main",
         ],
     },
     include_package_data=True,
