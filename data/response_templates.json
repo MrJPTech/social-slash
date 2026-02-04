@@ -1,0 +1,171 @@
+{
+    "comment_templates": {
+        "positive_feedback": {
+            "professional": [
+                "Thank you for your feedback! We appreciate your support.",
+                "We're glad you enjoyed this. Thanks for sharing!",
+                "Your kind words mean a lot to us. Thank you!"
+            ],
+            "friendly": [
+                "Thanks so much! Really appreciate you!",
+                "You're awesome! Thanks for the love!",
+                "This made our day! Thank you!"
+            ],
+            "casual": [
+                "Thanks! Glad you liked it!",
+                "Appreciate that! Thanks!",
+                "Thanks for the support!"
+            ]
+        },
+        "question": {
+            "professional": [
+                "Great question! {answer}",
+                "Thanks for asking. {answer}",
+                "That's a great point to clarify. {answer}"
+            ],
+            "friendly": [
+                "Good question! {answer}",
+                "Happy to help! {answer}",
+                "Thanks for reaching out! {answer}"
+            ]
+        },
+        "constructive_criticism": {
+            "professional": [
+                "Thank you for your feedback. We'll take this into consideration.",
+                "We appreciate your honest input. This helps us improve.",
+                "Thanks for sharing your perspective. We value your feedback."
+            ],
+            "supportive": [
+                "We hear you and appreciate you taking the time to share this.",
+                "Thank you for this feedback. We're always looking to improve.",
+                "Your input is valuable to us. Thanks for sharing."
+            ]
+        },
+        "spam_detection": {
+            "response": null,
+            "action": "ignore",
+            "patterns": [
+                "follow me",
+                "check my profile",
+                "dm for collab",
+                "free followers",
+                "make money fast"
+            ]
+        }
+    },
+    "dm_templates": {
+        "greeting": {
+            "professional": [
+                "Hello! Thank you for reaching out. How can I assist you today?",
+                "Hi there! Thanks for your message. How may I help?",
+                "Good day! We appreciate you contacting us. What can we do for you?"
+            ],
+            "friendly": [
+                "Hey there! Thanks for the message! What's up?",
+                "Hi! Great to hear from you! How can I help?",
+                "Hello! Thanks for reaching out! What can I do for you?"
+            ]
+        },
+        "support_request": {
+            "professional": [
+                "I understand your concern. Let me help you with that.",
+                "Thank you for bringing this to our attention. Here's what we can do:",
+                "I appreciate your patience. Let me look into this for you."
+            ],
+            "supportive": [
+                "I'm sorry you're experiencing this. Let's get this sorted out.",
+                "I completely understand. Here's how we can help:",
+                "No worries, we'll figure this out together."
+            ]
+        },
+        "escalation": {
+            "template": "I want to make sure you get the best help possible. Let me connect you with our team who can assist further.",
+            "include_contact": true
+        },
+        "closing": {
+            "professional": [
+                "Is there anything else I can help you with?",
+                "Please don't hesitate to reach out if you have more questions.",
+                "We're here if you need anything else."
+            ],
+            "friendly": [
+                "Let me know if you need anything else!",
+                "Happy to help anytime!",
+                "Feel free to reach out again!"
+            ]
+        }
+    },
+    "platform_specific": {
+        "instagram": {
+            "max_length": 2200,
+            "emoji_style": "moderate",
+            "hashtag_replies": false,
+            "story_mention_response": "Thanks for the mention!"
+        },
+        "reddit": {
+            "max_length": 10000,
+            "emoji_style": "minimal",
+            "include_markdown": true,
+            "subreddit_aware": true
+        },
+        "youtube": {
+            "max_length": 10000,
+            "emoji_style": "moderate",
+            "timestamp_aware": true,
+            "pinned_comment_priority": true
+        },
+        "telegram": {
+            "max_length": 4096,
+            "emoji_style": "expressive",
+            "markdown_supported": true,
+            "quick_replies": true
+        },
+        "linkedin": {
+            "max_length": 1300,
+            "emoji_style": "minimal",
+            "professional_tone": true,
+            "no_slang": true
+        },
+        "bluesky": {
+            "max_length": 300,
+            "emoji_style": "moderate",
+            "thread_aware": true
+        },
+        "tiktok": {
+            "max_length": 150,
+            "emoji_style": "expressive",
+            "casual_tone": true,
+            "trend_aware": true
+        },
+        "facebook": {
+            "max_length": 8000,
+            "emoji_style": "moderate",
+            "reaction_acknowledgment": true
+        }
+    },
+    "sentiment_responses": {
+        "very_positive": {
+            "boost_enthusiasm": true,
+            "add_emoji": true,
+            "engagement_cta": true
+        },
+        "positive": {
+            "match_tone": true,
+            "add_emoji": true
+        },
+        "neutral": {
+            "be_helpful": true,
+            "add_value": true
+        },
+        "negative": {
+            "empathize_first": true,
+            "offer_help": true,
+            "no_defensive": true
+        },
+        "very_negative": {
+            "prioritize_review": true,
+            "escalation_suggested": true,
+            "human_review_required": true
+        }
+    }
+}

@@ -1,0 +1,97 @@
+{
+    "comment_agent": {
+        "poll_interval_seconds": 60,
+        "auto_approve": false,
+        "platforms": ["instagram", "reddit", "youtube"],
+        "max_replies_per_post": 10,
+        "cooldown_per_user_seconds": 300,
+        "blocked_keywords": [
+            "spam",
+            "scam",
+            "buy followers",
+            "dm me",
+            "check bio",
+            "link in bio"
+        ],
+        "brand_voice": "professional",
+        "min_comment_length": 5,
+        "skip_own_comments": true,
+        "skip_verified_accounts": false,
+        "response_styles": {
+            "positive": "friendly",
+            "negative": "supportive",
+            "question": "helpful",
+            "neutral": "professional"
+        }
+    },
+    "dm_agent": {
+        "auto_reply": false,
+        "response_delay_seconds": 30,
+        "platforms": ["instagram", "telegram", "reddit"],
+        "escalation_keywords": [
+            "help",
+            "urgent",
+            "problem",
+            "issue",
+            "support",
+            "complaint",
+            "refund"
+        ],
+        "brand_voice": "friendly",
+        "max_messages_per_conversation": 10,
+        "archive_after_hours": 48,
+        "greeting_detection": true,
+        "auto_archive_spam": true
+    },
+    "bot_accounts": {
+        "default_style": "professional",
+        "max_replies_per_hour": 60,
+        "cooldown_between_replies_seconds": 300,
+        "rate_limits": {
+            "instagram": {
+                "max_per_hour": 30,
+                "cooldown_seconds": 120
+            },
+            "reddit": {
+                "max_per_hour": 20,
+                "cooldown_seconds": 180
+            },
+            "youtube": {
+                "max_per_hour": 25,
+                "cooldown_seconds": 150
+            },
+            "telegram": {
+                "max_per_hour": 60,
+                "cooldown_seconds": 60
+            }
+        }
+    },
+    "webhooks": {
+        "verify_signatures": true,
+        "events": [
+            "message.received",
+            "post.published",
+            "post.failed"
+        ],
+        "retry_failed_events": true,
+        "max_retries": 3
+    },
+    "ai_settings": {
+        "provider": "gemini",
+        "model": "gemini-2.0-flash",
+        "max_response_length": 280,
+        "temperature": 0.7,
+        "include_emoji": true,
+        "personalization": true
+    },
+    "review_queue": {
+        "auto_expire_hours": 24,
+        "max_pending_reviews": 100,
+        "notify_on_new": true,
+        "priority_keywords": [
+            "urgent",
+            "help",
+            "problem"
+        ]
+    }
+}
