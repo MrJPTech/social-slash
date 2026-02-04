@@ -125,7 +125,8 @@ if ($Platform) {
 }
 Write-Host ""
 
-# Execute
+# Execute with PYTHONPATH set
+$env:PYTHONPATH = $projectRoot
 & $pythonExe @args
 $exitCode = $LASTEXITCODE
 

@@ -131,7 +131,8 @@ if ($Action -eq "start") {
 }
 Write-Host ""
 
-# Execute
+# Execute with PYTHONPATH set
+$env:PYTHONPATH = $projectRoot
 & $pythonExe @args
 $exitCode = $LASTEXITCODE
 

@@ -282,7 +282,8 @@ if ($DryRun) {
 
 Write-Host ""
 
-# Execute Python backend
+# Execute Python backend with PYTHONPATH set
+$env:PYTHONPATH = $projectRoot
 & $pythonExe @args
 $exitCode = $LASTEXITCODE
 
