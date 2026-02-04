@@ -125,4 +125,179 @@
 
 ---
 
+## 2026-02-03 - Late API Unified Inbox for Engagement
+
+**Context**: Need engagement automation (comment replies, DM replies) for social media accounts.
+
+**Decision**: Use Late API's unified inbox (Comments + DMs Add-on) instead of platform-specific APIs.
+
+**Rationale**:
+- Single API handles all platforms (Instagram, Reddit, YouTube, Facebook, LinkedIn, Bluesky, TikTok, Telegram)
+- No need to manage individual platform SDKs (instagrapi, praw, tweepy, etc.)
+- Consistent interface for comments and DMs across platforms
+- Webhook support for real-time event handling
+
+**Alternatives Considered**:
+- Platform-specific APIs (PRAW for Reddit, Instagrapi for Instagram) - too complex
+- Buffer/Hootsuite engagement APIs - commercial pricing
+- Web scraping - fragile and ToS issues
+
+**Impact**:
+- Single `LateEngagementClient` handles all platforms
+- Requires Late Inbox Add-on subscription
+- Simplified codebase with unified patterns
+
+---
+
+## 2026-02-03 - Agent State Machine Pattern
+
+**Context**: Need structured agents for automated engagement that can be monitored and controlled.
+
+**Decision**: Implement agents with explicit state machine: IDLE → MONITORING → PROCESSING → GENERATING → REVIEWING → RESPONDING → ERROR
+
+**Rationale**:
+- Clear state transitions for debugging
+- Easy to implement human-in-the-loop review (REVIEWING state)
+- Graceful error handling (ERROR state with recovery)
+- Status reporting for CLI commands
+
+**Alternatives Considered**:
+- Simple polling loop without states - harder to monitor/control
+- Event-driven only - loses visibility into agent state
+
+**Impact**:
+- All agents inherit from BaseAgent with state tracking
+- CLI can report current agent state
+- Human review queue integrates naturally
+
+---
+
+## 2026-02-03 - SQLite for Engagement Storage
+
+**Context**: Need to persist tracked posts, comments, DMs, and bot configurations.
+
+**Decision**: Use SQLite for local storage via `EngagementDatabase` class.
+
+**Rationale**:
+- No additional infrastructure required
+- Single file database, easy backup
+- Sufficient for single-instance engagement automation
+- Python sqlite3 built-in, no extra dependencies
+
+**Alternatives Considered**:
+- PostgreSQL - overkill for local automation
+- Redis - good for caching but not persistence
+- JSON files - no query capability
+
+**Impact**:
+- Database file at `data/engagement.db`
+- Simple schema for posts, comments, DMs, bots
+- Easy migration path to PostgreSQL if needed
+
+---
+
+## 2026-02-03 - Human-in-the-Loop Default
+
+**Context**: Auto-replying to comments/DMs carries reputation risk.
+
+**Decision**: Default to human review queue (`auto_approve: false`, `auto_reply: false`).
+
+**Rationale**:
+- Prevents inappropriate automated responses
+- Allows quality control before sending
+- User can enable auto-mode when confident
+- `PendingReview` model tracks suggested responses
+
+**Alternatives Considered**:
+- Auto-approve by default - too risky for brand reputation
+- No auto mode at all - limits utility
+
+**Impact**:
+- CLI commands include review/approve/reject actions
+- Review queue visible via `/social:comment-agent review`
+- Auto modes available but explicitly disabled by default
+
+---
+
+## 2026-02-03 - Absolute Imports for Module Structure
+
+**Context**: Relative imports (`from ..engagement`) caused "beyond top-level package" errors.
+
+**Decision**: Use absolute imports (`from engagement.late_engagement_client`) in all modules.
+
+**Rationale**:
+- Works for both package imports and standalone script execution
+- Consistent import style across codebase
+- Avoids relative import complexity
+
+**Impact**:
+- All `__init__.py` files use absolute imports
+- Agents, engagement, storage, webhooks modules all consistent
+- Tests can import modules directly
+
+---
+
+## 2026-02-03 - Railway for Webhook Deployment
+
+**Context**: Webhooks need public HTTPS endpoint for Late to send events.
+
+**Decision**: Use Railway for webhook server deployment.
+
+**Rationale**:
+- Simple deployment from git
+- Auto HTTPS with custom domain support
+- Free tier sufficient for webhook handling
+- Environment variable management
+- Easy scaling if needed
+
+**Alternatives Considered**:
+- Vercel - serverless, potential cold start issues
+- AWS Lambda - more complex setup
+- Self-hosted - requires infrastructure management
+
+**Impact**:
+- `railway.json` and `Procfile` for deployment config
+- Uvicorn serves FastAPI webhook handler
+- Health check endpoint at `/health`
+
+---
+
+## 2026-02-03 - Skip Anthropic Test When API Key Missing
+
+**Context**: Test `test_init_anthropic_provider` fails when `ANTHROPIC_API_KEY` environment variable is not set.
+
+**Decision**: Add `@pytest.mark.skipif` decorator to skip the test when API key is not available.
+
+**Rationale**:
+- Tests should pass in CI/local environments without all API keys configured
+- Anthropic provider test requires actual API key to validate initialization
+- Skip is more appropriate than mock for provider initialization tests
+- Other provider tests (Gemini) have similar skip patterns
+
+**Impact**:
+- Test suite passes in all environments
+- Anthropic functionality still tested when API key is available
+- Clear skip reason documented in test output
+
+---
+
+## 2026-02-03 - Explicit is_active Parameter for Bot Accounts
+
+**Context**: `save_bot_account()` was missing `is_active` parameter, causing `deactivate_bot()` to not persist the deactivation state.
+
+**Decision**: Add explicit `is_active` parameter to `save_bot_account()` and include it in both INSERT and UPDATE SQL.
+
+**Rationale**:
+- Bot activation/deactivation is a core feature
+- ON CONFLICT DO UPDATE clause needs all fields to update
+- Explicit parameter makes the API clearer than relying on defaults
+- Consistent with other optional parameters like `is_primary`
+
+**Impact**:
+- `deactivate_bot()` and `activate_bot()` now work correctly
+- Bot status persists across application restarts
+- `update_bot()` can modify any bot field including active status
+
+---
+
 **Usage**: Add entry whenever making significant technical decisions
