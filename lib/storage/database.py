@@ -9,7 +9,6 @@ Provides persistent storage for:
 - Pending review queue
 """
 
-import os
 import sqlite3
 from datetime import datetime
 from typing import List, Optional, Dict, Any

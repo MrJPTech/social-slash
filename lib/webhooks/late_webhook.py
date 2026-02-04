@@ -17,7 +17,6 @@ Deployment: Railway or any FastAPI-compatible host
 import os
 import hmac
 import hashlib
-import asyncio
 from datetime import datetime
 from typing import Dict, Any, Optional
 from queue import Queue
