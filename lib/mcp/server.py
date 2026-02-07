@@ -592,8 +592,15 @@ def main() -> None:
     """Entry point - auto-detects transport from PORT env var."""
     port = os.environ.get("PORT")
     if port:
+        from mcp.server.transport_security import TransportSecuritySettings
+
         mcp.settings.host = "0.0.0.0"
         mcp.settings.port = int(port)
+        # Disable DNS rebinding protection for cloud deployment
+        # (Railway domain isn't in the default localhost allowlist)
+        mcp.settings.transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=False,
+        )
         print(f"[MCP] Starting SSE transport on 0.0.0.0:{port}")
         mcp.run(transport="sse")
     else:

@@ -11,8 +11,13 @@ from lib.mcp.server import mcp
 if __name__ == "__main__":
     port = os.environ.get("PORT")
     if port:
+        from mcp.server.transport_security import TransportSecuritySettings
+
         mcp.settings.host = "0.0.0.0"
         mcp.settings.port = int(port)
+        mcp.settings.transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=False,
+        )
         print(f"[MCP] Starting SSE transport on 0.0.0.0:{port}")
         mcp.run(transport="sse")
     else:
