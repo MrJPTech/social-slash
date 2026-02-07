@@ -1,0 +1,34 @@
+# Virtual environment
+.venv/
+
+# Version control
+.git/
+.gitignore
+
+# Tests
+tests/
+
+# Claude Code config
+.claude/
+.memory-bank/
+
+# Build artifacts
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Environment files (passed via --env-file at runtime)
+.env
+.env.*
+
+# Database (mounted as volume at runtime)
+data/*.db
+
+# Docs
+*.md
+LICENSE

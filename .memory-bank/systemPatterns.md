@@ -326,5 +326,75 @@ async def handle_webhook(request: Request):
 - Return 401 for invalid signatures
 - Return simple status response
 
+## Persona Pattern
+
+Voice/speech style system for content generation agents:
+
+```python
+from abc import ABC, abstractmethod
+import re, random
+
+class BasePersona(ABC):
+    SHARED_VOCAB = {"going to": "gonna", "want to": "wanna", "got to": "gotta"}
+
+    def apply_vocab_transform(self, text: str) -> str:
+        """Post-process AI output with persona-specific vocabulary."""
+        all_vocab = {**self.SHARED_VOCAB, **self.VOCAB_MAP}
+        for original, replacement in all_vocab.items():
+            text = re.sub(re.escape(original), replacement, text, flags=re.IGNORECASE)
+        return text
+
+    @abstractmethod
+    def get_system_prompt(self, context_type: str) -> str: pass
+
+    @abstractmethod
+    def get_response_length_guide(self, context_type: str) -> tuple: pass
+
+class SwizzPersona:
+    """Router/factory that switches between professional and personal modes."""
+    def __init__(self, mode="professional"):
+        self._professional = SwizzimaticPersona()
+        self._personal = BigSwizziPersona()
+        self.set_mode(mode)
+
+    def set_mode(self, mode): ...
+    def get_active_persona(self) -> BasePersona: ...
+    def get_platform_config(self, platform) -> dict: ...
+```
+
+**Key patterns:**
+- Voice is a STYLE LAYER — captures how to speak, not what to talk about
+- Content topics come from the caller/user, persona shapes the delivery
+- Dual approach: system prompts guide AI + vocab post-processing ensures consistency
+- Few-shot examples from Instagram data for voice consistency
+- Platform configs enforce character limits (tiktok: 150, twitter: 280, instagram: 2200)
+- Two modes: professional (SwizzimaticPersona) and personal (BigSwizziPersona)
+
+## Content Agent Pattern
+
+Agents that generate content using persona voice:
+
+```python
+class WritingAgent(BaseAgent):
+    def __init__(self, config, persona=None, db=None, ai_provider="gemini"):
+        super().__init__(config, ai_provider, name="WritingAgent")
+        self.persona = persona or SwizzPersona(mode=config.get('persona_mode', 'professional'))
+
+    def generate_post(self, topic, platform, post_type, persona_mode="professional"):
+        active = self.persona.get_active_persona()
+        system_prompt = active.get_system_prompt(post_type)
+        length_guide = active.get_response_length_guide(post_type)
+        # Build prompt with system_prompt + few_shot_examples + topic
+        raw = self.response_generator._generate(prompt, max_length=max_chars)
+        content = active.apply_vocab_transform(raw)  # Post-process vocabulary
+        return {"content": content, "platform": platform, ...}
+```
+
+**Key patterns:**
+- All content agents extend BaseAgent with SwizzPersona integration
+- Persona mode switchable via `--persona professional|personal` CLI flag
+- AI generation → vocab post-processing → platform char limit enforcement
+- CLI entry points via argparse with action/topic/platform/persona args
+
 ---
 **Usage**: Update when establishing new patterns or conventions

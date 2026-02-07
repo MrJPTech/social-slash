@@ -5,7 +5,7 @@
 **Status**: In Development
 
 ## Overview
-Social Slash is a standalone Claude Code slash command package for social media automation. It enables posting to 13 platforms via Late SDK with optional AI content enhancement using Gemini or Anthropic.
+Social Slash is a standalone Claude Code slash command package for social media automation. It enables posting to 13 platforms via Late SDK with optional AI content enhancement using Gemini or Anthropic. Includes engagement automation (comment/DM agents, bot management) and persona-powered content generation in the SWIZZ voice.
 
 ## Tech Stack
 

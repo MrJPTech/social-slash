@@ -1,0 +1,9 @@
+services:
+  mcp:
+    build: .
+    image: social-slash-mcp
+    stdin_open: true
+    env_file:
+      - .env.local
+    volumes:
+      - ./data/engagement.db:/app/data/engagement.db:ro

@@ -1,33 +1,187 @@
 # Active Context
 
-**Last Updated**: 2026-02-03 (Session 7)
+**Last Updated**: 2026-02-07 (Session 12)
 **Project**: social-slash
 
 ## Current Focus
-- [x] Initial project structure with Late SDK integration
-- [x] CLAUDE.md documentation generated
-- [x] Memory Bank initialized
-- [x] Virtual environment created and dependencies installed
-- [x] Fixed import issue (SCHEDULING_TOOLS missing from exports)
-- [x] Fixed Poster to lazy-init Late client (dry-run now works without API key)
-- [x] Unit tests created and passing (11 tests)
-- [x] Environment variables configured (.env.local)
-- [x] Gemini API tested and working (gemini-2.0-flash)
-- [x] Late API working with new key (9 connected accounts)
-- [x] Fixed Late SDK response handling (AccountsListResponse → .accounts)
-- [x] Fixed posts.create API (requires platforms as list of {platform, accountId})
-- [x] First real post published to Twitter/X with AI enhancement!
-- [x] Claude Code slash command configs created (.claude/commands/social/)
-- [x] **Platform-specific posting options implemented** (Session 3)
-- [x] **Engagement Automation Agents FULLY IMPLEMENTED** (Session 4)
-- [x] **ALL 151 TESTS PASSING** (Session 5)
-- [x] **SHIPPED TO PRODUCTION** (Session 6) - 4 commits pushed
-- [x] **CODE CLEANUP** (Session 6) - Removed 8 unused imports
-- [x] **COMMANDS TESTED & FIXED** (Session 7) - PYTHONPATH fix for all commands
-- [x] **BOT ACCOUNTS REGISTERED** (Session 7) - 4 platforms configured
-- [x] **ENGAGEMENT SYSTEM OPERATIONAL** (Session 7) - Live testing complete
+- [x] **MCP SERVER BUILT** (Session 11) - 19 tools, FastMCP, suppress_stdout()
+- [x] **DOCKER IMAGE BUILT** (Session 12) - social-slash-mcp:latest, python:3.12-slim
+- [x] **CLAUDE DESKTOP REGISTERED** (Session 12) - 16th MCP server in config
+- [x] **END-TO-END VERIFIED** (Session 12) - tools/list, status_overview, dry_run all pass
+- [ ] Commit Session 9-12 work to git (25+ uncommitted files!)
 - [ ] Update google.generativeai to google.genai (deprecated warning)
 - [ ] Deploy webhook server to Railway
+- [ ] Resize images for Instagram aspect ratio compliance
+- [ ] Fix Docker networking (Late API calls timeout from container)
+
+## Session 11-12 Accomplishments - MCP Server + Docker + Claude Desktop
+
+### MCP Server (Session 11 - 8 new files)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `lib/mcp/__init__.py` | ~4 | Package exports |
+| `lib/mcp/__main__.py` | ~5 | Entry point: `python -m lib.mcp` |
+| `lib/mcp/_client_helpers.py` | ~55 | Late client factory, suppress_stdout(), agent config builder |
+| `lib/mcp/server.py` | ~390 | FastMCP server with 19 `@mcp.tool()` definitions |
+| `requirements-mcp.txt` | ~15 | Slim dependency set for Docker |
+| `Dockerfile` | ~16 | Python 3.12-slim image |
+| `docker-compose.yml` | ~11 | Dev convenience with env_file + volume mount |
+| `.dockerignore` | ~25 | Excludes .venv, tests, .git, etc. |
+
+### 19 MCP Tools (5 groups)
+
+| Group | Tools | Needs |
+|-------|-------|-------|
+| Utility (5) | accounts_list, accounts_refresh_cache, posts_recent, post_details, status_overview | LATE_API_KEY |
+| Writing (3) | writing_generate_post, writing_generate_caption, writing_generate_thread | AI key |
+| Research (4) | research_hashtags, research_content_ideas, research_trending, research_content_calendar | AI key |
+| Media (5) | media_generate_caption, media_generate_story_text, media_generate_carousel, media_generate_alt_text, media_suggest_format | AI key |
+| Posting (2) | post_to_platform, post_to_multiple | LATE_API_KEY |
+
+### Docker Build (Session 12)
+- Image: `social-slash-mcp:latest` built successfully
+- All 19 tools registered and responding through container
+- Late API calls timeout from Docker (DNS/networking) — direct Python works fine
+
+### Claude Desktop Registration (Session 12)
+- Added `social-slash` to `claude_desktop_config.json` (16 total MCP servers)
+- Mode: Direct Python (dev) with PYTHONPATH + LATE_API_KEY + GOOGLE_API_KEY
+- Restart Claude Desktop to activate
+
+### Critical Implementation Details
+- `suppress_stdout()` wraps all Late SDK and agent calls to prevent print() corrupting MCP JSON-RPC
+- Agent factory functions create agents inside suppress_stdout()
+- Poster uses `skip_late_init=True` for dry-run mode
+- Database graceful degradation when engagement.db not mounted
+
+---
+
+## Session 10 Accomplishments - Slash Command Upgrade
+
+### New Slash Commands (6 total)
+
+| Command | File | Purpose |
+|---------|------|---------|
+| `/social:write` | `.claude/commands/agents/write.ps1` | SWIZZ voice post/thread/caption generation |
+| `/social:research` | `.claude/commands/agents/research.ps1` | Hashtag/trend/content research |
+| `/social:media` | `.claude/commands/agents/media.ps1` | Reel/story/carousel caption generation |
+| `/social:accounts` | `.claude/commands/utility/accounts.ps1` | Connected account management |
+| `/social:analytics` | `.claude/commands/utility/analytics.ps1` | Post analytics and metrics |
+| `/social:status` | `.claude/commands/utility/status.ps1` | Project status dashboard |
+
+### New Python Backends (4 files)
+
+| File | Purpose |
+|------|---------|
+| `lib/utility/__init__.py` | Package exports |
+| `lib/utility/accounts.py` | Account listing via Late SDK |
+| `lib/utility/analytics.py` | Post analytics via Late SDK |
+| `lib/utility/status.py` | Aggregated project status |
+
+### Documentation (9 .md files)
+
+All in `.claude/commands/social/`:
+- **Agent docs**: `write.md`, `research.md`, `media.md`
+- **Utility docs**: `accounts.md`, `analytics.md`, `status.md`
+- **Backfill docs**: `comment-agent.md`, `dm-agent.md`, `bot-manage.md`
+
+### Updated Files
+
+| File | Change |
+|------|--------|
+| `CLAUDE.md` | Full command inventory with all 12 commands |
+| `.memory-bank/progress.md` | Session 10 progress |
+| `.memory-bank/activeContext.md` | Session 10 context |
+
+### Complete Command Inventory (12 total)
+
+**Posting (3)**: `/social:post`, `/social:multi-post`, `/social:schedule`
+**Engagement (3)**: `/social:comment-agent`, `/social:dm-agent`, `/social:bot-manage`
+**Agents (3)**: `/social:write`, `/social:research`, `/social:media`
+**Utilities (3)**: `/social:accounts`, `/social:analytics`, `/social:status`
+
+---
+
+## Session 9 Accomplishments - SWIZZ Voice Persona & Content Agents
+
+### Dual-Mode Persona System (6 new files, 3 modified)
+Built a complete voice/speech style system capturing how Jay Ward (@swizzimatic / @BigSwizzi) communicates — vocabulary, emoji, tone, brevity — NOT topical content. Content topics come from the caller; the persona is just a style layer.
+
+### New Files Created
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `lib/persona/__init__.py` | ~25 | Package exports |
+| `lib/persona/swizz_persona.py` | ~509 | Dual-mode persona system (core) |
+| `lib/persona/instagram_parser.py` | ~270 | Instagram export data extractor |
+| `lib/agents/writing_agent.py` | ~310 | Social media post generation in SWIZZ voice |
+| `lib/agents/research_agent.py` | ~280 | Trend/hashtag/content research agent |
+| `lib/agents/media_agent.py` | ~310 | Media captioning agent |
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `lib/agents/__init__.py` | Added WritingAgent, ResearchAgent, MediaAgent imports/exports |
+| `setup.py` | Added 3 console_script entry points |
+| `lib/engagement/response_generator.py` | Added 'swizz' and 'bigswizzi' brand voices |
+
+### Persona Architecture
+- **SwizzimaticPersona** (professional): formality 0.3, verbosity 0.25, 5-15 words, emoji freq 0.4
+- **BigSwizziPersona** (personal): formality 0.15, verbosity 0.15, 1-7 words, AAVE-native, caps emphasis 0.3
+- **SwizzPersona** (router): switches between modes via `set_mode("professional"|"personal")`
+- **Vocabulary post-processing**: `apply_vocab_transform()` converts AI output ("your"→"ya", "going to"→"gonna", etc.)
+- **Platform configs**: Character limits per platform (tiktok 150, instagram 2200, twitter 280, etc.)
+
+### Agent Capabilities
+- **WritingAgent**: `generate_post()`, `generate_caption()`, `generate_thread()` — all with persona mode selection
+- **ResearchAgent**: `research_hashtags()`, `suggest_content_ideas()`, `analyze_trending()`, `build_content_calendar()`
+- **MediaAgent**: `generate_reel_caption()`, `generate_story_text()`, `generate_carousel_captions()`, `generate_alt_text()`, `suggest_media_format()`
+
+### CLI Usage
+```bash
+python -m lib.agents.writing_agent --action generate --topic "New product launch" --platform instagram --persona professional
+python -m lib.agents.research_agent --action suggest --theme "spring marketing" --count 5
+python -m lib.agents.media_agent --action caption --description "Product flat lay" --persona personal
+```
+
+---
+
+## Session 8 Accomplishments - Media Upload & Multi-Platform Posting
+
+### Late SDK Media Upload Discovery
+- `client.media.upload(file_path)` accepts local file paths (< 4MB)
+- Returns cloud URL at `https://media.getlate.dev/temp/...`
+- `client.media.upload_large(file_path, vercel_token)` for files 4MB-5GB
+- `posts.create()` `media_items` param requires `[{"type": "image", "url": "..."}]` format
+- **Workflow: Upload local files first, then reference URLs in post**
+
+### Multi-Platform Post with Photos (7/9 success)
+Posted enhanced content with 3 terminal screenshots to all platforms:
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| Twitter/X | Posted | |
+| LinkedIn | Posted | |
+| TikTok | Posted | |
+| Facebook | Posted | |
+| Threads | Posted | |
+| Reddit | Posted | Custom title added |
+| Google Business | Posted | |
+| Instagram | **Failed** | Aspect ratio 2.64:1 exceeds max 1.91:1 (images 913x346px) |
+| YouTube | **Failed** | Requires video, not images |
+
+### AI Enhancement Issues - RESOLVED
+- **Gemini API key**: ~~Reported as leaked (403 error)~~ → **Rotated with new key, working!**
+- **KIMI API key**: Updated in .env.local
+- **Anthropic API key**: Still not set (low priority, Gemini works)
+- `google.generativeai` deprecation warning still present (migrate to `google.genai` later)
+
+### Content Posted
+> Claude, oh Claude - you do me so well, building my personality so I don't have to post on social media anymore and sound like a robot. Farewell & thank you for a good time 😂🤖
+
+---
 
 ## Session 7 Accomplishments - Commands & Bot Setup
 

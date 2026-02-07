@@ -300,4 +300,117 @@
 
 ---
 
+## 2026-02-06 - Late SDK Media Upload for Local Files
+
+**Context**: User wants to attach local screenshots to multi-platform posts. Late SDK's `posts.create()` only accepts media URLs, not local file paths.
+
+**Decision**: Use `client.media.upload(file_path)` to upload local files first, then reference returned URLs in `posts.create()`.
+
+**Rationale**:
+- Late SDK has built-in media upload: `client.media.upload()` for files < 4MB
+- `client.media.upload_large()` available for files 4MB-5GB (requires Vercel token)
+- Returns cloud URLs at `media.getlate.dev/temp/`
+- `media_items` format: `[{"type": "image", "url": "https://media.getlate.dev/..."}]`
+
+**Alternatives Considered**:
+- Hosting images externally (Imgur, Cloudflare) - unnecessary complexity
+- Base64 encoding - not supported by Late API
+- Modifying social-slash to auto-detect local vs URL - future improvement
+
+**Impact**:
+- Local file → Late media upload → URL → posts.create() pipeline works
+- social-slash CLI currently only accepts URLs (could be enhanced)
+- Instagram has aspect ratio limits: 0.75:1 to 1.91:1 (wide screenshots fail)
+- YouTube requires video content, image-only posts rejected
+
+---
+
+## 2026-02-06 - Gemini API Key Rotation Needed
+
+**Context**: Gemini API key returned 403 "reported as leaked" during AI enhancement attempt.
+
+**Decision**: Need to rotate Google API key in Google Cloud Console and update `.env.local`.
+
+**Rationale**:
+- Key was likely flagged due to accidental exposure (committed to repo or logged)
+- Both AI providers currently unavailable (Gemini leaked, Anthropic not configured)
+- Manual content enhancement used as workaround this session
+
+**Impact**:
+- AI enhancement temporarily unavailable
+- Need new key from https://aistudio.google.com/apikey
+- Also need to set ANTHROPIC_API_KEY as backup
+
+---
+
+## 2026-02-06 - Dual-Mode Persona System (Voice as Style Layer)
+
+**Context**: Need to generate social media content in the authentic voice of Jay Ward (@swizzimatic / @BigSwizzi) across two distinct communication modes.
+
+**Decision**: Build a dual-mode persona system that captures ONLY speech patterns and voice personality — vocabulary, emoji usage, response length, tone, directness. Content topics come from the caller; the persona is just a style layer applied on top.
+
+**Rationale**:
+- Same person has two distinct modes: professional (@swizzimatic) and personal (@BigSwizzi)
+- Voice is about HOW you speak, not WHAT you speak about
+- Vocabulary post-processing (`apply_vocab_transform()`) ensures consistent voice after AI generation
+- Few-shot examples from Instagram data provide voice consistency
+- Platform configs enforce character limits per platform
+
+**Alternatives Considered**:
+- RAG over Instagram data - overkill, not about content topics
+- Single persona mode - loses the dual-mode communication style
+- Topical content agents (video/music) - user explicitly rejected, agents are voice-only
+
+**Impact**:
+- 6 new files in lib/persona/ and lib/agents/
+- 3 modified files for integration
+- CLI + programmatic API for all 3 new agents
+- Persona can be used by existing CommentAgent/DMAgent via 'swizz'/'bigswizzi' brand voices
+
+---
+
+## 2026-02-06 - BaseAgent Pattern for New Agents (Not ElizaOS)
+
+**Context**: PRSMTECH-SMCA uses ElizaOS Service/Action/Provider pattern. social-slash uses its own BaseAgent(ABC) pattern.
+
+**Decision**: Follow social-slash's existing BaseAgent pattern for all 3 new agents. Use SMCA's voice/persona concepts as inspiration only.
+
+**Rationale**:
+- Consistency within social-slash codebase
+- BaseAgent provides state machine, rate limiting, stats, logging, ResponseGenerator integration
+- No dependency on ElizaOS runtime
+- Adapting SMCA patterns would require architectural changes
+
+**Impact**:
+- All 3 new agents extend BaseAgent with SwizzPersona integration
+- Reuse existing ResponseGenerator._generate() for AI calls
+- Consistent CLI pattern with argparse across all agents
+
+---
+
+## 2026-02-06 - Vocabulary Post-Processing Over Prompt-Only Approach
+
+**Context**: Need AI-generated content to use SWIZZ-specific vocabulary ("ya" instead of "your", "gonna" instead of "going to", etc.)
+
+**Decision**: Use dual approach: persona system prompts guide the AI, then `apply_vocab_transform()` applies regex-based vocabulary mapping as post-processing.
+
+**Rationale**:
+- AI models don't reliably maintain consistent vocabulary in output
+- Post-processing ensures 100% vocabulary consistency
+- Regex with `re.IGNORECASE` handles all casing variations
+- Shared vocab (contractions) + mode-specific vocab (AAVE for BigSwizzi)
+
+**Alternatives Considered**:
+- Prompt engineering only - inconsistent results
+- Fine-tuned model - too expensive for this use case
+- Template-based (no AI) - loses natural language generation
+
+**Impact**:
+- `BasePersona.apply_vocab_transform()` applied to all AI output
+- SHARED_VOCAB for common contractions both modes use
+- Mode-specific VOCAB_MAP for unique vocabulary per persona
+- BigSwizziPersona has 12+ vocab entries including AAVE terms
+
+---
+
 **Usage**: Add entry whenever making significant technical decisions
