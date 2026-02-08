@@ -37,8 +37,12 @@ Usage:
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
+import secrets
+import time
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -567,7 +571,7 @@ def post_to_multiple(
 # ============================================================================
 
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, RedirectResponse
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -582,7 +586,162 @@ async def root(request: Request) -> JSONResponse:
     return JSONResponse({
         "service": "Social Slash MCP Server",
         "endpoints": {"mcp": "/mcp", "health": "/health"},
-        "auth": "Bearer token required on /mcp",
+        "auth": "OAuth 2.0 (Authorization Code + PKCE)",
+    })
+
+
+# ============================================================================
+# OAUTH 2.0 ENDPOINTS (Claude.ai custom connector)
+# ============================================================================
+
+# In-memory stores (single Railway instance, acceptable for personal server)
+_auth_codes: dict[str, dict] = {}  # code -> {client_id, code_challenge, expires}
+_registered_clients: dict[str, dict] = {}  # client_id -> {client_secret, redirect_uris, ...}
+
+
+def _get_server_url(request: Request) -> str:
+    """Derive the public server URL from the request."""
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    host = request.headers.get("x-forwarded-host", request.url.netloc)
+    return f"{scheme}://{host}"
+
+
+@mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET"])
+async def oauth_metadata(request: Request) -> JSONResponse:
+    """RFC 8414 - OAuth 2.0 Authorization Server Metadata."""
+    base = _get_server_url(request)
+    return JSONResponse({
+        "issuer": base,
+        "authorization_endpoint": f"{base}/authorize",
+        "token_endpoint": f"{base}/token",
+        "registration_endpoint": f"{base}/register",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code"],
+        "token_endpoint_auth_methods_supported": ["none", "client_secret_post"],
+        "code_challenge_methods_supported": ["S256"],
+    })
+
+
+@mcp.custom_route("/.well-known/oauth-protected-resource", methods=["GET"])
+async def resource_metadata(request: Request) -> JSONResponse:
+    """RFC 9728 - OAuth 2.0 Protected Resource Metadata."""
+    base = _get_server_url(request)
+    return JSONResponse({
+        "resource": f"{base}/mcp",
+        "authorization_servers": [base],
+        "bearer_methods_supported": ["header"],
+    })
+
+
+@mcp.custom_route("/register", methods=["POST"])
+async def register_client(request: Request) -> JSONResponse:
+    """RFC 7591 - Dynamic Client Registration."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid_request"}, status_code=400)
+
+    client_id = secrets.token_urlsafe(16)
+    client_secret = secrets.token_urlsafe(32)
+    redirect_uris = body.get("redirect_uris", [])
+
+    _registered_clients[client_id] = {
+        "client_secret": client_secret,
+        "redirect_uris": redirect_uris,
+        "client_name": body.get("client_name", ""),
+        "grant_types": body.get("grant_types", ["authorization_code"]),
+        "response_types": body.get("response_types", ["code"]),
+        "token_endpoint_auth_method": body.get("token_endpoint_auth_method", "client_secret_post"),
+    }
+
+    return JSONResponse({
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "redirect_uris": redirect_uris,
+        "client_name": body.get("client_name", ""),
+        "grant_types": ["authorization_code"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": "client_secret_post",
+    }, status_code=201)
+
+
+@mcp.custom_route("/authorize", methods=["GET"])
+async def authorize(request: Request) -> RedirectResponse:
+    """Authorization endpoint - auto-approves (single-user personal server)."""
+    params = request.query_params
+    redirect_uri = params.get("redirect_uri", "")
+    state = params.get("state", "")
+    code_challenge = params.get("code_challenge", "")
+    client_id = params.get("client_id", "")
+    response_type = params.get("response_type", "")
+
+    if response_type != "code":
+        return RedirectResponse(
+            f"{redirect_uri}?error=unsupported_response_type&state={state}",
+            status_code=302,
+        )
+
+    # Generate authorization code
+    code = secrets.token_urlsafe(32)
+    _auth_codes[code] = {
+        "client_id": client_id,
+        "code_challenge": code_challenge,
+        "redirect_uri": redirect_uri,
+        "expires": time.time() + 300,  # 5 minute expiry
+    }
+
+    return RedirectResponse(
+        f"{redirect_uri}?code={code}&state={state}",
+        status_code=302,
+    )
+
+
+@mcp.custom_route("/token", methods=["POST"])
+async def token_exchange(request: Request) -> JSONResponse:
+    """Token endpoint - exchanges authorization code for access token (with PKCE)."""
+    try:
+        body = await request.body()
+        # Support both form-encoded and JSON
+        content_type = request.headers.get("content-type", "")
+        if "json" in content_type:
+            params = json.loads(body)
+        else:
+            from urllib.parse import parse_qs
+            raw = parse_qs(body.decode())
+            params = {k: v[0] for k, v in raw.items()}
+    except Exception:
+        return JSONResponse({"error": "invalid_request"}, status_code=400)
+
+    grant_type = params.get("grant_type", "")
+    code = params.get("code", "")
+    code_verifier = params.get("code_verifier", "")
+
+    if grant_type != "authorization_code":
+        return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
+
+    # Look up and consume the auth code
+    code_data = _auth_codes.pop(code, None)
+    if not code_data:
+        return JSONResponse({"error": "invalid_grant", "error_description": "Code not found or already used"}, status_code=400)
+
+    if code_data["expires"] < time.time():
+        return JSONResponse({"error": "invalid_grant", "error_description": "Code expired"}, status_code=400)
+
+    # PKCE verification (S256)
+    if code_data["code_challenge"] and code_verifier:
+        digest = hashlib.sha256(code_verifier.encode()).digest()
+        computed = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+        if computed != code_data["code_challenge"]:
+            return JSONResponse({"error": "invalid_grant", "error_description": "PKCE verification failed"}, status_code=400)
+
+    # Return the MCP_AUTH_TOKEN as the access token
+    auth_token = os.environ.get("MCP_AUTH_TOKEN", "")
+    if not auth_token:
+        return JSONResponse({"error": "server_error", "error_description": "MCP_AUTH_TOKEN not configured"}, status_code=500)
+
+    return JSONResponse({
+        "access_token": auth_token,
+        "token_type": "Bearer",
     })
 
 
@@ -608,9 +767,22 @@ class BearerAuthMiddleware:
             auth_header = headers.get(b"authorization", b"").decode()
             expected = f"Bearer {self.token}"
             if auth_header != expected:
+                # Derive base URL for resource_metadata link
+                host = ""
+                for k, v in scope.get("headers", []):
+                    if k == b"x-forwarded-host":
+                        host = v.decode()
+                        break
+                    elif k == b"host":
+                        host = v.decode()
+                scheme = "https" if any(k == b"x-forwarded-proto" and v == b"https" for k, v in scope.get("headers", [])) else "https"
+                base = f"{scheme}://{host}" if host else ""
+                res_uri = f"{base}/.well-known/oauth-protected-resource" if base else ""
+                www_auth = f'Bearer resource_metadata="{res_uri}"' if res_uri else "Bearer"
                 response = JSONResponse(
-                    {"error": "Unauthorized", "hint": "Set Authorization: Bearer <MCP_AUTH_TOKEN>"},
+                    {"error": "Unauthorized"},
                     status_code=401,
+                    headers={"WWW-Authenticate": www_auth},
                 )
                 await response(scope, receive, send)
                 return
