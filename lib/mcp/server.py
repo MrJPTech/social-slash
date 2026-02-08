@@ -5,7 +5,7 @@ Exposes social media tools via Model Context Protocol for Claude Desktop
 and Claude mobile/web (via SSE transport on Railway).
 
 Transport auto-detection:
-  - PORT env var set (Railway/cloud): SSE on 0.0.0.0:$PORT
+  - PORT env var set (Railway/cloud): streamable-http on 0.0.0.0:$PORT
   - No PORT (local/Claude Desktop): stdio
 
 Usage:
@@ -30,7 +30,9 @@ Usage:
         }
     }
 
-    # Claude mobile/web: Add Railway URL as Custom Connector in claude.ai Settings
+    # Claude mobile: Add as remote MCP server in Claude iOS/Android app
+    #   URL: https://<railway-domain>/mcp
+    #   Auth: Bearer token (MCP_AUTH_TOKEN env var)
 """
 
 from __future__ import annotations
@@ -579,7 +581,7 @@ async def root(request: Request) -> JSONResponse:
     """Root endpoint with service info."""
     return JSONResponse({
         "service": "Social Slash MCP Server",
-        "endpoints": {"sse": "/sse", "messages": "/messages/", "health": "/health"},
+        "endpoints": {"mcp": "/mcp", "health": "/health"},
     })
 
 
@@ -596,13 +598,14 @@ def main() -> None:
 
         mcp.settings.host = "0.0.0.0"
         mcp.settings.port = int(port)
+        mcp.settings.stateless_http = True
         # Disable DNS rebinding protection for cloud deployment
         # (Railway domain isn't in the default localhost allowlist)
         mcp.settings.transport_security = TransportSecuritySettings(
             enable_dns_rebinding_protection=False,
         )
-        print(f"[MCP] Starting SSE transport on 0.0.0.0:{port}")
-        mcp.run(transport="sse")
+        print(f"[MCP] Starting streamable-http transport on 0.0.0.0:{port}")
+        mcp.run(transport="streamable-http")
     else:
         mcp.run(transport="stdio")
 
