@@ -577,7 +577,18 @@ from starlette.responses import JSONResponse, RedirectResponse
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> JSONResponse:
     """Health check endpoint for Railway."""
-    return JSONResponse({"status": "healthy", "service": "social-slash-mcp", "tools": 19})
+    return JSONResponse({
+        "status": "healthy",
+        "service": "social-slash-mcp",
+        "tools": 19,
+        "env": {
+            "LATE_API_KEY": "set" if os.getenv("LATE_API_KEY") else "MISSING",
+            "GOOGLE_API_KEY": "set" if os.getenv("GOOGLE_API_KEY") else "MISSING",
+            "ANTHROPIC_API_KEY": "set" if os.getenv("ANTHROPIC_API_KEY") else "MISSING",
+            "MCP_AUTH_TOKEN": "set" if os.getenv("MCP_AUTH_TOKEN") else "MISSING",
+            "OAUTH_CLIENT_ID": "set" if os.getenv("OAUTH_CLIENT_ID") else "MISSING",
+        },
+    })
 
 
 @mcp.custom_route("/", methods=["GET"])
