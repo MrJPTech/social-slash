@@ -582,7 +582,39 @@ async def root(request: Request) -> JSONResponse:
     return JSONResponse({
         "service": "Social Slash MCP Server",
         "endpoints": {"mcp": "/mcp", "health": "/health"},
+        "auth": "Bearer token required on /mcp",
     })
+
+
+# ============================================================================
+# BEARER TOKEN AUTH MIDDLEWARE
+# ============================================================================
+
+
+class BearerAuthMiddleware:
+    """ASGI middleware that requires a Bearer token on the /mcp endpoint.
+
+    Public endpoints (/, /health) are not protected.
+    If MCP_AUTH_TOKEN is not set, all requests are allowed.
+    """
+
+    def __init__(self, app, token: str):
+        self.app = app
+        self.token = token
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http" and scope["path"] == "/mcp":
+            headers = dict(scope.get("headers", []))
+            auth_header = headers.get(b"authorization", b"").decode()
+            expected = f"Bearer {self.token}"
+            if auth_header != expected:
+                response = JSONResponse(
+                    {"error": "Unauthorized", "hint": "Set Authorization: Bearer <MCP_AUTH_TOKEN>"},
+                    status_code=401,
+                )
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
 
 
 # ============================================================================
@@ -594,18 +626,32 @@ def main() -> None:
     """Entry point - auto-detects transport from PORT env var."""
     port = os.environ.get("PORT")
     if port:
+        import anyio
+        import uvicorn
         from mcp.server.transport_security import TransportSecuritySettings
 
         mcp.settings.host = "0.0.0.0"
         mcp.settings.port = int(port)
         mcp.settings.stateless_http = True
-        # Disable DNS rebinding protection for cloud deployment
-        # (Railway domain isn't in the default localhost allowlist)
         mcp.settings.transport_security = TransportSecuritySettings(
             enable_dns_rebinding_protection=False,
         )
-        print(f"[MCP] Starting streamable-http transport on 0.0.0.0:{port}")
-        mcp.run(transport="streamable-http")
+
+        auth_token = os.environ.get("MCP_AUTH_TOKEN", "")
+
+        async def _serve():
+            app = mcp.streamable_http_app()
+            if auth_token:
+                app = BearerAuthMiddleware(app, auth_token)
+                print(f"[MCP] Auth: Bearer token required on /mcp")
+            else:
+                print(f"[MCP] Auth: DISABLED (set MCP_AUTH_TOKEN to enable)")
+            print(f"[MCP] Starting streamable-http on 0.0.0.0:{port}")
+            config = uvicorn.Config(app, host="0.0.0.0", port=int(port), log_level="info")
+            server = uvicorn.Server(config)
+            await server.serve()
+
+        anyio.run(_serve)
     else:
         mcp.run(transport="stdio")
 
