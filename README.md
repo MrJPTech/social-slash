@@ -2,7 +2,7 @@
 
 # Social Slash
 
-<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=22&pause=1000&color=FF3D00&center=true&vCenter=true&multiline=true&repeat=true&width=600&height=80&lines=19+MCP+Tools+%7C+13+Platforms+%7C+SWIZZ+Voice;AI+Content+Agents+%7C+Railway+SSE+%7C+Claude+Mobile" alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=22&pause=1000&color=FF3D00&center=true&vCenter=true&multiline=true&repeat=true&width=600&height=80&lines=19+MCP+Tools+%7C+13+Platforms+%7C+SWIZZ+Voice;OAuth+2.0+%7C+3+Access+Methods+%7C+Railway+Deploy" alt="Typing SVG" />
 
 [![PRSMTECH](https://img.shields.io/badge/PRSMTECH-INTERNAL-FF3D00?style=for-the-badge&labelColor=0C0C0C)](https://github.com/MrJPTech)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
@@ -24,8 +24,8 @@ Social Slash is a social media automation package that works across the entire C
 | Mode | Transport | Use Case |
 |:-----|:----------|:---------|
 | **Slash Commands** | PowerShell + Python | Claude Code CLI |
-| **MCP Server** | stdio | Claude Desktop |
-| **MCP Server** | SSE (Railway) | Claude Mobile/Web |
+| **MCP Server** | stdio | Claude Desktop (Windows) |
+| **MCP Server** | streamable-http (Railway) | Claude Desktop (Mac), Claude.ai (OAuth) |
 
 19 tools across 5 groups: utility, writing, research, media, and posting. Optional AI content generation in the **SWIZZ** dual-mode voice persona (professional/personal).
 
@@ -36,7 +36,7 @@ Claude Code ──► PowerShell ──► Python Backend ──► Late SDK ─
                                     │
 Claude Desktop ──► MCP (stdio) ─────┘
                                     │
-Claude Mobile ──► MCP (SSE/Railway) ┘
+Claude.ai/Mac ──► MCP (HTTP/Railway) ┘
                                     │
                          Optional AI Enhancement
                         (Gemini 2.0 / Anthropic)
@@ -57,7 +57,7 @@ lib/mcp/server.py (FastMCP, 19 @mcp.tool())
   Platform API ──► Result JSON ──► Client
 ```
 
-Transport auto-detection: `PORT` env var triggers SSE for Railway; no `PORT` defaults to stdio for Claude Desktop.
+Transport auto-detection: `PORT` env var triggers streamable-http for Railway; no `PORT` defaults to stdio for Claude Desktop. OAuth 2.0 (PKCE) protects the `/mcp` endpoint for Claude.ai connectors.
 
 </details>
 
@@ -70,7 +70,7 @@ Transport auto-detection: `PORT` env var triggers SSE for Railway; no `PORT` def
 | **Research** | Hashtag research, trending analysis, content calendars, idea generation |
 | **Media** | Reel captions, story text, carousel captions, alt text, format suggestions |
 | **Engagement** | Comment monitoring, DM auto-reply, bot management |
-| **MCP Server** | 19 tools for Claude Desktop + Claude Mobile via Railway SSE |
+| **MCP Server** | 19 tools for Claude Desktop + Claude.ai via Railway (OAuth 2.0) |
 
 ## MCP Tools
 
@@ -146,6 +146,11 @@ LATE_API_KEY=your_late_api_key
 # Optional (for AI agent tools)
 GOOGLE_API_KEY=your_google_api_key
 ANTHROPIC_API_KEY=your_anthropic_key
+
+# Railway deployment (remote access)
+MCP_AUTH_TOKEN=your_bearer_token
+OAUTH_CLIENT_ID=your_oauth_client_id
+OAUTH_CLIENT_SECRET=your_oauth_client_secret
 ```
 
 ### API Keys
@@ -179,16 +184,41 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-### Claude Mobile/Web (Railway SSE)
+### Claude Desktop - Mac (Remote URL)
+
+Add to Mac's `claude_desktop_config.json`:
+
+```json
+{
+    "mcpServers": {
+        "social-slash": {
+            "type": "url",
+            "url": "https://web-production-c9cb9.up.railway.app/mcp",
+            "headers": {
+                "Authorization": "Bearer <MCP_AUTH_TOKEN>"
+            }
+        }
+    }
+}
+```
+
+### Claude.ai (OAuth 2.0 Custom Connector)
 
 Deployed at `web-production-c9cb9.up.railway.app`. Auto-deploys from `master` branch.
+
+1. Go to **claude.ai** > **Settings** > **Integrations**
+2. **Add Custom Connector**
+3. Fill in:
+   - **Name**: `Social Slash`
+   - **Remote MCP server URL**: `https://web-production-c9cb9.up.railway.app/mcp`
+   - **OAuth Client ID**: *(matching `OAUTH_CLIENT_ID` in Railway)*
+   - **OAuth Client Secret**: *(matching `OAUTH_CLIENT_SECRET` in Railway)*
+4. Save — Claude.ai completes OAuth flow automatically
 
 ```bash
 # Verify deployment
 curl https://web-production-c9cb9.up.railway.app/health
 ```
-
-Add as **Custom Connector** in claude.ai > Settings > Connectors to sync tools to Claude iOS/Android.
 
 ### Docker
 
@@ -265,7 +295,7 @@ pytest tests/
 # Local MCP server (stdio)
 PYTHONPATH=. python -m lib.mcp
 
-# Local SSE testing
+# Local HTTP testing
 PORT=8000 PYTHONPATH=. python -m lib.mcp
 ```
 
@@ -276,8 +306,9 @@ PORT=8000 PYTHONPATH=. python -m lib.mcp
 | Runtime | Python 3.12 |
 | Distribution | Late SDK (13 platforms) |
 | AI | Google Gemini 2.0 Flash, Anthropic Claude |
-| MCP | FastMCP 1.26 (stdio + SSE) |
-| Server | uvicorn (SSE transport) |
+| MCP | FastMCP 1.26 (stdio + streamable-http) |
+| Auth | OAuth 2.0 (PKCE) + Bearer Token |
+| Server | uvicorn (streamable-http transport) |
 | Deploy | Railway (auto-deploy from master) |
 | Container | Docker (python:3.12-slim) |
 | Data | Pydantic, SQLite, JSON configs |

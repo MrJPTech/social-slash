@@ -413,4 +413,87 @@
 
 ---
 
+## 2026-02-08 - Streamable-HTTP Transport for Claude Mobile
+
+**Context**: Claude mobile app needs HTTP-based MCP transport, not stdio.
+
+**Decision**: Switch from SSE to `streamable-http` transport with `stateless_http=True`.
+
+**Rationale**:
+- Claude mobile app doesn't support SSE transport
+- `streamable-http` uses single `/mcp` POST endpoint
+- `stateless_http=True` avoids session persistence on Railway (stateless deployment)
+- Simpler than managing SSE connections
+
+**Impact**:
+- Single `/mcp` endpoint replaces `/sse` + `/messages/`
+- Railway auto-deploys from GitHub master push
+- Works for both Claude Desktop (remote URL) and Claude.ai web
+
+---
+
+## 2026-02-08 - OAuth 2.0 for Claude.ai Custom Connectors
+
+**Context**: Claude.ai custom connectors require OAuth 2.0 authentication, not simple bearer tokens.
+
+**Decision**: Implement full OAuth 2.0 flow (RFC 8414, RFC 9728, RFC 7591) with auto-approve for single-user server.
+
+**Rationale**:
+- Claude.ai mandates OAuth 2.0 for custom MCP connectors
+- Single-user personal server → auto-approve on `/authorize` is acceptable
+- PKCE (S256) verification adds security without user friction
+- In-memory stores sufficient for single Railway instance
+
+**Impact**:
+- OAuth endpoints: `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource`, `/authorize`, `/token`, `/register`
+- Token exchange returns `MCP_AUTH_TOKEN` as `access_token`
+- BearerAuthMiddleware validates all `/mcp` requests
+
+---
+
+## 2026-02-08 - Pre-Shared OAuth Credentials (Lock Down)
+
+**Context**: OAuth flow auto-approved everyone. Anyone finding the Railway URL could get full access to all 19 tools including posting to social accounts.
+
+**Decision**: Require pre-shared `OAUTH_CLIENT_ID` + `OAUTH_CLIENT_SECRET` set as Railway env vars. Block dynamic client registration entirely.
+
+**Rationale**:
+- Open registration is a security risk for a personal automation server
+- Pre-shared credentials mean only you can authenticate
+- Claude.ai connector dialog has fields for OAuth Client ID/Secret
+- `/register` returning 403 prevents unauthorized client creation
+- Client ID validated on `/authorize`, both ID + secret validated on `/token`
+
+**Alternatives Considered**:
+- IP allowlisting - too restrictive for mobile/travel
+- Rate limiting only - doesn't prevent unauthorized access
+- Keep open registration - unacceptable security risk
+
+**Impact**:
+- `/register` returns 403 `registration_not_supported`
+- `/authorize` redirects with `error=unauthorized_client` if client_id doesn't match
+- `/token` returns 401 `invalid_client` if credentials don't match
+- Claude.ai connector configured with matching ID/secret
+
+---
+
+## 2026-02-08 - Railway Shared Variables Must Be Linked to Service
+
+**Context**: Mac and Claude.ai web getting "GOOGLE_API_KEY not found" despite Railway dashboard showing the variables.
+
+**Decision**: Added `/health` env var diagnostics to expose which vars are actually reaching the process. Discovered Railway "Shared Variables" must be explicitly linked to the service.
+
+**Rationale**:
+- Railway Shared Variables exist at project level but DON'T automatically propagate to services
+- Must click "Add All" or individually link them to the `web` service
+- `/health` endpoint diagnostics (`set` vs `MISSING`) immediately revealed the issue
+- This is a Railway platform behavior, not a code bug
+
+**Impact**:
+- `/health` now shows env var status for quick diagnostics
+- All 6 env vars linked to web service and confirmed working
+- Lesson: always verify env vars reach the process, not just the dashboard
+
+---
+
 **Usage**: Add entry whenever making significant technical decisions

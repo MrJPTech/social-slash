@@ -1,59 +1,59 @@
 # Active Context
 
-**Last Updated**: 2026-02-07 (Session 12)
+**Last Updated**: 2026-02-08 (Session 15)
 **Project**: social-slash
 
 ## Current Focus
 - [x] **MCP SERVER BUILT** (Session 11) - 19 tools, FastMCP, suppress_stdout()
 - [x] **DOCKER IMAGE BUILT** (Session 12) - social-slash-mcp:latest, python:3.12-slim
 - [x] **CLAUDE DESKTOP REGISTERED** (Session 12) - 16th MCP server in config
-- [x] **END-TO-END VERIFIED** (Session 12) - tools/list, status_overview, dry_run all pass
-- [ ] Commit Session 9-12 work to git (25+ uncommitted files!)
+- [x] **STREAMABLE-HTTP TRANSPORT** (Session 13) - `/mcp` endpoint for Claude mobile
+- [x] **OAUTH 2.0 FLOW** (Session 14) - RFC 8414/9728/7591 for Claude.ai connectors
+- [x] **OAUTH LOCKED DOWN** (Session 15) - Pre-shared OAUTH_CLIENT_ID + OAUTH_CLIENT_SECRET
+- [x] **RAILWAY DEPLOY WORKING** (Session 15) - All env vars linked, all 3 clients working
 - [ ] Update google.generativeai to google.genai (deprecated warning)
-- [ ] Deploy webhook server to Railway
-- [ ] Resize images for Instagram aspect ratio compliance
 - [ ] Fix Docker networking (Late API calls timeout from container)
+- [ ] Unit tests for persona system and new agents
 
-## Session 11-12 Accomplishments - MCP Server + Docker + Claude Desktop
+## Session 15 Accomplishments - OAuth Lockdown + Railway Fix
 
-### MCP Server (Session 11 - 8 new files)
+### OAuth Lockdown (Pre-Shared Credentials)
+- Blocked `/register` endpoint → returns 403
+- `/authorize` validates `client_id` against `OAUTH_CLIENT_ID` env var
+- `/token` validates both `client_id` + `client_secret`, cross-checks against auth code
+- Removed `registration_endpoint` from OAuth metadata
+- Changed `token_endpoint_auth_methods_supported` to `["client_secret_post"]` only
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| `lib/mcp/__init__.py` | ~4 | Package exports |
-| `lib/mcp/__main__.py` | ~5 | Entry point: `python -m lib.mcp` |
-| `lib/mcp/_client_helpers.py` | ~55 | Late client factory, suppress_stdout(), agent config builder |
-| `lib/mcp/server.py` | ~390 | FastMCP server with 19 `@mcp.tool()` definitions |
-| `requirements-mcp.txt` | ~15 | Slim dependency set for Docker |
-| `Dockerfile` | ~16 | Python 3.12-slim image |
-| `docker-compose.yml` | ~11 | Dev convenience with env_file + volume mount |
-| `.dockerignore` | ~25 | Excludes .venv, tests, .git, etc. |
+### /health Endpoint Enhanced
+- Added env var diagnostics: shows `set` or `MISSING` for each key
+- Keys checked: `LATE_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `MCP_AUTH_TOKEN`, `OAUTH_CLIENT_ID`
+- Critical for diagnosing Railway deployment issues
 
-### 19 MCP Tools (5 groups)
+### Railway Shared Variable Fix
+- **Root cause**: Env vars were Railway "Shared Variables" but NOT linked to the `web` service
+- Only `MCP_AUTH_TOKEN` and `OAUTH_CLIENT_ID` (service-level) were reaching the process
+- `/health` showed `LATE_API_KEY: MISSING`, `GOOGLE_API_KEY: MISSING`
+- **Fix**: User linked all 6 shared variables to web service in Railway dashboard
+- After redeploy: all keys showing as "set"
 
-| Group | Tools | Needs |
-|-------|-------|-------|
-| Utility (5) | accounts_list, accounts_refresh_cache, posts_recent, post_details, status_overview | LATE_API_KEY |
-| Writing (3) | writing_generate_post, writing_generate_caption, writing_generate_thread | AI key |
-| Research (4) | research_hashtags, research_content_ideas, research_trending, research_content_calendar | AI key |
-| Media (5) | media_generate_caption, media_generate_story_text, media_generate_carousel, media_generate_alt_text, media_suggest_format | AI key |
-| Posting (2) | post_to_platform, post_to_multiple | LATE_API_KEY |
+### All 3 Access Methods Working
+| Client | Mode | Status |
+|--------|------|--------|
+| Windows Claude Desktop | Local Python (stdio) | Working |
+| Mac Claude Desktop | Remote URL (Railway) | Working |
+| Claude.ai Web | Remote URL (OAuth) | Working |
 
-### Docker Build (Session 12)
-- Image: `social-slash-mcp:latest` built successfully
-- All 19 tools registered and responding through container
-- Late API calls timeout from Docker (DNS/networking) — direct Python works fine
+### Git Commits This Session
+1. `857a4f2` - fix(mcp): lock down OAuth to pre-shared credentials only
+2. `f15480c` - fix(mcp): add env var diagnostics to /health endpoint
 
-### Claude Desktop Registration (Session 12)
-- Added `social-slash` to `claude_desktop_config.json` (16 total MCP servers)
-- Mode: Direct Python (dev) with PYTHONPATH + LATE_API_KEY + GOOGLE_API_KEY
-- Restart Claude Desktop to activate
-
-### Critical Implementation Details
-- `suppress_stdout()` wraps all Late SDK and agent calls to prevent print() corrupting MCP JSON-RPC
-- Agent factory functions create agents inside suppress_stdout()
-- Poster uses `skip_late_init=True` for dry-run mode
-- Database graceful degradation when engagement.db not mounted
+### Railway Environment (6 env vars)
+- `LATE_API_KEY` - Late SDK access
+- `GOOGLE_API_KEY` - Gemini AI provider
+- `MCP_AUTH_TOKEN` - Bearer token auth for `/mcp`
+- `OAUTH_CLIENT_ID` - Pre-shared OAuth client ID
+- `OAUTH_CLIENT_SECRET` - Pre-shared OAuth client secret
+- `ANTHROPIC_API_KEY` - (optional, Anthropic AI provider)
 
 ---
 

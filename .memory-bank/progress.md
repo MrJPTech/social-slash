@@ -4,7 +4,66 @@
 **Current Sprint**: Sprint 3 - SWIZZ Voice Persona & Content Agents
 **Sprint Goal**: Build persona-powered content generation agents
 
-## Latest Session (2026-02-07 - Sessions 11-12)
+## Latest Session (2026-02-08 - Session 15)
+
+### Completed - OAuth Lockdown + Railway Fix
+
+- [x] **OAuth Locked Down to Pre-Shared Credentials**
+  - `/register` returns 403 (dynamic registration disabled)
+  - `/authorize` validates `client_id` against `OAUTH_CLIENT_ID` env var
+  - `/token` validates `client_id` + `client_secret` + cross-checks auth code
+  - Removed `registration_endpoint` from OAuth metadata
+  - Auth methods changed to `["client_secret_post"]` only
+
+- [x] **Health Endpoint Enhanced**
+  - `/health` now shows env var diagnostics (set/MISSING for each key)
+  - Critical for diagnosing Railway deployment issues
+
+- [x] **Railway Shared Variable Bug Found & Fixed**
+  - Root cause: env vars were "Shared Variables" not linked to web service
+  - `/health` diagnostics revealed LATE_API_KEY and GOOGLE_API_KEY as MISSING
+  - User linked all 6 shared variables to web service
+  - After redeploy: all keys "set", all tools working
+
+- [x] **All 3 Access Methods Verified Working**
+  - Windows Claude Desktop (local Python stdio)
+  - Mac Claude Desktop (remote Railway URL)
+  - Claude.ai Web (remote Railway URL + OAuth)
+
+### Git Commits This Session
+1. `857a4f2` - fix(mcp): lock down OAuth to pre-shared credentials only
+2. `f15480c` - fix(mcp): add env var diagnostics to /health endpoint
+
+---
+
+## Previous Sessions (2026-02-08 - Sessions 13-14)
+
+### Completed - Streamable-HTTP + OAuth 2.0
+
+- [x] **Streamable-HTTP Transport** (Session 13)
+  - Switched from SSE to `streamable-http` for Claude mobile app support
+  - Endpoint: `/mcp` (POST) replaces `/sse` + `/messages/`
+  - `stateless_http=True` for Railway (no session persistence)
+  - Fixed `__main__.py` duplicate transport logic bug
+
+- [x] **OAuth 2.0 for Claude.ai** (Session 14)
+  - RFC 8414 (metadata), RFC 9728 (resource), RFC 7591 (registration)
+  - Auto-approve on `/authorize`, PKCE (S256) on `/token`
+  - BearerAuthMiddleware with `WWW-Authenticate` header
+  - `_get_server_url()` handles Railway proxy headers
+
+- [x] **Railway Deployed**
+  - Auto-deploy from GitHub `master` branch
+  - URL: `https://web-production-c9cb9.up.railway.app/mcp`
+
+### Git Commits Sessions 13-14
+- `207722d` - feat(mcp): switch to streamable-http transport
+- `36ef59d` - feat(mcp): add bearer token auth for remote /mcp endpoint
+- `814b682` - feat(mcp): add OAuth 2.0 flow for Claude.ai custom connectors
+
+---
+
+## Previous Sessions (2026-02-07 - Sessions 11-12)
 
 ### Completed - MCP Server + Docker + Claude Desktop
 
@@ -31,13 +90,12 @@
   - `tools/list`: 19 tools responding
   - `status_overview`: Gemini SET, DB Available
   - `post_to_platform` dry_run: Valid JSON response
-  - Late API returning 500 (getlate.dev server-side, temporary)
 
 - [x] **CLAUDE.md Updated** with MCP server section and architecture diagram
 - [x] **Auto Memory Updated** with Session 11 learnings
 
-### Git Commits This Session
-- Not yet committed (pending - 25+ files from Sessions 9-12)
+### Git Commits Sessions 11-12
+- Multiple commits for MCP server, Docker, transport, auth
 
 ---
 
@@ -304,10 +362,8 @@
 - [x] CLAUDE.md updated with full command inventory
 
 **Remaining**:
-- [ ] Git commit Session 9-12 work (25+ uncommitted files!)
 - [ ] Update google.generativeai to google.genai (deprecated)
 - [ ] Fix Docker networking for Late API calls
-- [ ] Dry-run verification tests on all 3 new agents
 - [ ] Unit tests for persona system and new agents
 
 ### Sprint 2 (2026-02-03 to 2026-02-06)
