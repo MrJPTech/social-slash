@@ -596,7 +596,11 @@ async def root(request: Request) -> JSONResponse:
 
 # In-memory stores (single Railway instance, acceptable for personal server)
 _auth_codes: dict[str, dict] = {}  # code -> {client_id, code_challenge, expires}
-_registered_clients: dict[str, dict] = {}  # client_id -> {client_secret, redirect_uris, ...}
+
+# Pre-shared OAuth credentials — only clients with matching values can authenticate.
+# Set these in Railway env vars; leave empty for local dev (auth bypassed).
+_OAUTH_CLIENT_ID = os.environ.get("OAUTH_CLIENT_ID", "")
+_OAUTH_CLIENT_SECRET = os.environ.get("OAUTH_CLIENT_SECRET", "")
 
 
 def _get_server_url(request: Request) -> str:
@@ -614,10 +618,9 @@ async def oauth_metadata(request: Request) -> JSONResponse:
         "issuer": base,
         "authorization_endpoint": f"{base}/authorize",
         "token_endpoint": f"{base}/token",
-        "registration_endpoint": f"{base}/register",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code"],
-        "token_endpoint_auth_methods_supported": ["none", "client_secret_post"],
+        "token_endpoint_auth_methods_supported": ["client_secret_post"],
         "code_challenge_methods_supported": ["S256"],
     })
 
@@ -635,34 +638,8 @@ async def resource_metadata(request: Request) -> JSONResponse:
 
 @mcp.custom_route("/register", methods=["POST"])
 async def register_client(request: Request) -> JSONResponse:
-    """RFC 7591 - Dynamic Client Registration."""
-    try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse({"error": "invalid_request"}, status_code=400)
-
-    client_id = secrets.token_urlsafe(16)
-    client_secret = secrets.token_urlsafe(32)
-    redirect_uris = body.get("redirect_uris", [])
-
-    _registered_clients[client_id] = {
-        "client_secret": client_secret,
-        "redirect_uris": redirect_uris,
-        "client_name": body.get("client_name", ""),
-        "grant_types": body.get("grant_types", ["authorization_code"]),
-        "response_types": body.get("response_types", ["code"]),
-        "token_endpoint_auth_method": body.get("token_endpoint_auth_method", "client_secret_post"),
-    }
-
-    return JSONResponse({
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "redirect_uris": redirect_uris,
-        "client_name": body.get("client_name", ""),
-        "grant_types": ["authorization_code"],
-        "response_types": ["code"],
-        "token_endpoint_auth_method": "client_secret_post",
-    }, status_code=201)
+    """Dynamic client registration is disabled — use pre-shared credentials."""
+    return JSONResponse({"error": "registration_not_supported"}, status_code=403)
 
 
 @mcp.custom_route("/authorize", methods=["GET"])
@@ -678,6 +655,13 @@ async def authorize(request: Request) -> RedirectResponse:
     if response_type != "code":
         return RedirectResponse(
             f"{redirect_uri}?error=unsupported_response_type&state={state}",
+            status_code=302,
+        )
+
+    # Validate client_id against pre-shared credential
+    if _OAUTH_CLIENT_ID and client_id != _OAUTH_CLIENT_ID:
+        return RedirectResponse(
+            f"{redirect_uri}?error=unauthorized_client&state={state}",
             status_code=302,
         )
 
@@ -715,9 +699,17 @@ async def token_exchange(request: Request) -> JSONResponse:
     grant_type = params.get("grant_type", "")
     code = params.get("code", "")
     code_verifier = params.get("code_verifier", "")
+    client_id = params.get("client_id", "")
+    client_secret = params.get("client_secret", "")
 
     if grant_type != "authorization_code":
         return JSONResponse({"error": "unsupported_grant_type"}, status_code=400)
+
+    # Validate client credentials against pre-shared values
+    if _OAUTH_CLIENT_ID and client_id != _OAUTH_CLIENT_ID:
+        return JSONResponse({"error": "invalid_client", "error_description": "Unknown client_id"}, status_code=401)
+    if _OAUTH_CLIENT_SECRET and client_secret != _OAUTH_CLIENT_SECRET:
+        return JSONResponse({"error": "invalid_client", "error_description": "Bad client_secret"}, status_code=401)
 
     # Look up and consume the auth code
     code_data = _auth_codes.pop(code, None)
@@ -726,6 +718,10 @@ async def token_exchange(request: Request) -> JSONResponse:
 
     if code_data["expires"] < time.time():
         return JSONResponse({"error": "invalid_grant", "error_description": "Code expired"}, status_code=400)
+
+    # Verify client_id matches the one that requested the auth code
+    if client_id and code_data.get("client_id") and client_id != code_data["client_id"]:
+        return JSONResponse({"error": "invalid_grant", "error_description": "client_id mismatch"}, status_code=400)
 
     # PKCE verification (S256)
     if code_data["code_challenge"] and code_verifier:
@@ -815,9 +811,11 @@ def main() -> None:
             app = mcp.streamable_http_app()
             if auth_token:
                 app = BearerAuthMiddleware(app, auth_token)
-                print(f"[MCP] Auth: Bearer token required on /mcp")
+                print(f"[MCP] Auth: Bearer token + OAuth 2.0 on /mcp")
             else:
                 print(f"[MCP] Auth: DISABLED (set MCP_AUTH_TOKEN to enable)")
+            oauth_status = "locked" if _OAUTH_CLIENT_ID else "open (set OAUTH_CLIENT_ID to lock)"
+            print(f"[MCP] OAuth: {oauth_status}")
             print(f"[MCP] Starting streamable-http on 0.0.0.0:{port}")
             config = uvicorn.Config(app, host="0.0.0.0", port=int(port), log_level="info")
             server = uvicorn.Server(config)
