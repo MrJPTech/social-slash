@@ -2,7 +2,7 @@
 """
 Image Agent for AI Image Generation
 
-Generates images for social media using Google Imagen 3 with
+Generates images for social media using Google Imagen 4 with
 prompt enhancement via Gemini Flash and SWIZZ voice persona styling.
 
 Features:

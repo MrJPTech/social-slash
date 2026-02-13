@@ -2,7 +2,7 @@
 """
 Imagen AI Client for Image Generation
 
-Uses Google's Imagen 3 model via the google-genai SDK for:
+Uses Google's Imagen 4 model via the google-genai SDK for:
 - Social media post graphics
 - Platform-optimized image generation with aspect ratio presets
 - Temp file management and Late SDK upload integration
@@ -24,10 +24,10 @@ class ImagenClient:
     """
     Imagen AI client for social media image generation.
 
-    Uses Imagen 3 via the google-genai SDK (same API key as GeminiClient).
+    Uses Imagen 4 via the google-genai SDK (same API key as GeminiClient).
     """
 
-    MODEL = "imagen-3.0-generate-002"
+    MODEL = "imagen-4.0-generate-001"
 
     # Platform + image type -> aspect ratio presets
     PLATFORM_PRESETS: Dict[str, str] = {

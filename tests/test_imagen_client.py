@@ -45,7 +45,7 @@ class TestImagenClientInit:
     def test_model_constant(self):
         """MODEL constant is set correctly."""
         from lib.ai.imagen_client import ImagenClient
-        assert ImagenClient.MODEL == "imagen-3.0-generate-002"
+        assert ImagenClient.MODEL == "imagen-4.0-generate-001"
 
 
 # ─────────────────────────────────────────────────────────────────────
