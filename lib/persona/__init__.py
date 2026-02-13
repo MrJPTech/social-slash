@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-SWIZZ Voice Persona System
+Multi-Mode Voice Persona System
 
-Dual-mode persona configuration for social media content generation.
-Captures speech patterns and voice style from @swizzimatic (professional)
-and @BigSwizzi (personal) Instagram accounts.
+Three voice personas for social media content generation:
+@swizzimatic (professional), @BigSwizzi (personal), and Jordan Ward (ceo).
 """
 
 from lib.persona.swizz_persona import (
     BasePersona,
     SwizzimaticPersona,
     BigSwizziPersona,
+    JordanWardPersona,
     SwizzPersona,
 )
 from lib.persona.instagram_parser import InstagramParser
@@ -19,6 +19,7 @@ __all__ = [
     'BasePersona',
     'SwizzimaticPersona',
     'BigSwizziPersona',
+    'JordanWardPersona',
     'SwizzPersona',
     'InstagramParser',
 ]

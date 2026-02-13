@@ -46,7 +46,7 @@ def build_agent_config(persona_mode: str = "professional", platform: str = "inst
     """Build a config dict for agent constructors (WritingAgent, ResearchAgent, MediaAgent).
 
     Args:
-        persona_mode: "professional" or "personal"
+        persona_mode: "professional", "personal", or "ceo"
         platform: Default target platform
 
     Returns:

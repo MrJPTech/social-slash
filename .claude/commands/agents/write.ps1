@@ -56,10 +56,12 @@ param(
                  "snapchat", "telegram", "googlebusiness")]
     [string]$Platform = "instagram",
 
-    [ValidateSet("announcement", "resource_share", "casual", "business", "promo", "hype")]
+    [ValidateSet("announcement", "resource_share", "casual", "business", "promo", "hype",
+                 "problem_solution", "myth_busting", "quick_tips", "day_in_life",
+                 "case_study", "industry_commentary", "quick_wins")]
     [string]$PostType = "casual",
 
-    [ValidateSet("professional", "personal")]
+    [ValidateSet("professional", "personal", "ceo")]
     [string]$Persona = "professional",
 
     [int]$NumPosts = 3,
@@ -104,7 +106,7 @@ if ($DryRun) {
 # Display header
 Write-Host ""
 Write-Host "===========================================================" -ForegroundColor Cyan
-Write-Host "            SWIZZ Voice Writing Agent                        " -ForegroundColor Cyan
+Write-Host "            Social Slash Writing Agent                         " -ForegroundColor Cyan
 Write-Host "===========================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Action: $Action" -ForegroundColor White

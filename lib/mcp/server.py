@@ -59,10 +59,19 @@ Available tools are prefixed by group:
 - accounts_*   : List and manage connected social media accounts
 - posts_*      : View recent posts and post details
 - status_*     : Project status overview
-- writing_*    : Generate posts/captions/threads in SWIZZ voice
+- writing_*    : Generate posts/captions/threads in SWIZZ voice or Jordan Ward CEO voice
 - research_*   : Hashtag research, content ideas, trending analysis
 - media_*      : Reel/story/carousel captions, alt text, format suggestions
 - post_*       : Publish or dry-run posts to platforms
+
+Voice personas:
+- professional : @swizzimatic casual-professional voice
+- personal     : @BigSwizzi ultra-concise AAVE voice
+- ceo          : Jordan Ward evidence-based CEO thought leadership
+
+CEO content formats (use with persona_mode="ceo"):
+  problem_solution, myth_busting, quick_tips, day_in_life,
+  case_study, industry_commentary, quick_wins
 """,
 )
 
@@ -189,7 +198,7 @@ def status_overview() -> str:
     # Bot database (graceful if not available)
     try:
         from lib.storage.database import EngagementDatabase
-        db = EngagementDatabase()
+        EngagementDatabase()
         results.append("Engagement DB: Available")
     except Exception:
         results.append("Engagement DB: Not available (mount data/engagement.db)")
@@ -217,13 +226,15 @@ def writing_generate_post(
     post_type: str = "casual",
     persona_mode: str = "professional",
 ) -> str:
-    """Generate a social media post in the SWIZZ voice.
+    """Generate a social media post in the SWIZZ or CEO voice.
 
     Args:
         topic: What the post should be about
         platform: Target platform (instagram, twitter, linkedin, tiktok, etc.)
-        post_type: Style - casual, announcement, resource_share, business, promo, hype
-        persona_mode: professional (swizzimatic) or personal (bigswizzi)
+        post_type: Style - casual, announcement, resource_share, business, promo, hype,
+                   or CEO formats: problem_solution, myth_busting, quick_tips, day_in_life,
+                   case_study, industry_commentary, quick_wins
+        persona_mode: professional (swizzimatic), personal (bigswizzi), or ceo (jordan ward)
     """
     try:
         with suppress_stdout():
@@ -245,12 +256,12 @@ def writing_generate_caption(
     platform: str = "instagram",
     persona_mode: str = "professional",
 ) -> str:
-    """Generate a caption for media content in SWIZZ voice.
+    """Generate a caption for media content in SWIZZ or CEO voice.
 
     Args:
         media_description: What the photo/video shows
         platform: Target platform
-        persona_mode: professional or personal
+        persona_mode: professional, personal, or ceo
     """
     try:
         with suppress_stdout():
@@ -272,13 +283,13 @@ def writing_generate_thread(
     num_posts: int = 3,
     persona_mode: str = "professional",
 ) -> str:
-    """Generate a multi-post thread in SWIZZ voice.
+    """Generate a multi-post thread in SWIZZ or CEO voice.
 
     Args:
         topic: Thread topic
         platform: Target platform (twitter recommended)
         num_posts: Number of posts in thread (2-10)
-        persona_mode: professional or personal
+        persona_mode: professional, personal, or ceo
     """
     try:
         with suppress_stdout():
@@ -570,8 +581,8 @@ def post_to_multiple(
 # HEALTH CHECK (Railway deployment)
 # ============================================================================
 
-from starlette.requests import Request
-from starlette.responses import JSONResponse, RedirectResponse
+from starlette.requests import Request  # noqa: E402
+from starlette.responses import JSONResponse, RedirectResponse  # noqa: E402
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -822,9 +833,9 @@ def main() -> None:
             app = mcp.streamable_http_app()
             if auth_token:
                 app = BearerAuthMiddleware(app, auth_token)
-                print(f"[MCP] Auth: Bearer token + OAuth 2.0 on /mcp")
+                print("[MCP] Auth: Bearer token + OAuth 2.0 on /mcp")
             else:
-                print(f"[MCP] Auth: DISABLED (set MCP_AUTH_TOKEN to enable)")
+                print("[MCP] Auth: DISABLED (set MCP_AUTH_TOKEN to enable)")
             oauth_status = "locked" if _OAUTH_CLIENT_ID else "open (set OAUTH_CLIENT_ID to lock)"
             print(f"[MCP] OAuth: {oauth_status}")
             print(f"[MCP] Starting streamable-http on 0.0.0.0:{port}")

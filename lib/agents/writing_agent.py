@@ -122,7 +122,7 @@ class WritingAgent(BaseAgent):
             self.log_item('content', platform, 'self', topic)
             self.transition(AgentState.GENERATING)
 
-            result = self.generate_post(
+            self.generate_post(
                 topic=topic,
                 platform=platform,
                 post_type=post_type,
@@ -184,15 +184,26 @@ class WritingAgent(BaseAgent):
                 f"- \"{ex}\"" for ex in examples
             )
 
-        prompt = (
-            f"{system_prompt}\n\n"
-            f"Platform: {platform} (max {max_chars} characters)\n"
-            f"Target length: {length_guide[0]}-{length_guide[1]} words\n"
-            f"Post type: {post_type}\n"
-            f"{examples_text}\n\n"
-            f"Write a {platform} post about: {topic}\n\n"
-            f"Return ONLY the post text. No explanations."
-        )
+        # Check if active persona has a structured format prompt for this post_type
+        format_prompt = None
+        if hasattr(active, 'get_content_format_prompt'):
+            format_prompt = active.get_content_format_prompt(post_type, topic)
+
+        if format_prompt:
+            prompt = (
+                f"{format_prompt}\n\n"
+                f"Platform: {platform} (max {max_chars} characters)\n"
+            )
+        else:
+            prompt = (
+                f"{system_prompt}\n\n"
+                f"Platform: {platform} (max {max_chars} characters)\n"
+                f"Target length: {length_guide['min']}-{length_guide['max']} words\n"
+                f"Post type: {post_type}\n"
+                f"{examples_text}\n\n"
+                f"Write a {platform} post about: {topic}\n\n"
+                f"Return ONLY the post text. No explanations."
+            )
 
         # Generate via AI
         raw_content = self.response_generator._generate(prompt, max_length=max_chars)
@@ -319,10 +330,12 @@ def main():
     parser.add_argument('--platform', type=str, default='instagram',
                        help='Target platform')
     parser.add_argument('--post-type', type=str, default='casual',
-                       choices=['announcement', 'resource_share', 'casual', 'business', 'promo', 'hype'],
+                       choices=['announcement', 'resource_share', 'casual', 'business', 'promo', 'hype',
+                                'problem_solution', 'myth_busting', 'quick_tips', 'day_in_life',
+                                'case_study', 'industry_commentary', 'quick_wins'],
                        help='Post type')
     parser.add_argument('--persona', type=str, default='professional',
-                       choices=['professional', 'personal'],
+                       choices=['professional', 'personal', 'ceo'],
                        help='Persona mode')
     parser.add_argument('--num-posts', type=int, default=3,
                        help='Number of posts for thread')

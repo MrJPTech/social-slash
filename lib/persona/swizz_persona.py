@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-SWIZZ Voice Persona System
+Multi-Mode Voice Persona System
 
-Dual-mode persona capturing speech patterns from two Instagram accounts:
+Three voice personas for social media content generation:
 - @swizzimatic (professional mode): casual-professional, 5-15 words
 - @BigSwizzi (personal mode): ultra-concise AAVE-native, 1-7 words
+- Jordan Ward (ceo mode): evidence-based CEO thought leadership, 20-160 words
 
 These personas define HOW to speak (vocabulary, tone, emoji, brevity),
 NOT what topics to speak about. Content topics come from the caller.
@@ -382,12 +383,265 @@ Write ONLY the response content. No quotes, no labels."""
         }
 
 
+class JordanWardPersona(BasePersona):
+    """
+    Jordan Ward CEO voice persona.
+
+    Formality: 0.7, Verbosity: 0.6, Emoji: 0.15
+    Evidence-based, contrarian, mentorship-oriented.
+    Structured content formats for thought leadership.
+    20-160 words typical depending on format.
+    """
+
+    # CEO vocabulary — polished, no slang contractions
+    VOCAB_MAP = {
+        "I think": "the data shows",
+        "stuff": "systems",
+        "things": "factors",
+        "a lot": "significant",
+        "big": "substantial",
+        "bad": "ineffective",
+        "good": "high-performing",
+        "fix": "optimize",
+        "problem": "challenge",
+        "deal with": "address",
+        "get rid of": "eliminate",
+        "figure out": "identify",
+        "set up": "implement",
+        "look at": "evaluate",
+        "try": "test",
+    }
+
+    EMOJI_CONTEXT_MAP = {
+        'business': ['📊', '💼', '🏗️'],
+        'tech': ['⚙️', '🔧', '💻'],
+        'success': ['📈', '✅', '🎯'],
+        'growth': ['🚀', '📈', '💡'],
+        'insight': ['💡', '🔍', '🧠'],
+        'cta': ['👇', '➡️', '🔔'],
+    }
+
+    RESPONSE_LENGTHS = {
+        # General types
+        'casual': {'min': 20, 'max': 50},
+        'business': {'min': 30, 'max': 80},
+        'thought_leadership': {'min': 40, 'max': 100},
+        # CEO content formats
+        'problem_solution': {'min': 80, 'max': 160},
+        'myth_busting': {'min': 60, 'max': 130},
+        'quick_tips': {'min': 50, 'max': 120},
+        'day_in_life': {'min': 80, 'max': 160},
+        'case_study': {'min': 80, 'max': 150},
+        'industry_commentary': {'min': 60, 'max': 140},
+        'quick_wins': {'min': 25, 'max': 80},
+    }
+
+    TONE_CONFIG = {
+        'formality': 0.7,
+        'verbosity': 0.6,
+        'emoji_frequency': 0.15,
+        'directness': 0.85,
+        'enthusiasm': 0.6,
+        'caps_emphasis': 0.02,
+    }
+
+    # 7 CEO content formats with structure and duration
+    CONTENT_FORMATS = {
+        'problem_solution': {
+            'structure': ['hook', 'problem_with_numbers', '3_step_solution', 'proof', 'cta'],
+            'duration': '60-70 seconds',
+            'description': 'Identify a costly problem, present a data-backed solution',
+        },
+        'myth_busting': {
+            'structure': ['myth_statement', 'why_people_believe_it', 'truth_with_data', 'actionable_takeaway', 'cta'],
+            'duration': '55-60 seconds',
+            'description': 'Challenge a common belief with contrarian evidence',
+        },
+        'quick_tips': {
+            'structure': ['hook_with_number', 'tip_1', 'tip_2', 'tip_3', 'cta'],
+            'duration': '45-60 seconds',
+            'description': 'Numbered actionable tips with real examples',
+        },
+        'day_in_life': {
+            'structure': ['hook_question', 'morning_routine', 'work_day', 'what_surprised_me', 'closing'],
+            'duration': '80-90 seconds',
+            'description': 'Behind-the-scenes look at CEO reality',
+        },
+        'case_study': {
+            'structure': ['client_intro', 'the_problem', 'what_we_did', 'the_results', 'lesson'],
+            'duration': '70-75 seconds',
+            'description': 'Real engagement with metrics and outcomes',
+        },
+        'industry_commentary': {
+            'structure': ['trending_topic', 'contrarian_take', 'what_matters_now', 'prediction', 'cta'],
+            'duration': '70-80 seconds',
+            'description': 'Hot take on industry trends with data backing',
+        },
+        'quick_wins': {
+            'structure': ['setup', 'problem', 'fix', 'result', 'time_invested'],
+            'duration': '30-45 seconds',
+            'description': 'Short tactical win with measurable impact',
+        },
+    }
+
+    HOOK_TEMPLATES = [
+        "I just realized something most tech leaders get completely wrong...",
+        "Everyone thinks they need {X} to scale. That's wrong.",
+        "3 things that helped us grow PRSMTECH from {A} to {B}:",
+        "Want to know what a tech CEO actually does?",
+        "Your {X} is costing you more than you realize...",
+        "Everyone's talking about {X}. Here's the actual truth...",
+        "One {change} fixed a ${amount} problem.",
+    ]
+
+    def get_system_prompt(self, context_type: str = "business") -> str:
+        length = self.RESPONSE_LENGTHS.get(context_type, self.RESPONSE_LENGTHS['business'])
+        examples = self.get_few_shot_examples(context_type, 3)
+        examples_text = "\n".join(f'- "{ex}"' for ex in examples)
+
+        # Base CEO voice rules
+        prompt = f"""You are Jordan Ward, CEO of PRSMTECH. You speak with authority backed by evidence.
+
+VOICE RULES:
+- Target length: {length['min']}-{length['max']} words
+- Always lead with a hook that stops the scroll
+- Back claims with data, numbers, or specific examples
+- Be contrarian when the data supports it — challenge conventional wisdom
+- Mentorship tone: teach from experience, not theory
+- Every post ends with a clear CTA (follow, comment, share)
+- Use "we" when referencing PRSMTECH work, "I" for personal lessons
+
+TONE:
+- Polished but not stiff — authoritative, not academic
+- Direct: say what you mean, no hedging
+- Evidence-first: "the data shows" over "I think"
+- Action-oriented: give people something to DO
+
+NEVER:
+- Use slang or AAVE contractions (no "gonna", "wanna", "cuz")
+- Be vague — always include specifics (numbers, timeframes, metrics)
+- Sound like a LinkedIn motivational poster
+- Use more than 1-2 emojis per post
+- Hedge with "maybe" or "it depends" without following up with a clear stance
+
+EXAMPLE MESSAGES:
+{examples_text}
+
+Write ONLY the response content. No quotes, no labels."""
+
+        # Add format structure if context_type is a content format
+        fmt = self.CONTENT_FORMATS.get(context_type)
+        if fmt:
+            structure_steps = " → ".join(fmt['structure'])
+            prompt += f"""
+
+CONTENT FORMAT: {context_type.replace('_', ' ').title()}
+Structure: {structure_steps}
+Duration: {fmt['duration']}
+Description: {fmt['description']}
+
+Follow this structure precisely. Each section should flow naturally into the next."""
+
+        return prompt
+
+    def get_brand_voice(self) -> str:
+        return (
+            'You are Jordan Ward, CEO of PRSMTECH. Evidence-based thought leader. '
+            'Speak with authority backed by data and real experience. Lead with hooks. '
+            'Be contrarian when evidence supports it. Mentorship-oriented: teach from '
+            'experience, not theory. Every post includes specifics (numbers, metrics, '
+            'timeframes). Polished but direct — no slang, no hedging. End with a CTA. '
+            'Use "we" for PRSMTECH, "I" for personal lessons.'
+        )
+
+    def get_vocab_map(self) -> Dict[str, str]:
+        # CEO voice does NOT use SHARED_VOCAB slang contractions
+        return dict(self.VOCAB_MAP)
+
+    def get_emoji_map(self) -> Dict[str, List[str]]:
+        return self.EMOJI_CONTEXT_MAP
+
+    def get_response_length_guide(self, context_type: str) -> Dict[str, int]:
+        return self.RESPONSE_LENGTHS.get(context_type, self.RESPONSE_LENGTHS['business'])
+
+    def get_tone_config(self) -> Dict[str, float]:
+        return self.TONE_CONFIG
+
+    def get_content_format_prompt(self, format_name: str, topic: str) -> Optional[str]:
+        """Return a structured prompt for a CEO content format.
+
+        Args:
+            format_name: One of the 7 CEO content format keys
+            topic: The topic to write about
+
+        Returns:
+            Structured prompt string, or None if format_name not recognized
+        """
+        fmt = self.CONTENT_FORMATS.get(format_name)
+        if not fmt:
+            return None
+
+        system = self.get_system_prompt(format_name)
+        structure_steps = "\n".join(f"  {i+1}. {s.replace('_', ' ').title()}" for i, s in enumerate(fmt['structure']))
+        length = self.RESPONSE_LENGTHS.get(format_name, self.RESPONSE_LENGTHS['business'])
+
+        return (
+            f"{system}\n\n"
+            f"Write a {format_name.replace('_', ' ')} post about: {topic}\n\n"
+            f"Follow this structure:\n{structure_steps}\n\n"
+            f"Target: {length['min']}-{length['max']} words. "
+            f"Duration guide: {fmt['duration']}.\n"
+            f"Return ONLY the post text. No explanations."
+        )
+
+    def _get_examples(self) -> Dict[str, List[str]]:
+        return {
+            'casual': [
+                "We cut a client from 27 tools to 7 and improved velocity by 30%. Tools are the problem, not the solution.",
+                "The hardest part of being a CEO isn't technical. It's people. Saying no. Making tough calls. The tech part? That's easy.",
+                "Right infrastructure compounds over time. It's not visible, but the impact is massive 📈",
+            ],
+            'business': [
+                "We helped a company with 100K users scale on a $50K/year stack instead of a $500K enterprise tool. Same performance. 90% less cost. Choose based on your actual needs, not what your competitors use.",
+                "Hiring is the most important thing. Everything else follows. You can't outwork a bad system. Fix systems, not fire people.",
+                "Weekly retrospectives. 30 minutes every Friday. Best ROI meeting we have. Continuous improvement isn't optional — it's survival.",
+            ],
+            'thought_leadership': [
+                "AI won't replace developers. But AI-using developers will replace developers who don't use AI. It's a tool adoption problem, not a replacement problem.",
+                "Most companies can scale to 10X with the right architecture, not expensive tools. Smart strategy beats big budgets every time.",
+                "The best companies use 5-7 tools exceptionally well. The worst use 40 tools poorly. Master before you add.",
+            ],
+            'problem_solution': [
+                "Your tech debt is costing you more than you realize. We audited a SaaS company spending 40% of engineering time on workarounds. Step 1: Map the debt. Step 2: Prioritize by business impact. Step 3: Dedicate 1 sprint per quarter to reduction. Result: $500K saved in Year 1, same team, better velocity. Follow for more tech strategy nobody talks about.",
+            ],
+            'myth_busting': [
+                "Everyone thinks they need enterprise software to scale. That's wrong. Enterprise means expensive, not advanced. We helped a 100K-user company scale on a $50K/year stack. 90% less cost, same performance. Choose based on actual needs, not marketing. Follow for unpopular tech opinions.",
+            ],
+            'quick_tips': [
+                "3 things that helped us grow PRSMTECH: 1. Hire for attitude, train for skill — most companies do it backwards. 2. Document everything — costs time upfront, saves 100x later. 3. Weekly retrospectives — 30 minutes every Friday, continuous improvement. Follow for more scaling tips.",
+            ],
+            'day_in_life': [
+                "Want to know what a tech CEO actually does? 5:30 AM: Coffee, industry news for 20 minutes. Most leaders skip this — it's the edge. 9 AM standup, 11 AM client call, 1 PM hiring decision, 3 PM strategy. The hardest part isn't technical. It's people. Follow for CEO reality.",
+            ],
+            'case_study': [
+                "SaaS company. 50 people. Bleeding money on infrastructure. They paid for 15 tools. Deployment took 3 days. We audited, built integrations, automated deploys. 8-week project. Result: deployment in 30 minutes, cloud costs down 40%, $500K saved Year 1. Follow for more case studies.",
+            ],
+            'industry_commentary': [
+                "Everyone's talking about AI replacing developers. Here's the truth: AI-using developers will replace developers who don't use AI. It's a tool adoption problem. In 12 months, the best engineers will be 3x more productive. The gap will be enormous. Follow for contrarian tech takes.",
+            ],
+            'quick_wins': [
+                "One line of code fixed a $50K problem. N+1 query — fetching data inefficiently. One join, one line change. 95% faster. 30 minutes of work. Follow for more quick wins 🎯",
+            ],
+        }
+
+
 class SwizzPersona:
     """
-    Factory/router class for dual-mode SWIZZ persona.
+    Factory/router class for multi-mode voice persona.
 
-    Switches between @swizzimatic (professional) and @BigSwizzi (personal)
-    voice modes. Delegates all calls to the active persona instance.
+    Switches between @swizzimatic (professional), @BigSwizzi (personal),
+    and Jordan Ward (ceo) voice modes. Delegates all calls to the active
+    persona instance.
     """
 
     PLATFORM_CONFIGS = {
@@ -406,23 +660,34 @@ class SwizzPersona:
         Initialize with a persona mode.
 
         Args:
-            mode: "professional" (@swizzimatic) or "personal" (@BigSwizzi)
+            mode: "professional" (@swizzimatic), "personal" (@BigSwizzi), or "ceo" (Jordan Ward)
         """
         self._professional = SwizzimaticPersona()
         self._personal = BigSwizziPersona()
+        self._ceo = JordanWardPersona()
         self._mode = mode
-        self._active = self._professional if mode == "professional" else self._personal
+        self._active = self._resolve_persona(mode)
 
     @property
     def mode(self) -> str:
         return self._mode
 
+    def _resolve_persona(self, mode: str) -> BasePersona:
+        """Resolve mode string to persona instance."""
+        if mode == "professional":
+            return self._professional
+        elif mode == "personal":
+            return self._personal
+        elif mode == "ceo":
+            return self._ceo
+        return self._professional
+
     def set_mode(self, mode: str):
-        """Switch between professional and personal voice."""
-        if mode not in ("professional", "personal"):
-            raise ValueError(f"Invalid mode: {mode}. Use 'professional' or 'personal'.")
+        """Switch between professional, personal, and ceo voice."""
+        if mode not in ("professional", "personal", "ceo"):
+            raise ValueError(f"Invalid mode: {mode}. Use 'professional', 'personal', or 'ceo'.")
         self._mode = mode
-        self._active = self._professional if mode == "professional" else self._personal
+        self._active = self._resolve_persona(mode)
 
     def get_active_persona(self) -> BasePersona:
         """Return the currently active persona instance."""
@@ -457,9 +722,26 @@ class SwizzPersona:
         """
         Classify what type of response this should be.
 
-        Returns: 'resource_share', 'casual', 'business', 'reaction', 'hype', 'acknowledgment'
+        Returns: 'resource_share', 'casual', 'business', 'reaction', 'hype', 'acknowledgment',
+                 or CEO format types when in ceo mode.
         """
         content_lower = content.lower()
+
+        # CEO content format detection (when in ceo mode)
+        if self._mode == "ceo":
+            ceo_keywords = {
+                'problem_solution': ['problem', 'solution', 'fix', 'cost', 'save', 'optimize'],
+                'myth_busting': ['myth', 'wrong', 'truth', 'actually', 'contrary', 'misconception'],
+                'quick_tips': ['tips', 'ways', 'things', 'steps', 'lessons', 'rules'],
+                'day_in_life': ['day in', 'routine', 'behind the scenes', 'what i do', 'ceo life'],
+                'case_study': ['case study', 'client', 'results', 'we helped', 'engagement'],
+                'industry_commentary': ['trend', 'industry', 'prediction', 'opinion', 'take on'],
+                'quick_wins': ['quick win', 'one change', 'simple', 'easy fix', 'hack'],
+            }
+            for fmt, keywords in ceo_keywords.items():
+                if any(kw in content_lower for kw in keywords):
+                    return fmt
+            return 'thought_leadership'
 
         # Resource/link sharing
         if any(w in content_lower for w in ['check', 'link', 'recommend', 'tool', 'service']):
@@ -506,3 +788,12 @@ if __name__ == "__main__":
     print(f"Vocab transform: 'This is for them' -> '{persona.apply_vocab_transform('This is for them')}'")
     print(f"Emojis (approval_hype): {persona.select_emojis('approval_hype', 2)}")
     print(f"Response type ('This is fire'): {persona.determine_response_type('This is fire')}")
+    print()
+
+    persona.set_mode("ceo")
+
+    print("=== JordanWardPersona (CEO) ===")
+    print(f"Brand voice: {persona.get_brand_voice()[:80]}...")
+    print(f"Vocab transform: 'I think we should fix the stuff' -> '{persona.apply_vocab_transform('I think we should fix the stuff')}'")
+    print(f"Emojis (business): {persona.select_emojis('business', 2)}")
+    print(f"Response type ('The myth about AI'): {persona.determine_response_type('The myth about AI')}")
