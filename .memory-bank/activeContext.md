@@ -1,6 +1,6 @@
 # Active Context
 
-**Last Updated**: 2026-02-08 (Session 15)
+**Last Updated**: 2026-02-12 (Session 16)
 **Project**: social-slash
 
 ## Current Focus
@@ -11,49 +11,50 @@
 - [x] **OAUTH 2.0 FLOW** (Session 14) - RFC 8414/9728/7591 for Claude.ai connectors
 - [x] **OAUTH LOCKED DOWN** (Session 15) - Pre-shared OAUTH_CLIENT_ID + OAUTH_CLIENT_SECRET
 - [x] **RAILWAY DEPLOY WORKING** (Session 15) - All env vars linked, all 3 clients working
+- [x] **JORDAN WARD CEO PERSONA** (Session 16) - Third voice mode with 7 content formats
+- [x] **RUFF LINT CLEAN** (Session 16) - Fixed 6 pre-existing lint issues
+- [x] **RAILWAY DEPLOYED** (Session 16) - CEO persona live on Railway
 - [ ] Update google.generativeai to google.genai (deprecated warning)
 - [ ] Fix Docker networking (Late API calls timeout from container)
-- [ ] Unit tests for persona system and new agents
 
-## Session 15 Accomplishments - OAuth Lockdown + Railway Fix
+## Session 16 Accomplishments - Jordan Ward CEO Persona + Deploy
 
-### OAuth Lockdown (Pre-Shared Credentials)
-- Blocked `/register` endpoint → returns 403
-- `/authorize` validates `client_id` against `OAUTH_CLIENT_ID` env var
-- `/token` validates both `client_id` + `client_secret`, cross-checks against auth code
-- Removed `registration_endpoint` from OAuth metadata
-- Changed `token_endpoint_auth_methods_supported` to `["client_secret_post"]` only
+### Jordan Ward CEO Persona (8 files, 759 lines added)
+Third voice mode alongside professional (@swizzimatic) and personal (@BigSwizzi):
+- **JordanWardPersona(BasePersona)** class (~200 lines) with evidence-based, data-driven CEO voice
+- **7 CEO content formats**: problem_solution, myth_busting, quick_tips, day_in_life, case_study, industry_commentary, quick_wins
+- **CEO vocabulary transforms**: "I think" -> "the data shows", "stuff" -> "systems", etc. (no SHARED_VOCAB slang)
+- **SwizzPersona router** updated: accepts "ceo" mode, keyword detection for format routing
+- **Writing agent bug fix**: `length_guide[0]`/`[1]` -> `length_guide['min']`/`['max']`
+- **CEO format prompt integration**: `get_content_format_prompt()` provides structured prompts
+- **50 new tests** across 11 test classes (all passing)
+- **Ruff lint**: Fixed 6 pre-existing issues (F841, F541, E402) - all clean
 
-### /health Endpoint Enhanced
-- Added env var diagnostics: shows `set` or `MISSING` for each key
-- Keys checked: `LATE_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `MCP_AUTH_TOKEN`, `OAUTH_CLIENT_ID`
-- Critical for diagnosing Railway deployment issues
+### Files Modified
+| File | Change |
+|------|--------|
+| `lib/persona/swizz_persona.py` | Added JordanWardPersona class, updated SwizzPersona router |
+| `lib/persona/__init__.py` | Exported JordanWardPersona |
+| `lib/agents/writing_agent.py` | Fixed length_guide bug, added CEO format support, updated CLI |
+| `lib/engagement/response_generator.py` | Added jordan_ward brand voice |
+| `lib/mcp/server.py` | Updated tool docs + server instructions + lint fixes |
+| `lib/mcp/_client_helpers.py` | Updated docstring |
+| `.claude/commands/agents/write.ps1` | Added ceo persona + 7 CEO post types |
+| `tests/test_jordan_ward_persona.py` | NEW - 50 tests across 11 test classes |
 
-### Railway Shared Variable Fix
-- **Root cause**: Env vars were Railway "Shared Variables" but NOT linked to the `web` service
-- Only `MCP_AUTH_TOKEN` and `OAUTH_CLIENT_ID` (service-level) were reaching the process
-- `/health` showed `LATE_API_KEY: MISSING`, `GOOGLE_API_KEY: MISSING`
-- **Fix**: User linked all 6 shared variables to web service in Railway dashboard
-- After redeploy: all keys showing as "set"
-
-### All 3 Access Methods Working
-| Client | Mode | Status |
-|--------|------|--------|
-| Windows Claude Desktop | Local Python (stdio) | Working |
-| Mac Claude Desktop | Remote URL (Railway) | Working |
-| Claude.ai Web | Remote URL (OAuth) | Working |
+### Railway Deploy
+- Committed `da1beee` -> pushed to master -> Railway auto-deployed
+- Health check: healthy, 19 tools, all env vars set
+- Railway CLI linked: `railway link -p "Social-Slash" -s "web"`
+- URL: `https://web-production-c9cb9.up.railway.app/mcp`
 
 ### Git Commits This Session
-1. `857a4f2` - fix(mcp): lock down OAuth to pre-shared credentials only
-2. `f15480c` - fix(mcp): add env var diagnostics to /health endpoint
+1. `da1beee` - feat(persona): add Jordan Ward CEO voice as third persona mode
 
-### Railway Environment (6 env vars)
-- `LATE_API_KEY` - Late SDK access
-- `GOOGLE_API_KEY` - Gemini AI provider
-- `MCP_AUTH_TOKEN` - Bearer token auth for `/mcp`
-- `OAUTH_CLIENT_ID` - Pre-shared OAuth client ID
-- `OAUTH_CLIENT_SECRET` - Pre-shared OAuth client secret
-- `ANTHROPIC_API_KEY` - (optional, Anthropic AI provider)
+### Test Results
+- **157 tests passed** (50 new CEO + 107 existing)
+- **1 skipped** (anthropic provider)
+- **16 pre-existing failures** (5 late SDK import + 11 Gemini quota)
 
 ---
 

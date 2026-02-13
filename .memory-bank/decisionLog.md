@@ -496,4 +496,32 @@
 
 ---
 
+## 2026-02-12 - Jordan Ward CEO Persona as Third Voice Mode
+
+**Context**: PRSMTECH CEO content needs a distinct voice from the SWIZZ personas. Jordan Ward's CEO voice is evidence-based, contrarian, mentorship-oriented, and data-driven — fundamentally different from @swizzimatic (professional tech) and @BigSwizzi (personal/casual).
+
+**Decision**: Add `JordanWardPersona(BasePersona)` as a third voice mode alongside the existing two SWIZZ modes. CEO voice has its own vocabulary map (polished, no slang), 7 structured content formats, and separate few-shot examples.
+
+**Rationale**:
+- CEO content strategy document (650 lines) defines distinct hooks, scripts, formats
+- Evidence-based voice ("the data shows" vs "I think") is fundamentally different from SWIZZ casual tone
+- 7 content formats (problem_solution, myth_busting, quick_tips, etc.) provide structured prompts
+- Reuses existing BasePersona/SwizzPersona infrastructure — just a new mode, not a new system
+- `get_content_format_prompt()` CEO-specific method enables structured content generation
+
+**Alternatives Considered**:
+- Separate persona system — unnecessary, SwizzPersona router handles multiple modes cleanly
+- Prompt-only approach (no new class) — loses structure, vocabulary consistency, and format templates
+- Fine-tuned model — too expensive for three distinct voices
+
+**Impact**:
+- 8 files modified/created, ~760 lines added
+- SwizzPersona router now accepts "ceo" mode alongside "professional" and "personal"
+- Writing agent CLI accepts `--persona ceo` and 7 CEO post types
+- MCP tools accept `persona_mode="ceo"` and CEO post types
+- 50 new unit tests covering all CEO persona functionality
+- Module docstring updated from "Dual-mode" to "Multi-mode"
+
+---
+
 **Usage**: Add entry whenever making significant technical decisions

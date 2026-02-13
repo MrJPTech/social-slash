@@ -125,15 +125,15 @@ class ResponseGenerator:
         """Initialize the AI client based on provider."""
         if self.provider == 'gemini':
             try:
-                import google.generativeai as genai
+                from google import genai
                 api_key = self._api_key or os.getenv('GOOGLE_API_KEY')
                 if not api_key:
                     raise ValueError("GOOGLE_API_KEY not found")
-                genai.configure(api_key=api_key)
-                self._client = genai.GenerativeModel('gemini-2.0-flash')
+                self._genai_client = genai.Client(api_key=api_key)
+                self._client = self._genai_client
                 print("[INFO] Response generator initialized with Gemini")
             except ImportError:
-                raise ImportError("google-generativeai package required. Run: pip install google-generativeai")
+                raise ImportError("google-genai package required. Run: pip install google-genai")
 
         elif self.provider == 'anthropic':
             try:
@@ -355,7 +355,9 @@ Respond in JSON format only:
             Generated text
         """
         if self.provider == 'gemini':
-            response = self._client.generate_content(prompt)
+            response = self._client.models.generate_content(
+                model='gemini-2.0-flash', contents=prompt
+            )
             text = response.text.strip()
         elif self.provider == 'anthropic':
             response = self._client.messages.create(

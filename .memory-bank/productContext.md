@@ -1,59 +1,76 @@
 # Product Context
 
 **Project**: social-slash
-**Last Updated**: 2026-02-01
-**Status**: In Development
+**Last Updated**: 2026-02-12
+**Status**: In Development (Sprint 3)
 
 ## Overview
-Social Slash is a standalone Claude Code slash command package for social media automation. It enables posting to 13 platforms via Late SDK with optional AI content enhancement using Gemini or Anthropic. Includes engagement automation (comment/DM agents, bot management) and persona-powered content generation in the SWIZZ voice.
+Social Slash is a social media automation platform with three access methods: Claude Code slash commands, MCP server (Claude Desktop + Claude.ai), and Python CLI. Posts to 13 platforms via Late SDK with AI content enhancement. Features engagement automation (comment/DM agents, bot management), multi-mode persona-powered content generation (3 voice modes), and 19 MCP tools deployed to Railway with OAuth 2.0.
 
 ## Tech Stack
 
-### Frontend
-- PowerShell slash commands (`.claude/commands/`)
-- Claude Code CLI integration
+### Interfaces
+- PowerShell slash commands (`.claude/commands/`) — 12 commands
+- MCP server (FastMCP) — 19 tools, Claude Desktop + Claude.ai
+- Python CLI — direct module execution
 
 ### Backend
 - Python 3.10+
 - Late SDK for multi-platform distribution
+- FastMCP (mcp v1.26.0) for MCP server
+- Starlette for HTTP/OAuth endpoints
 - Pydantic for data validation
-- httpx/requests for HTTP
+- SQLite for engagement storage
 
 ### AI Integration
 - Google Gemini 2.0 Flash (primary)
 - Anthropic Claude (alternative)
 
 ### Infrastructure
-- Standalone package (pip installable)
-- No database required
-- Stateless operation
+- Railway (MCP server deployment, auto-deploy from master)
+- Docker (python:3.12-slim image)
+- OAuth 2.0 (pre-shared credentials for Claude.ai)
+- Streamable-HTTP transport (`/mcp` endpoint)
 
 ## Architecture
 
+### Slash Commands (Claude Code)
 ```
-Claude Code → PowerShell Command → Python Backend → Late SDK → Platform API
-                                        ↓
-                               Optional AI Enhancement
+/social:post (PowerShell) → poster.py → Late SDK → Platform API
+                                ↓
+                       Optional AI Enhancement
 ```
 
-**Key Flow:**
-1. User invokes `/social:post` with content and platform(s)
-2. PowerShell wrapper builds CLI args and calls Python
-3. `poster.py` orchestrates enhancement and distribution
-4. `late_client.py` handles Late SDK interaction
-5. Results returned to user
+### MCP Server (Claude Desktop / Claude.ai)
+```
+Claude Desktop/Claude.ai → MCP JSON-RPC → server.py (19 tools)
+                                              ↓
+                                    suppress_stdout()
+                                              ↓
+                              Late SDK / Agents / Poster → Platform API
+```
+
+### Three Access Methods
+1. **Windows Claude Desktop** — local Python stdio
+2. **Mac Claude Desktop** — remote Railway URL
+3. **Claude.ai Web** — remote Railway URL + OAuth 2.0
 
 ## Key Features
 1. **13 Platform Support**: LinkedIn, TikTok, Instagram, YouTube, Twitter, Facebook, Pinterest, Threads, Bluesky, Reddit, Snapchat, Telegram, Google Business
-2. **AI Enhancement**: Optional content optimization via Gemini or Claude
-3. **Multi-Platform**: Post to multiple platforms simultaneously
-4. **Scheduling**: Schedule posts for future publishing
-5. **Dry Run**: Test posts without publishing
+2. **AI Enhancement**: Content optimization via Gemini or Claude
+3. **3 Voice Modes**: Professional (@swizzimatic), Personal (@BigSwizzi), CEO (Jordan Ward)
+4. **7 CEO Content Formats**: problem_solution, myth_busting, quick_tips, day_in_life, case_study, industry_commentary, quick_wins
+5. **19 MCP Tools**: 5 utility + 3 writing + 4 research + 5 media + 2 posting
+6. **Engagement Automation**: Comment/DM agents with human-in-the-loop review
+7. **Multi-Platform Posting**: Post to multiple platforms simultaneously
+8. **Scheduling**: Schedule posts for future publishing
+9. **OAuth 2.0**: Pre-shared credentials for Claude.ai custom connectors
 
 ## External Integrations
-- **Late API** (getlate.dev) - Core distribution backend
-- **Google Gemini API** - AI content enhancement
-- **Anthropic API** - Alternative AI enhancement
+- **Late API** (getlate.dev) — Core distribution backend (9 connected accounts)
+- **Google Gemini API** — AI content enhancement
+- **Anthropic API** — Alternative AI enhancement
+- **Railway** — MCP server deployment (`https://web-production-c9cb9.up.railway.app/mcp`)
 
 ## Environment Variables
 ```env
@@ -63,7 +80,17 @@ LATE_API_KEY=your_late_api_key
 # Optional (for AI enhancement)
 GOOGLE_API_KEY=your_google_api_key
 ANTHROPIC_API_KEY=your_anthropic_key
+
+# Railway MCP server
+MCP_AUTH_TOKEN=bearer_token_for_remote_access
+OAUTH_CLIENT_ID=pre_shared_oauth_client_id
+OAUTH_CLIENT_SECRET=pre_shared_oauth_client_secret
 ```
+
+## Test Suite
+- **157 tests passing**, 1 skipped
+- 16 pre-existing failures (5 late SDK import, 11 Gemini quota)
+- 50 CEO persona tests across 11 test classes
 
 ---
 **Usage**: Update when architecture or major features change

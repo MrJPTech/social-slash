@@ -5,7 +5,7 @@ late-sdk>=1.2.17
 
 # AI Enhancement (optional)
 anthropic>=0.40.0
-google-generativeai>=0.8.0
+google-genai>=1.0.0
 
 # HTTP Client
 requests>=2.31.0

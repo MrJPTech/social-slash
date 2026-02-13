@@ -4,7 +4,41 @@
 **Current Sprint**: Sprint 3 - SWIZZ Voice Persona & Content Agents
 **Sprint Goal**: Build persona-powered content generation agents
 
-## Latest Session (2026-02-08 - Session 15)
+## Latest Session (2026-02-12 - Session 16)
+
+### Completed - Jordan Ward CEO Persona + Lint + Railway Deploy
+
+- [x] **Jordan Ward CEO Persona** (8 files modified/created)
+  - `JordanWardPersona(BasePersona)` class (~200 lines) with evidence-based, data-driven CEO voice
+  - 7 CEO content formats: problem_solution, myth_busting, quick_tips, day_in_life, case_study, industry_commentary, quick_wins
+  - CEO vocabulary transforms: "I think" → "the data shows", "stuff" → "systems", etc. (no SHARED_VOCAB slang)
+  - `SwizzPersona` router updated: accepts "ceo" mode, keyword detection for format routing
+  - Writing agent bug fix: `length_guide[0]`/`[1]` → `length_guide['min']`/`['max']`
+  - CEO format prompt integration via `get_content_format_prompt()`
+  - MCP server tool docs updated for CEO persona + post types
+  - CLI updated with `--persona ceo` and 7 CEO post types
+
+- [x] **Ruff Lint Clean** (6 pre-existing issues fixed)
+  - F841: unused `result` variable in `writing_agent.py`
+  - F841: unused `db` variable in `server.py`
+  - E402: Module imports in `server.py` (noqa comments)
+  - F541: f-strings without placeholders in `server.py` (x2)
+
+- [x] **Railway Deployed**
+  - Commit `da1beee` → pushed to master → Railway auto-deploy
+  - Health check: healthy, 19 tools, all env vars set
+  - Railway CLI linked: `railway link -p "Social-Slash" -s "web"`
+
+- [x] **50 New Tests** (all passing)
+  - 11 test classes covering tone, vocab, formats, prompts, brand voice, examples, emojis, routing
+  - Total: 157 passed, 1 skipped, 16 pre-existing failures (5 late SDK + 11 Gemini quota)
+
+### Git Commits This Session
+1. `da1beee` - feat(persona): add Jordan Ward CEO voice as third persona mode
+
+---
+
+## Previous Session (2026-02-08 - Session 15)
 
 ### Completed - OAuth Lockdown + Railway Fix
 
@@ -360,11 +394,17 @@
 - [x] 3 utility Python backends (accounts, analytics, status)
 - [x] 9 documentation .md files (3 agent + 3 utility + 3 backfill)
 - [x] CLAUDE.md updated with full command inventory
+- [x] MCP server (19 tools, FastMCP, Docker, Railway deploy)
+- [x] Streamable-HTTP transport for Claude mobile
+- [x] OAuth 2.0 with pre-shared credentials for Claude.ai
+- [x] All 3 access methods working (Desktop stdio, Desktop remote, Claude.ai OAuth)
+- [x] Jordan Ward CEO persona (third voice mode, 7 content formats)
+- [x] 50 CEO persona unit tests (all passing)
+- [x] Ruff lint clean (6 pre-existing issues fixed)
 
 **Remaining**:
 - [ ] Update google.generativeai to google.genai (deprecated)
 - [ ] Fix Docker networking for Late API calls
-- [ ] Unit tests for persona system and new agents
 
 ### Sprint 2 (2026-02-03 to 2026-02-06)
 **Goal**: Complete engagement automation agents system

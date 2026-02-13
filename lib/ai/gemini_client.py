@@ -13,7 +13,7 @@ import json
 from typing import Dict, List, Optional, Any
 
 try:
-    import google.generativeai as genai
+    from google import genai
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
@@ -37,8 +37,8 @@ class GeminiClient:
         """
         if not GEMINI_AVAILABLE:
             raise ImportError(
-                "google-generativeai package not installed. "
-                "Run: pip install google-generativeai"
+                "google-genai package not installed. "
+                "Run: pip install google-genai"
             )
 
         self.api_key = api_key or os.getenv('GOOGLE_API_KEY')
@@ -49,8 +49,7 @@ class GeminiClient:
                 "variable or pass api_key parameter."
             )
 
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel(self.MODEL)
+        self.client = genai.Client(api_key=self.api_key)
 
     def enhance_content(
         self,
@@ -97,7 +96,7 @@ Respond in JSON format:
 """
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(model=self.MODEL, contents=prompt)
             result_text = response.text
 
             # Parse JSON from response
@@ -111,7 +110,7 @@ Respond in JSON format:
             result['provider'] = 'gemini'
             result['model'] = self.MODEL
 
-            print(f"[SUCCESS] Content enhanced with Gemini")
+            print("[SUCCESS] Content enhanced with Gemini")
             return result
 
         except json.JSONDecodeError:
@@ -156,7 +155,7 @@ Example response: ["developer", "coding", "tech"]
 """
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(model=self.MODEL, contents=prompt)
             result_text = response.text
 
             # Clean up response
@@ -211,7 +210,7 @@ Respond in JSON format:
 """
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(model=self.MODEL, contents=prompt)
             result_text = response.text
 
             # Parse JSON

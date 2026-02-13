@@ -1,7 +1,7 @@
 # System Patterns & Conventions
 
 **Project**: social-slash
-**Last Updated**: 2026-02-03
+**Last Updated**: 2026-02-12
 
 ## Code Organization
 
@@ -10,20 +10,32 @@
 social-slash/
 ├── .claude/commands/
 │   ├── posting/                # Posting slash commands (post, multi-post, schedule)
-│   └── engagement/             # Engagement slash commands (comment-agent, dm-agent, bot-manage)
+│   ├── engagement/             # Engagement slash commands (comment-agent, dm-agent, bot-manage)
+│   ├── agents/                 # Agent slash commands (write, research, media)
+│   └── utility/                # Utility slash commands (accounts, analytics, status)
 ├── lib/                        # Python package source
 │   ├── posting/                # Core posting logic
 │   ├── api_clients/            # External API wrappers (late_client)
 │   ├── ai/                     # AI enhancement clients (gemini, anthropic)
 │   ├── tools/                  # Tools database
-│   ├── agents/                 # Engagement automation agents
+│   ├── agents/                 # Content + engagement automation agents
 │   │   ├── base_agent.py       # Abstract base with state machine
+│   │   ├── writing_agent.py    # SWIZZ/CEO voice post generation
+│   │   ├── research_agent.py   # Content research and hashtags
+│   │   ├── media_agent.py      # Media captioning agent
 │   │   ├── comment_agent.py    # Comment monitoring/reply agent
 │   │   ├── dm_agent.py         # DM monitoring/reply agent
 │   │   └── bot_manager.py      # Bot account management
+│   ├── persona/                # Multi-mode voice persona system
+│   │   ├── swizz_persona.py    # BasePersona, Swizzimatic, BigSwizzi, JordanWard, SwizzPersona router
+│   │   └── instagram_parser.py # Instagram export data extractor
 │   ├── engagement/             # Engagement client and response generator
 │   │   ├── late_engagement_client.py  # Unified inbox client
 │   │   └── response_generator.py      # AI response generation
+│   ├── mcp/                    # MCP server for Claude Desktop/Claude.ai
+│   │   ├── server.py           # FastMCP server with 19 tools + OAuth
+│   │   ├── _client_helpers.py  # Late client factory, stdout suppressor
+│   │   └── __main__.py         # Entry point: python -m lib.mcp
 │   ├── storage/                # Database and models
 │   │   ├── database.py         # SQLite wrapper
 │   │   └── models.py           # Data models
@@ -33,7 +45,7 @@ social-slash/
 │   ├── platform_templates.json # Platform-specific settings
 │   ├── engagement_config.json  # Agent configuration
 │   └── response_templates.json # Response templates
-├── tests/                      # Unit tests
+├── tests/                      # Unit tests (157 passing)
 └── .memory-bank/               # This directory
 ```
 
@@ -366,9 +378,13 @@ class SwizzPersona:
 - Voice is a STYLE LAYER — captures how to speak, not what to talk about
 - Content topics come from the caller/user, persona shapes the delivery
 - Dual approach: system prompts guide AI + vocab post-processing ensures consistency
-- Few-shot examples from Instagram data for voice consistency
+- Few-shot examples for voice consistency (Instagram data for SWIZZ, content strategy doc for CEO)
 - Platform configs enforce character limits (tiktok: 150, twitter: 280, instagram: 2200)
-- Two modes: professional (SwizzimaticPersona) and personal (BigSwizziPersona)
+- Three modes: professional (SwizzimaticPersona), personal (BigSwizziPersona), ceo (JordanWardPersona)
+- CEO mode has 7 structured content formats with `get_content_format_prompt()` for structured prompts
+- CEO vocab transforms are polished/formal (no SHARED_VOCAB slang contractions)
+- `SwizzPersona` router delegates to the active persona via `_resolve_persona()` helper
+- `determine_response_type()` routes CEO keywords (myth, tips, case study, etc.) to content formats
 
 ## Content Agent Pattern
 
@@ -392,8 +408,9 @@ class WritingAgent(BaseAgent):
 
 **Key patterns:**
 - All content agents extend BaseAgent with SwizzPersona integration
-- Persona mode switchable via `--persona professional|personal` CLI flag
+- Persona mode switchable via `--persona professional|personal|ceo` CLI flag
 - AI generation → vocab post-processing → platform char limit enforcement
+- CEO format integration: checks `get_content_format_prompt()` before using generic prompt
 - CLI entry points via argparse with action/topic/platform/persona args
 
 ---
