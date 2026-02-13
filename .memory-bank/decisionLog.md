@@ -4,6 +4,53 @@
 
 ---
 
+## 2026-02-12 - Separate ImagenClient from GeminiClient
+
+**Context**: Adding image generation capability. The `google-genai` SDK supports both text (`generate_content`) and image (`generate_images`) generation, so could extend GeminiClient or create a new class.
+
+**Decision**: Create separate `ImagenClient` class in `lib/ai/imagen_client.py`.
+
+**Rationale**:
+- Different API surface: `generate_images()` vs `generate_content()`, different return types
+- Different config types: `GenerateImagesConfig` vs text-based prompts
+- Different concerns: aspect ratios, platform presets, temp file management, Late SDK upload
+- Follows Single Responsibility Principle
+
+**Alternatives Considered**:
+- Extend GeminiClient with image methods — violates SRP, muddies text vs image concerns
+- Generic AI client wrapper — over-engineering for two distinct use cases
+
+**Impact**:
+- Clean separation of text and image generation
+- ImagenClient can evolve independently (new models, features)
+- Both use same `google-genai` SDK and `GOOGLE_API_KEY`
+
+---
+
+## 2026-02-12 - Two-Model Prompt Enhancement Pipeline
+
+**Context**: User prompts like "tech startup workspace" need enhancement for best Imagen 3 results.
+
+**Decision**: Use Gemini Flash (text) to refine prompts before passing to Imagen 3 (image).
+
+**Rationale**:
+- Imagen 3 generates better images with detailed, descriptive prompts
+- Gemini Flash is fast and cheap for text refinement
+- Persona context (professional/personal/ceo) can influence visual style through prompt wording
+- Fallback: if enhancement fails, raw prompt is still usable
+
+**Alternatives Considered**:
+- Direct user prompts to Imagen — lower quality results
+- Hardcoded style templates — inflexible, no persona awareness
+- Client-side prompt building — more complex, less AI-aware
+
+**Impact**:
+- Higher quality generated images from better prompts
+- Persona-aware visual styles (corporate blue, vibrant bold, executive dark tones)
+- Small additional latency (~1s for Gemini Flash call)
+
+---
+
 ## 2026-01-31 - Late SDK as Primary Backend
 
 **Context**: Need a reliable way to post to multiple social media platforms without managing individual API integrations.
@@ -521,6 +568,32 @@
 - MCP tools accept `persona_mode="ceo"` and CEO post types
 - 50 new unit tests covering all CEO persona functionality
 - Module docstring updated from "Dual-mode" to "Multi-mode"
+
+---
+
+## 2026-02-12 - Migrate from google-generativeai to google-genai SDK
+
+**Context**: The `google-generativeai` package (PyPI) is deprecated (EOL August 2025). Google replaced it with `google-genai` which uses a client-based API pattern instead of module-level configuration.
+
+**Decision**: Migrate all Gemini usage to `google-genai` SDK v1.63.0 with the new `genai.Client()` pattern.
+
+**Rationale**:
+- Old package is deprecated and will stop receiving updates
+- New SDK uses cleaner client-based pattern: `genai.Client(api_key=key)` instead of `genai.configure(api_key=key)` + `genai.GenerativeModel(model)`
+- New generation call: `client.models.generate_content(model=MODEL, contents=prompt)` is more explicit
+- `response.text` accessor unchanged — minimal migration effort
+- Already had the new SDK in requirements (`google-genai>=1.0.0`) but code was still using old patterns
+
+**Alternatives Considered**:
+- Keep old package — would eventually break as Google drops support
+- Use Anthropic as primary — loses cost advantage of Gemini Flash
+- Use REST API directly — more work, less maintainable
+
+**Impact**:
+- 4 files modified: `gemini_client.py`, `response_generator.py`, `requirements.txt`, `requirements-mcp.txt`
+- No breaking changes to external API (same tool signatures, same output format)
+- Railway Docker rebuild required (new pip dependency)
+- All 173 tests passing after migration
 
 ---
 

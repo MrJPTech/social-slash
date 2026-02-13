@@ -1,4 +1,7 @@
-"""Client helpers for MCP server - Late client factory, stdout suppression, config builders."""
+"""Client helpers for MCP server - Late client factory, stdout suppression, config builders.
+
+Used by server.py tool factories for WritingAgent, ResearchAgent, MediaAgent, and ImageAgent.
+"""
 
 import io
 import os

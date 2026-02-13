@@ -4,7 +4,92 @@
 **Current Sprint**: Sprint 3 - SWIZZ Voice Persona & Content Agents
 **Sprint Goal**: Build persona-powered content generation agents
 
-## Latest Session (2026-02-12 - Session 16)
+## Latest Session (2026-02-12 - Session 18)
+
+### Completed - AI Image Generation (Google Imagen 3)
+
+- [x] **ImagenClient** (`lib/ai/imagen_client.py`)
+  - Google Imagen 3 via `google-genai` SDK (`client.models.generate_images()`)
+  - Model: `imagen-3.0-generate-002`
+  - 22 platform presets mapping platform+type to aspect ratios
+  - Methods: `generate_image()`, `generate_for_platform()`, `generate_and_upload()`
+  - Temp file management with `_save_to_temp()`, Late SDK upload with `_upload_to_late()`
+
+- [x] **ImageAgent** (`lib/agents/image_agent.py`)
+  - Extends BaseAgent following MediaAgent pattern
+  - Two-model pipeline: Gemini Flash enhances prompt → Imagen 3 generates image
+  - `PERSONA_STYLE_MAP`: professional=corporate, personal=vibrant, ceo=authoritative
+  - 6 generation methods: graphic, thumbnail, carousel, story, text_overlay, ai_art
+  - CLI `main()` with argparse supporting all actions + `--dry-run`
+
+- [x] **5 MCP Tools** (server.py GROUP 6, total 19→24)
+  - `image_generate_graphic`, `image_generate_thumbnail`, `image_generate_carousel`
+  - `image_generate_story`, `image_generate_art`
+  - Factory: `_get_image_agent()` with `suppress_stdout()` + `build_agent_config()`
+
+- [x] **CLI Command** (`/social:imagine`)
+  - PowerShell wrapper: `.claude/commands/agents/imagine.ps1`
+  - Documentation: `.claude/commands/social/imagine.md`
+  - Actions: graphic, thumbnail, carousel, story, overlay, art, presets, status
+
+- [x] **Dependencies** - Added `Pillow>=10.0.0` to requirements.txt + requirements-mcp.txt
+
+- [x] **Exports** - ImagenClient in `lib/ai/__init__.py`, ImageAgent in `lib/agents/__init__.py`
+
+- [x] **38 New Tests** (18 ImagenClient + 20 ImageAgent, all passing)
+
+- [x] **239 Tests Passing** (up from 173), 1 skipped
+
+### Files Changed (11)
+| File | Action |
+|------|--------|
+| `lib/ai/imagen_client.py` | CREATE |
+| `lib/agents/image_agent.py` | CREATE |
+| `tests/test_imagen_client.py` | CREATE |
+| `tests/test_image_agent.py` | CREATE |
+| `.claude/commands/agents/imagine.ps1` | CREATE |
+| `.claude/commands/social/imagine.md` | CREATE |
+| `lib/mcp/server.py` | MODIFY (GROUP 6 + tool count) |
+| `lib/mcp/_client_helpers.py` | MODIFY (docstring) |
+| `lib/agents/__init__.py` | MODIFY (export) |
+| `requirements.txt` | MODIFY (Pillow) |
+| `requirements-mcp.txt` | MODIFY (Pillow) |
+
+### Git Commits This Session
+- Not yet committed (pending)
+
+---
+
+## Previous Session (2026-02-12 - Session 17)
+
+### Completed - Gemini SDK Migration + API Key Fix + Full Pipeline Verification
+
+- [x] **Gemini SDK Migrated** (4 files)
+  - `google-generativeai` (deprecated, EOL Aug 2025) -> `google-genai` v1.63.0
+  - New pattern: `genai.Client(api_key=key)` replaces `genai.configure()` + `genai.GenerativeModel()`
+  - New call: `client.models.generate_content(model=MODEL, contents=prompt)` replaces `model.generate_content(prompt)`
+  - `response.text` accessor unchanged between SDKs
+  - Files: `gemini_client.py`, `response_generator.py`, `requirements.txt`, `requirements-mcp.txt`
+
+- [x] **New API Key Working**
+  - Updated `.env.local` with new key `AIzaSyBV...WT1w`
+  - Updated Railway shared variable (dashboard, linked to web service)
+  - $1,000 Google Cloud credits available (Gen App Builder trial, expires Nov 2026)
+
+- [x] **Full Pipeline Verified** (4 test paths)
+  - Direct curl -> Gemini API responds instantly
+  - GeminiClient -> content enhancement with hashtags/suggestions
+  - ResponseGenerator -> Jordan Ward CEO voice comment replies
+  - MCP Tool (Railway) -> CEO myth_busting post generated end-to-end
+
+- [x] **173 Tests Passing** (all green after migration)
+
+### Git Commits This Session
+1. `c53ad9b` - refactor(ai): migrate from google-generativeai to google-genai SDK
+
+---
+
+## Previous Session (2026-02-12 - Session 16)
 
 ### Completed - Jordan Ward CEO Persona + Lint + Railway Deploy
 
@@ -403,7 +488,8 @@
 - [x] Ruff lint clean (6 pre-existing issues fixed)
 
 **Remaining**:
-- [ ] Update google.generativeai to google.genai (deprecated)
+- [x] Update google.generativeai to google.genai ✅ **Session 17**
+- [x] AI Image Generation (Imagen 3) ✅ **Session 18**
 - [ ] Fix Docker networking for Late API calls
 
 ### Sprint 2 (2026-02-03 to 2026-02-06)
@@ -448,7 +534,7 @@
 - [x] Platform-specific posting options
 
 **Deferred**:
-- [ ] Migrate deprecated Gemini package (google.generativeai → google.genai)
+- [x] Migrate deprecated Gemini package (google.generativeai → google.genai) ✅ **Session 17**
 
 ---
 **Usage**: Update at end of each session with progress made

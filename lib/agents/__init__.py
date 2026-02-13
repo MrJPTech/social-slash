@@ -18,6 +18,7 @@ from lib.agents.bot_manager import BotManager
 from lib.agents.writing_agent import WritingAgent
 from lib.agents.research_agent import ResearchAgent
 from lib.agents.media_agent import MediaAgent
+from lib.agents.image_agent import ImageAgent
 
 __all__ = [
     'BaseAgent',
@@ -28,4 +29,5 @@ __all__ = [
     'WritingAgent',
     'ResearchAgent',
     'MediaAgent',
+    'ImageAgent',
 ]

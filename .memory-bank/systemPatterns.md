@@ -1,7 +1,7 @@
 # System Patterns & Conventions
 
 **Project**: social-slash
-**Last Updated**: 2026-02-12
+**Last Updated**: 2026-02-12 (Session 18)
 
 ## Code Organization
 
@@ -16,13 +16,14 @@ social-slash/
 ├── lib/                        # Python package source
 │   ├── posting/                # Core posting logic
 │   ├── api_clients/            # External API wrappers (late_client)
-│   ├── ai/                     # AI enhancement clients (gemini, anthropic)
+│   ├── ai/                     # AI clients (gemini, anthropic, imagen)
 │   ├── tools/                  # Tools database
 │   ├── agents/                 # Content + engagement automation agents
 │   │   ├── base_agent.py       # Abstract base with state machine
 │   │   ├── writing_agent.py    # SWIZZ/CEO voice post generation
 │   │   ├── research_agent.py   # Content research and hashtags
 │   │   ├── media_agent.py      # Media captioning agent
+│   │   ├── image_agent.py      # AI image generation agent (Imagen 3)
 │   │   ├── comment_agent.py    # Comment monitoring/reply agent
 │   │   ├── dm_agent.py         # DM monitoring/reply agent
 │   │   └── bot_manager.py      # Bot account management
@@ -33,7 +34,7 @@ social-slash/
 │   │   ├── late_engagement_client.py  # Unified inbox client
 │   │   └── response_generator.py      # AI response generation
 │   ├── mcp/                    # MCP server for Claude Desktop/Claude.ai
-│   │   ├── server.py           # FastMCP server with 19 tools + OAuth
+│   │   ├── server.py           # FastMCP server with 24 tools + OAuth
 │   │   ├── _client_helpers.py  # Late client factory, stdout suppressor
 │   │   └── __main__.py         # Entry point: python -m lib.mcp
 │   ├── storage/                # Database and models
@@ -45,7 +46,7 @@ social-slash/
 │   ├── platform_templates.json # Platform-specific settings
 │   ├── engagement_config.json  # Agent configuration
 │   └── response_templates.json # Response templates
-├── tests/                      # Unit tests (157 passing)
+├── tests/                      # Unit tests (239 passing)
 └── .memory-bank/               # This directory
 ```
 
@@ -83,6 +84,60 @@ class ClientName:
 - Accept API key as parameter OR from environment
 - Raise ValueError early if key missing
 - Cache where beneficial (`_account_cache`)
+
+## Gemini SDK Pattern (google-genai v1.63.0)
+
+Migrated from deprecated `google-generativeai` to `google-genai`:
+
+```python
+# New pattern (google-genai)
+from google import genai
+client = genai.Client(api_key=api_key)
+response = client.models.generate_content(model='gemini-2.0-flash', contents=prompt)
+text = response.text
+
+# Old pattern (deprecated google-generativeai)
+# import google.generativeai as genai
+# genai.configure(api_key=api_key)
+# model = genai.GenerativeModel('gemini-2.0-flash')
+# response = model.generate_content(prompt)
+```
+
+**Key differences:**
+- Client-based init vs module-level `configure()`
+- Explicit `model=` and `contents=` params in generate call
+- `response.text` unchanged between SDKs
+
+## Imagen SDK Pattern (google-genai v1.63.0)
+
+Image generation via same `google-genai` SDK as text, different API:
+
+```python
+from google import genai
+from google.genai import types
+
+client = genai.Client(api_key=api_key)
+response = client.models.generate_images(
+    model="imagen-3.0-generate-002",
+    prompt=prompt,
+    config=types.GenerateImagesConfig(
+        number_of_images=1,
+        aspect_ratio="1:1",
+        safety_filter_level="BLOCK_LOW_AND_ABOVE",
+        person_generation="ALLOW_ADULT",
+    )
+)
+for img in response.generated_images:
+    image_bytes = img.image.image_bytes  # raw bytes
+    # or img.image.save('output.png')   # PIL save
+```
+
+**Key differences from text generation:**
+- `generate_images()` vs `generate_content()`
+- Returns `generated_images` list with `.image.image_bytes`
+- Requires `types.GenerateImagesConfig` for options
+- Aspect ratios: 1:1, 3:4, 4:3, 9:16, 16:9
+- Requires `Pillow` for image handling
 
 ## Console Output Pattern
 

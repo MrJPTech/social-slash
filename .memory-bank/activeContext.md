@@ -1,6 +1,6 @@
 # Active Context
 
-**Last Updated**: 2026-02-12 (Session 16)
+**Last Updated**: 2026-02-12 (Session 18)
 **Project**: social-slash
 
 ## Current Focus
@@ -14,8 +14,59 @@
 - [x] **JORDAN WARD CEO PERSONA** (Session 16) - Third voice mode with 7 content formats
 - [x] **RUFF LINT CLEAN** (Session 16) - Fixed 6 pre-existing lint issues
 - [x] **RAILWAY DEPLOYED** (Session 16) - CEO persona live on Railway
-- [ ] Update google.generativeai to google.genai (deprecated warning)
+- [x] **GEMINI SDK MIGRATED** (Session 17) - google-generativeai -> google-genai v1.63.0
+- [x] **NEW API KEY WORKING** (Session 17) - AIzaSyBV...WT1w verified across all paths
+- [x] **GEMINI FULLY OPERATIONAL** (Session 17) - All 3 voice modes generating content
+- [x] **AI IMAGE GENERATION** (Session 18) - ImagenClient + ImageAgent + 5 MCP tools + CLI
 - [ ] Fix Docker networking (Late API calls timeout from container)
+- [ ] Install Pillow in venv (`pip install Pillow>=10.0.0`)
+- [ ] Live test image generation with Imagen 3 API
+- [ ] Deploy Session 18 changes to Railway (push to master)
+
+## Session 18 Accomplishments - AI Image Generation (Imagen 3)
+
+### New Files Created (6)
+| File | Lines | Purpose |
+|------|-------|---------|
+| `lib/ai/imagen_client.py` | ~180 | ImagenClient - Google Imagen 3 SDK wrapper with 22 platform presets |
+| `lib/agents/image_agent.py` | ~350 | ImageAgent(BaseAgent) - persona-aware prompt enhancement + generation |
+| `.claude/commands/agents/imagine.ps1` | ~180 | `/social:imagine` PowerShell CLI wrapper |
+| `.claude/commands/social/imagine.md` | ~86 | Command documentation |
+| `tests/test_imagen_client.py` | ~180 | 18 tests across 7 test classes |
+| `tests/test_image_agent.py` | ~421 | 20 tests across 12 test classes |
+
+### Files Modified (5)
+| File | Change |
+|------|--------|
+| `lib/mcp/server.py` | Added GROUP 6: 5 `image_*` tools, updated tool count 19→24 |
+| `lib/mcp/_client_helpers.py` | Updated docstring to mention ImageAgent |
+| `lib/agents/__init__.py` | Export ImageAgent |
+| `requirements.txt` | Added `Pillow>=10.0.0` |
+| `requirements-mcp.txt` | Added `Pillow>=10.0.0` |
+
+### Key Architecture Decisions
+- **Separate ImagenClient** from GeminiClient (different API: `generate_images` vs `generate_content`)
+- **Two-model prompt pipeline**: Gemini Flash (text) refines prompt → Imagen 3 generates image
+- **Persona-aware visual styles**: professional=corporate, personal=vibrant, ceo=authoritative
+- **22 platform presets** mapping platform+type to aspect ratios (1:1, 3:4, 4:3, 9:16, 16:9)
+- **6 generation methods**: graphic, thumbnail, carousel, story, text_overlay, ai_art
+- **Late SDK upload integration**: generate → save temp → upload → cleanup → return URLs
+
+### MCP Tools Added (5 new, 24 total)
+| Tool | Purpose |
+|------|---------|
+| `image_generate_graphic` | Social post graphic (platform-optimized) |
+| `image_generate_thumbnail` | Video/blog thumbnail (16:9) |
+| `image_generate_carousel` | Multi-slide carousel images |
+| `image_generate_story` | Story/reel cover image (9:16) |
+| `image_generate_art` | Freeform AI art (custom aspect ratio) |
+
+### Test Results
+- **239 tests passed**, 1 skipped (up from 173)
+- 38 new tests (18 ImagenClient + 20 ImageAgent)
+- All existing tests still green
+
+---
 
 ## Session 16 Accomplishments - Jordan Ward CEO Persona + Deploy
 
