@@ -262,7 +262,7 @@ class ImagenClient:
 
         client = Late(api_key=api_key)
         response = client.media.upload(local_path)
-        return response.url
+        return str(response.files[0].url)
 
 
 # Example usage
