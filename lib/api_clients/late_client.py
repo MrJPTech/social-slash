@@ -175,11 +175,28 @@ class LateDistributionClient:
                 platforms_payload[0]["platformSpecificData"] = platform_specific_data
                 print(f"[INFO] Platform-specific options: {list(platform_specific_data.keys())}")
 
+            # Format media_items as list of dicts (Late SDK requires type + url)
+            formatted_media = None
+            if media_urls:
+                formatted_media = []
+                for item in media_urls:
+                    if isinstance(item, str):
+                        # Determine type from URL extension
+                        url_lower = item.lower().split('?')[0]
+                        if any(url_lower.endswith(ext) for ext in ('.mp4', '.mov', '.avi', '.webm')):
+                            media_type = "video"
+                        else:
+                            media_type = "image"
+                        formatted_media.append({"type": media_type, "url": item})
+                    elif isinstance(item, dict):
+                        # Already in correct format
+                        formatted_media.append(item)
+
             # Build create params
             create_params = {
                 "content": content,
                 "platforms": platforms_payload,
-                "media_items": media_urls,
+                "media_items": formatted_media,
                 "scheduled_for": scheduled_for,
                 "publish_now": publish_now if not scheduled_for else False,
             }
