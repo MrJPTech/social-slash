@@ -146,12 +146,35 @@ class WritingAgent(BaseAgent):
             self.stats['errors'] += 1
             return False
 
+    # Tone descriptions for prompt injection
+    TONE_GUIDES = {
+        "authentic": "real and genuine, natural voice — no performance",
+        "motivational": "energizing, forward-looking, action-inspiring",
+        "humorous": "funny, witty, light-hearted — make them smile or laugh",
+        "reflective": "thoughtful, introspective, genuine about the journey",
+        "educational": "informative, clear, value-packed — teach something useful",
+        "hype": "maximum excitement, urgent, electric energy — stop the scroll",
+        "emotional": "heartfelt, vulnerable, authentic emotional depth",
+        "direct": "straight to the point, no fluff, just the truth",
+        "raw": "unfiltered, real-talk, zero polish — keep it 100",
+        "inspiring": "uplifting, possibility-focused, fills people with hope",
+    }
+
+    # Energy level descriptions
+    ENERGY_GUIDES = {
+        "low": "calm, measured, conversational — thoughtful and quiet",
+        "medium": "engaged, balanced, approachable — normal social energy",
+        "high": "bold, loud, high-energy — makes people stop scrolling",
+    }
+
     def generate_post(
         self,
         topic: str,
         platform: str = "instagram",
         post_type: str = "casual",
         persona_mode: str = "professional",
+        tone: str = "authentic",
+        energy: str = "medium",
     ) -> Dict[str, Any]:
         """
         Generate a social media post in SWIZZ voice.
@@ -159,12 +182,20 @@ class WritingAgent(BaseAgent):
         Args:
             topic: Content topic or prompt
             platform: Target platform
-            post_type: One of: announcement, resource_share, casual, business, promo, hype
-            persona_mode: "professional" (swizzimatic) or "personal" (bigswizzi)
+            post_type: One of: announcement, resource_share, casual, business, promo, hype,
+                       or CEO formats: problem_solution, myth_busting, quick_tips, day_in_life,
+                       case_study, industry_commentary, quick_wins, vibe_coder
+            persona_mode: "professional" (swizzimatic), "personal" (bigswizzi), or "ceo" (jordan ward)
+            tone: Emotional tone — authentic, motivational, humorous, reflective, educational,
+                  hype, emotional, direct, raw, inspiring
+            energy: Energy level — low (calm), medium (balanced), high (bold/loud)
 
         Returns:
-            Dict with content, hashtags, emojis, platform, persona_mode, review_status
+            Dict with content, hashtags, emojis, platform, persona_mode, post_type,
+                  tone, energy, char_count, char_limit, review_status
         """
+        import re
+
         # Switch persona mode if needed
         if persona_mode != self.persona._mode:
             self.persona.set_mode(persona_mode)
@@ -172,6 +203,13 @@ class WritingAgent(BaseAgent):
         active = self.persona.get_active_persona()
         platform_config = self.persona.get_platform_config(platform)
         max_chars = platform_config.get('max_chars', 2200)
+        hashtag_limit = platform_config.get('hashtag_limit', 5)
+        # Sensible hashtag count: cap at 10, 0 means no hashtags (Reddit, Snapchat, etc.)
+        hashtag_count = min(hashtag_limit, 10)
+
+        # Build tone/energy guidance
+        tone_desc = self.TONE_GUIDES.get(tone, self.TONE_GUIDES["authentic"])
+        energy_desc = self.ENERGY_GUIDES.get(energy, self.ENERGY_GUIDES["medium"])
 
         # Build persona-aware prompt
         system_prompt = active.get_system_prompt(post_type)
@@ -184,6 +222,14 @@ class WritingAgent(BaseAgent):
                 f"- \"{ex}\"" for ex in examples
             )
 
+        # Hashtag instruction (append to end of post)
+        hashtag_instruction = ""
+        if hashtag_count > 0:
+            hashtag_instruction = (
+                f"\n\nEnd the post with exactly {hashtag_count} relevant hashtags "
+                f"on a new line (e.g. #tech #build #startup)."
+            )
+
         # Check if active persona has a structured format prompt for this post_type
         format_prompt = None
         if hasattr(active, 'get_content_format_prompt'):
@@ -193,6 +239,10 @@ class WritingAgent(BaseAgent):
             prompt = (
                 f"{format_prompt}\n\n"
                 f"Platform: {platform} (max {max_chars} characters)\n"
+                f"Tone: {tone_desc}\n"
+                f"Energy level: {energy_desc}\n"
+                f"{hashtag_instruction}\n\n"
+                f"Return ONLY the post text. No explanations."
             )
         else:
             prompt = (
@@ -200,31 +250,45 @@ class WritingAgent(BaseAgent):
                 f"Platform: {platform} (max {max_chars} characters)\n"
                 f"Target length: {length_guide['min']}-{length_guide['max']} words\n"
                 f"Post type: {post_type}\n"
+                f"Tone: {tone_desc}\n"
+                f"Energy level: {energy_desc}\n"
                 f"{examples_text}\n\n"
-                f"Write a {platform} post about: {topic}\n\n"
+                f"Write a {platform} post about: {topic}\n"
+                f"{hashtag_instruction}\n\n"
                 f"Return ONLY the post text. No explanations."
             )
 
-        # Generate via AI
-        raw_content = self.response_generator._generate(prompt, max_length=max_chars)
+        # Generate via AI (extra budget for hashtag line)
+        raw_content = self.response_generator._generate(
+            prompt, max_length=max_chars + 200
+        )
 
         # Apply vocabulary post-processing
         content = active.apply_vocab_transform(raw_content)
 
-        # Enforce character limit
+        # Extract hashtags from content (last line(s) of # tokens)
+        hashtags: List[str] = re.findall(r'#\w+', content)
+
+        # Enforce character limit (on full content including hashtags)
         if len(content) > max_chars:
             content = content[:max_chars - 3].rsplit(' ', 1)[0] + "..."
+            # Re-extract hashtags from trimmed content
+            hashtags = re.findall(r'#\w+', content)
 
         # Select contextual emojis
         emojis = active.select_emojis(post_type, count=3)
 
         return {
             'content': content,
+            'hashtags': hashtags,
             'emojis': emojis,
             'platform': platform,
             'persona_mode': persona_mode,
             'post_type': post_type,
+            'tone': tone,
+            'energy': energy,
             'char_count': len(content),
+            'char_limit': max_chars,
             'review_status': 'approved' if self.auto_approve else 'pending',
         }
 
@@ -259,6 +323,8 @@ class WritingAgent(BaseAgent):
         platform: str = "twitter",
         num_posts: int = 3,
         persona_mode: str = "professional",
+        tone: str = "authentic",
+        energy: str = "medium",
     ) -> List[Dict[str, Any]]:
         """
         Generate a multi-post thread.
@@ -268,10 +334,14 @@ class WritingAgent(BaseAgent):
             platform: Target platform
             num_posts: Number of posts in thread
             persona_mode: Voice mode
+            tone: Emotional tone (authentic, motivational, humorous, etc.)
+            energy: Energy level (low, medium, high)
 
         Returns:
-            List of post dicts
+            List of post dicts with content, char_count, platform, persona_mode
         """
+        import re
+
         if persona_mode != self.persona._mode:
             self.persona.set_mode(persona_mode)
 
@@ -279,15 +349,19 @@ class WritingAgent(BaseAgent):
         platform_config = self.persona.get_platform_config(platform)
         max_chars = platform_config.get('max_chars', 280)
 
+        tone_desc = self.TONE_GUIDES.get(tone, self.TONE_GUIDES["authentic"])
+        energy_desc = self.ENERGY_GUIDES.get(energy, self.ENERGY_GUIDES["medium"])
         system_prompt = active.get_system_prompt("business")
 
         prompt = (
             f"{system_prompt}\n\n"
             f"Platform: {platform} (max {max_chars} characters per post)\n"
+            f"Tone: {tone_desc}\n"
+            f"Energy level: {energy_desc}\n"
             f"Write a {num_posts}-post thread about: {topic}\n\n"
-            f"Return each post on a separate line, numbered 1/ 2/ 3/ etc.\n"
+            f"Return each post on a SEPARATE LINE, numbered 1/ 2/ 3/ etc.\n"
             f"Each post must be under {max_chars} characters.\n"
-            f"Return ONLY the posts. No explanations."
+            f"Return ONLY the numbered posts. No explanations."
         )
 
         raw = self.response_generator._generate(prompt, max_length=max_chars * num_posts)
@@ -299,8 +373,6 @@ class WritingAgent(BaseAgent):
             line = line.strip()
             if not line:
                 continue
-            # Remove numbering prefix
-            import re
             cleaned = re.sub(r'^\d+[/.)]\s*', '', line)
             if cleaned and len(cleaned) > 5:
                 if len(cleaned) > max_chars:
@@ -309,7 +381,10 @@ class WritingAgent(BaseAgent):
                     'content': cleaned,
                     'platform': platform,
                     'persona_mode': persona_mode,
+                    'tone': tone,
+                    'energy': energy,
                     'char_count': len(cleaned),
+                    'char_limit': max_chars,
                 })
 
         return posts[:num_posts]
@@ -339,6 +414,13 @@ def main():
                        help='Persona mode')
     parser.add_argument('--num-posts', type=int, default=3,
                        help='Number of posts for thread')
+    parser.add_argument('--tone', type=str, default='authentic',
+                       choices=['authentic', 'motivational', 'humorous', 'reflective',
+                                'educational', 'hype', 'emotional', 'direct', 'raw', 'inspiring'],
+                       help='Emotional tone of the post')
+    parser.add_argument('--energy', type=str, default='medium',
+                       choices=['low', 'medium', 'high'],
+                       help='Energy level (low=calm, medium=balanced, high=bold)')
     parser.add_argument('--dry-run', action='store_true',
                        help='Preview without posting')
 
@@ -374,13 +456,17 @@ def main():
             platform=args.platform,
             post_type=args.post_type,
             persona_mode=args.persona,
+            tone=args.tone,
+            energy=args.energy,
         )
 
         print("=" * 60)
         print(f"Platform: {result['platform']} | Mode: {result['persona_mode']}")
-        print(f"Type: {result['post_type']} | Chars: {result['char_count']}")
+        print(f"Type: {result['post_type']} | Tone: {result['tone']} | Energy: {result['energy']}")
+        print(f"Chars: {result['char_count']}/{result['char_limit']}")
         print("=" * 60)
         print(f"\n{result['content']}\n")
+        print(f"Hashtags: {' '.join(result.get('hashtags', []))}")
         print(f"Emojis: {' '.join(result['emojis'])}")
         print("=" * 60)
 
@@ -395,6 +481,8 @@ def main():
             platform=args.platform,
             num_posts=args.num_posts,
             persona_mode=args.persona,
+            tone=args.tone,
+            energy=args.energy,
         )
 
         print("=" * 60)

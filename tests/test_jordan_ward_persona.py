@@ -93,11 +93,12 @@ class TestJordanWardContentFormats:
     def setup_method(self):
         self.persona = JordanWardPersona()
 
-    def test_seven_formats_defined(self):
-        """All 7 content formats are defined."""
+    def test_formats_defined(self):
+        """All 8 content formats are defined (7 CEO + vibe_coder)."""
         expected = {
             'problem_solution', 'myth_busting', 'quick_tips',
             'day_in_life', 'case_study', 'industry_commentary', 'quick_wins',
+            'vibe_coder',
         }
         assert set(self.persona.CONTENT_FORMATS.keys()) == expected
 
