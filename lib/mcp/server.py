@@ -1455,7 +1455,16 @@ def main() -> None:
             oauth_status = "locked" if _OAUTH_CLIENT_ID else "open (set OAUTH_CLIENT_ID to lock)"
             print(f"[MCP] OAuth: {oauth_status}")
             print(f"[MCP] Starting streamable-http on 0.0.0.0:{port}")
-            config = uvicorn.Config(app, host="0.0.0.0", port=int(port), log_level="info")
+            config = uvicorn.Config(
+                app,
+                host="0.0.0.0",
+                port=int(port),
+                log_level="info",
+                # Give streaming MCP connections 5 s to close cleanly on Railway
+                # rolling deploys, reducing "ASGI callable returned without
+                # completing response" noise in logs.
+                timeout_graceful_shutdown=5,
+            )
             server = uvicorn.Server(config)
             try:
                 await server.serve()

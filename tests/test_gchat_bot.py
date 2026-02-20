@@ -12,6 +12,7 @@ import lib.mcp._client_helpers  # noqa: F401
 
 from lib.scheduler.gchat_bot import (
     SlasherbotChatHandler,
+    _COMMAND_ID_MAP,
     _extract_flag,
     _strip_flags,
 )
@@ -122,6 +123,98 @@ class TestHandleEvent:
             "action": {"actionMethodName": "noop", "parameters": []},
         })
         assert "text" in resp
+
+    def test_empty_event_type_returns_empty(self):
+        """Google endpoint-verification pings arrive with empty/missing type — return {}."""
+        handler = SlasherbotChatHandler()
+        resp = handler.handle_event({"type": ""})
+        assert resp == {}
+
+    def test_missing_event_type_returns_empty(self):
+        handler = SlasherbotChatHandler()
+        resp = handler.handle_event({})
+        assert resp == {}
+
+    def test_empty_event_type_with_slash_command_routes(self):
+        """Slash commands arriving without a MESSAGE type should still route."""
+        handler = SlasherbotChatHandler()
+        resp = handler.handle_event({
+            "type": "",
+            "slashCommand": {"commandId": 1},  # status
+            "message": {"argumentText": ""},
+        })
+        assert "text" in resp
+        assert "Status" in resp["text"] or "Disabled" in resp["text"] or "Scheduler" in resp["text"]
+
+
+# ---------------------------------------------------------------------------
+# Slash command commandId routing
+# ---------------------------------------------------------------------------
+
+
+class TestCommandIdMap:
+    def test_map_has_eight_entries(self):
+        assert len(_COMMAND_ID_MAP) == 8
+
+    def test_status_is_id_1(self):
+        assert _COMMAND_ID_MAP[1] == "status"
+
+    def test_help_is_id_2(self):
+        assert _COMMAND_ID_MAP[2] == "help"
+
+    def test_all_ids_map_to_known_commands(self):
+        known = {"status", "help", "pending", "approve", "skip", "trigger", "write", "post"}
+        assert set(_COMMAND_ID_MAP.values()) == known
+
+
+class TestSlashCommandByCommandId:
+    def _slash_event(self, command_id: int, args: str = "") -> dict:
+        """Build a MESSAGE event containing a slashCommand with commandId only."""
+        return {
+            "type": "MESSAGE",
+            "message": {
+                "slashCommand": {"commandId": command_id},
+                "argumentText": args,
+                "text": f"/{_COMMAND_ID_MAP.get(command_id, '?')} {args}",
+            },
+        }
+
+    def test_status_by_command_id(self):
+        handler = SlasherbotChatHandler()
+        resp = handler.handle_event(self._slash_event(1))
+        assert "Status" in resp["text"] or "Scheduler" in resp["text"]
+
+    def test_help_by_command_id(self):
+        handler = SlasherbotChatHandler()
+        resp = handler.handle_event(self._slash_event(2))
+        assert "status" in resp["text"].lower()
+        assert "approve" in resp["text"].lower()
+
+    def test_pending_by_command_id(self):
+        handler = SlasherbotChatHandler()
+        with patch("lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[]):
+            resp = handler.handle_event(self._slash_event(3))
+        assert "text" in resp
+
+    def test_unknown_command_id_falls_back_to_freetext(self):
+        """An unmapped commandId should fall through to freetext (write) not crash."""
+        handler = SlasherbotChatHandler()
+        # commandId=99 is not in the map — route text should be empty → help
+        resp = handler.handle_event(self._slash_event(99))
+        assert "text" in resp
+
+    def test_slash_command_by_command_name_still_works(self):
+        """commandName field (if present) should still route correctly."""
+        handler = SlasherbotChatHandler()
+        event = {
+            "type": "MESSAGE",
+            "message": {
+                "slashCommand": {"commandName": "/help", "commandId": 2},
+                "argumentText": "",
+            },
+        }
+        resp = handler.handle_event(event)
+        assert "status" in resp["text"].lower()
 
 
 # ---------------------------------------------------------------------------

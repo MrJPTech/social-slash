@@ -57,6 +57,21 @@ _VALID_PLATFORMS = frozenset({
     "threads", "reddit", "bluesky", "google_business",
 })
 
+# Map Google Chat commandId integers → command names.
+# IDs must match those registered in Google Cloud Console →
+# APIs & Services → Google Chat API → Configuration → Slash Commands.
+# Google sends commandId (int) in slashCommand objects, NOT commandName.
+_COMMAND_ID_MAP: dict[int, str] = {
+    1: "status",
+    2: "help",
+    3: "pending",
+    4: "approve",
+    5: "skip",
+    6: "trigger",
+    7: "write",
+    8: "post",
+}
+
 _VALID_CHOICES = frozenset({"A1", "A2", "B1", "B2"})
 
 
@@ -87,29 +102,57 @@ class SlasherbotChatHandler:
         elif event_type == "REMOVED_FROM_SPACE":
             return {}
         elif event_type == "MESSAGE":
-            message = event.get("message", {})
-
-            # Slash command invocation: Google Chat populates message.slashCommand
-            # with commandName="/status" and leaves argumentText="" (just args).
-            slash_cmd = message.get("slashCommand", {})
-            if slash_cmd:
-                cmd_name = slash_cmd.get("commandName", "").lstrip("/").lower()
-                args = message.get("argumentText", "").strip()
-                # Build synthetic text so _route() handles it uniformly
-                synthetic = f"{cmd_name} {args}".strip()
-                return self._route(synthetic)
-
-            # Regular @mention: argumentText strips the @mention
-            text = message.get("argumentText", message.get("text", "")).strip()
-            return self._route(text)
+            return self._handle_message(event)
         elif event_type == "CARD_CLICKED":
             action = event.get("action", {})
             action_method = action.get("actionMethodName", "")
             params = {p["key"]: p["value"] for p in action.get("parameters", [])}
             return self._handle_card_action(action_method, params)
 
-        logger.warning("Unhandled Google Chat event type: %s", event_type)
-        return {}  # silent OK — don't show an error for system events (REACTION_ADDED etc.)
+        # Empty or unknown event_type — can happen for Google endpoint verification
+        # pings or system events (REACTION_ADDED etc.).  If a slashCommand is present
+        # at the top level, still try to route it.
+        if event.get("slashCommand"):
+            return self._handle_slash_command(event["slashCommand"], event.get("message", {}))
+
+        if event_type:
+            logger.warning("Unhandled Google Chat event type: %s", event_type)
+        # Silent OK for empty/unknown types — returning {} tells Google Chat "acknowledged"
+        return {}
+
+    def _handle_message(self, event: dict) -> dict:
+        """Handle MESSAGE events — slash commands or free-text @mentions."""
+        message = event.get("message", {})
+
+        # Slash command: Google Chat populates message.slashCommand with commandId (int).
+        # NOTE: Google's API sends commandId, NOT commandName — commandName is unreliable
+        # and may be absent entirely.  Use _COMMAND_ID_MAP to resolve the name.
+        slash_cmd = message.get("slashCommand", {})
+        if slash_cmd:
+            return self._handle_slash_command(slash_cmd, message)
+
+        # Regular @mention: argumentText strips the @SLASHERBOT prefix automatically.
+        text = message.get("argumentText", message.get("text", "")).strip()
+        return self._route(text)
+
+    def _handle_slash_command(self, slash_cmd: dict, message: dict) -> dict:
+        """Resolve command name from a slashCommand object and route it.
+
+        Google Chat sends ``commandId`` (int) in slash command payloads.
+        ``commandName`` is not present in most payloads.  Fall back to
+        ``_COMMAND_ID_MAP`` keyed by commandId.
+        """
+        # Try commandName first (future-proof / some API versions include it).
+        cmd_name = slash_cmd.get("commandName", "").lstrip("/").lower()
+        if not cmd_name:
+            cmd_id = int(slash_cmd.get("commandId", 0) or 0)
+            cmd_name = _COMMAND_ID_MAP.get(cmd_id, "")
+            if cmd_id and not cmd_name:
+                logger.warning("Unknown slash commandId: %s — routing as free text", cmd_id)
+
+        args = message.get("argumentText", "").strip()
+        synthetic = f"{cmd_name} {args}".strip() if cmd_name else args
+        return self._route(synthetic)
 
     # ------------------------------------------------------------------
     # Command router
