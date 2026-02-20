@@ -21,5 +21,8 @@ anthropic>=0.40.0
 # Image Processing (required by google-genai Imagen)
 Pillow>=10.0.0
 
-# Database (for engagement status)
+# Database (for engagement status + approval store)
 aiosqlite>=0.19.0
+
+# Scheduler (SLASHERBOT daily automation)
+apscheduler>=3.10.0

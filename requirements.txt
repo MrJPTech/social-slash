@@ -31,6 +31,9 @@ Pillow>=10.0.0
 # Data Validation
 pydantic>=2.0.0
 
+# Scheduler (SLASHERBOT daily automation)
+apscheduler>=3.10.0
+
 # Development
 pytest>=7.4.0
 pytest-asyncio>=0.23.0

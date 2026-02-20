@@ -1,0 +1,29 @@
+{
+  "pillars": [
+    "AI tools and automation",
+    "developer life and vibe coding",
+    "building in public",
+    "startup mindset and execution",
+    "tech trends and future thinking"
+  ],
+  "day_assignments": {
+    "monday":    "AI tools and automation",
+    "tuesday":   "developer life and vibe coding",
+    "wednesday": "building in public",
+    "thursday":  "startup mindset and execution",
+    "friday":    "tech trends and future thinking",
+    "saturday":  "AI tools and automation",
+    "sunday":    "developer life and vibe coding"
+  },
+  "subreddit_rotation": [
+    "r/entrepreneur",
+    "r/SideProject",
+    "r/AItools",
+    "r/learnprogramming",
+    "r/startups",
+    "r/webdev",
+    "r/artificial",
+    "r/programming"
+  ],
+  "subreddit_index": 0
+}
