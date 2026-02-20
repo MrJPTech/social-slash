@@ -2,7 +2,7 @@
 # Install: pip install -r requirements-mcp.txt
 
 # Core
-late-sdk>=1.2.17
+late-sdk==1.2.17
 mcp>=1.0.0
 pydantic>=2.0.0
 python-dotenv>=1.0.0
