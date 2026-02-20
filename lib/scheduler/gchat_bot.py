@@ -88,7 +88,18 @@ class SlasherbotChatHandler:
             return {}
         elif event_type == "MESSAGE":
             message = event.get("message", {})
-            # argumentText strips the @mention; fall back to full text field
+
+            # Slash command invocation: Google Chat populates message.slashCommand
+            # with commandName="/status" and leaves argumentText="" (just args).
+            slash_cmd = message.get("slashCommand", {})
+            if slash_cmd:
+                cmd_name = slash_cmd.get("commandName", "").lstrip("/").lower()
+                args = message.get("argumentText", "").strip()
+                # Build synthetic text so _route() handles it uniformly
+                synthetic = f"{cmd_name} {args}".strip()
+                return self._route(synthetic)
+
+            # Regular @mention: argumentText strips the @mention
             text = message.get("argumentText", message.get("text", "")).strip()
             return self._route(text)
         elif event_type == "CARD_CLICKED":
