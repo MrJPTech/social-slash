@@ -108,7 +108,8 @@ class SlasherbotChatHandler:
             params = {p["key"]: p["value"] for p in action.get("parameters", [])}
             return self._handle_card_action(action_method, params)
 
-        return {}
+        logger.warning("Unhandled Google Chat event type: %s", event_type)
+        return {}  # silent OK — don't show an error for system events (REACTION_ADDED etc.)
 
     # ------------------------------------------------------------------
     # Command router
@@ -119,7 +120,7 @@ class SlasherbotChatHandler:
             return {"text": _HELP_TEXT}
 
         parts = text.strip().split(maxsplit=1)
-        cmd = parts[0].lower()
+        cmd = parts[0].lstrip("/").lower()  # strip leading / so /status == status
         args = parts[1].strip() if len(parts) > 1 else ""
 
         router = {
