@@ -1,6 +1,6 @@
 # Active Context
 
-**Last Updated**: 2026-02-12 (Session 18)
+**Last Updated**: 2026-02-20 (Session 22)
 **Project**: social-slash
 
 ## Current Focus
@@ -18,10 +18,96 @@
 - [x] **NEW API KEY WORKING** (Session 17) - AIzaSyBV...WT1w verified across all paths
 - [x] **GEMINI FULLY OPERATIONAL** (Session 17) - All 3 voice modes generating content
 - [x] **AI IMAGE GENERATION** (Session 18) - ImagenClient + ImageAgent + 5 MCP tools + CLI
+- [x] **WRITING TOOLS ENHANCED** (Session 20) - tone/energy params, markdown output, 15 platforms
+- [x] **AUTO-IMAGE FOR INSTAGRAM/TIKTOK** (Session 21) - Auto-generate + attach AI image when no media
+- [x] **MEDIA_ITEMS FORMAT FIXED** (Session 21) - late_client.py now sends dicts not raw strings
+- [x] **LATE-SDK PINNED** (Session 21) - late-sdk==1.2.17 (prevents breaking newer version)
+- [x] **RAILWAY HEALTHY** (Session 21) - All 3 platforms (Instagram, TikTok, LinkedIn etc.) posting live
+- [x] **SLASHERBOT SCHEDULER** (Session 22) - Daily automated posting with Google Chat approval cards
+- [x] **SLASHERBOT LIVE** (Session 22) - Scheduler running on Railway, all 26+ jobs registered
 - [ ] Fix Docker networking (Late API calls timeout from container)
-- [ ] Install Pillow in venv (`pip install Pillow>=10.0.0`)
-- [ ] Live test image generation with Imagen 3 API
-- [ ] Deploy Session 18 changes to Railway (push to master)
+
+## Session 22 Accomplishments - SLASHERBOT Daily Automation
+
+### What Was Built
+Full autonomous daily posting system with Google Chat approval flow.
+
+| File | Purpose |
+|------|---------|
+| `lib/scheduler/approval_store.py` | SQLite TTL store — `get_pending_expired()` for auto-post |
+| `lib/scheduler/content_pipeline.py` | `ContentBundle` dataclass + A/B copy + 2 Imagen 4 images |
+| `lib/scheduler/gchat_cards.py` | cardsV2 cards, HMAC-SHA256 tokens, 4 approval buttons |
+| `lib/scheduler/daily_scheduler.py` | APScheduler cron jobs, 9 platforms, auto-post check |
+| `data/weekly_pillars.json` | Daily pillar schedule + 8-subreddit rotation |
+| `lib/mcp/server.py` | `/approval`, `/scheduler/status`, `/scheduler/trigger` routes |
+
+### Railway Status
+- `health: scheduler: "running"` confirmed ✅
+- All env vars live: `GCHAT_WEBHOOK_SOCIAL_SLASH`, `APPROVAL_TOKEN_SECRET`, `SCHEDULER_ENABLED=true`
+- 26+ jobs registered, first fires at **8:00 AM EST (LinkedIn)**
+- Commit `0d34edd` → pushed → deployed
+
+### Flow
+1. APScheduler fires per slot → ContentPipeline generates A/B posts + 2 AI images
+2. Bundle saved to SQLite → cardsV2 card with 4 buttons sent to SLASHERBOT Google Chat
+3. Click button → GET `/approval?slot=&choice=&token=` → HMAC validated → Poster.post() → confirmation card
+4. No response in 2h → auto-posts Option A + Image 1
+
+### Tests
+- **285 passing, 1 skipped** (46 new: approval_store×14, gchat_cards×16, content_pipeline×10, daily_scheduler×11)
+
+## Session 21 Accomplishments - Auto-Image for Instagram/TikTok + Railway Fix
+
+### Problem Solved
+Instagram and TikTok reject text-only posts via Late API (`[400] requires media content`).
+
+### Changes Made
+| File | Change |
+|------|--------|
+| `lib/mcp/server.py` | Added `MEDIA_REQUIRED_PLATFORMS`, `_auto_generate_image()`, `auto_image=True` param on both posting tools |
+| `lib/api_clients/late_client.py` | Fixed `media_items` format: raw URL strings → `[{"type": "image", "url": "..."}]` dicts |
+| `requirements.txt` | Pinned `late-sdk==1.2.17` (was `>=1.2.17`) |
+| `requirements-mcp.txt` | Pinned `late-sdk==1.2.17` (was `>=1.2.17`) |
+
+### Auto-Image Flow
+1. `post_to_platform(platform="instagram")` with no `media_urls`
+2. Detects `instagram` ∈ `MEDIA_REQUIRED_PLATFORMS`
+3. `_auto_generate_image()`: derives prompt from first 150 chars of content
+4. `ImagenClient.generate_and_upload()`: Imagen 4 → Late media upload → cloud URL
+5. URL attached as `{"type": "image", "url": "..."}` before posting
+6. Response includes `auto_generated_image` field
+
+### Aspect Ratios
+- Instagram: 1:1 (square) via `get_preset("instagram", "post")`
+- TikTok: 9:16 (vertical) via `get_preset("tiktok", "cover")`
+
+### Git Commits
+- `55f47fb` - feat(mcp): auto-generate AI image for Instagram and TikTok posts
+- `14bd50d` - fix(late-client): format media_items as dicts with type+url
+- `b106d33` - fix(deps): pin late-sdk to 1.2.17 to prevent breaking version upgrade
+
+### Railway Deploy Notes
+- Deployment was failing for 5+ hours due to `late-sdk>=1.2.17` pulling newer broken version
+- New version dropped `TikTokSettings` from `late.models._generated.models`
+- Fix: pin to `==1.2.17` → Railway health check now passes ✅
+- **All 9 platforms confirmed posting live via Railway MCP**
+
+---
+
+## Session 21 Live Test Results
+| Platform | Status | Notes |
+|----------|--------|-------|
+| LinkedIn | ✅ Posted | Text only |
+| Twitter | ✅ Posted | Text only |
+| Threads | ✅ Posted | Text only |
+| Facebook | ✅ Posted | Text only |
+| Reddit | ✅ Posted | Text only |
+| Google Business | ✅ Posted | Use `google_business` not `googlebusiness` |
+| Instagram | ✅ Posted | Auto-image attached (1:1) |
+| TikTok | ✅ Posted | Auto-image attached (9:16) |
+| YouTube | N/A | Requires video |
+
+---
 
 ## Session 18 Accomplishments - AI Image Generation (Imagen 3)
 

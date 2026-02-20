@@ -1,10 +1,83 @@
 # Progress Log
 
 **Project**: social-slash
-**Current Sprint**: Sprint 3 - SWIZZ Voice Persona & Content Agents
-**Sprint Goal**: Build persona-powered content generation agents
+**Current Sprint**: Sprint 4 - SLASHERBOT Daily Automation
+**Sprint Goal**: Fully autonomous daily posting with human-in-the-loop approval
 
-## Latest Session (2026-02-12 - Session 18)
+## Latest Session (2026-02-20 - Session 22)
+
+### Completed - SLASHERBOT Daily Automation (Full Feature)
+
+- [x] **`lib/scheduler/` package** — 5 new files, ~600 lines
+- [x] **`data/weekly_pillars.json`** — 5 content pillars, day assignments, 8 subreddit rotation
+- [x] **ApprovalStore** — SQLite at `data/approvals.db`, TTL expiry, `get_pending_expired()`
+- [x] **ContentPipeline** — `ContentBundle` dataclass, A/B copy generation, 2 Imagen 4 images per slot
+- [x] **GChatCards** — cardsV2 format, HMAC-SHA256 tokens, `send_approval_card()`, `send_confirmation_card()`, `send_auto_post_card()`
+- [x] **DailyScheduler** — APScheduler 3.11.2, 9 platforms × time slots (~26 jobs/day), 5-min auto-post check
+- [x] **server.py routes** — `/approval` (GET), `/scheduler/status` (GET), `/scheduler/trigger` (POST)
+- [x] **apscheduler installed** — 3.11.2 in `.venv` via `.venv/Scripts/python -m pip install`
+- [x] **46 new tests passing** — total 285 passing, 1 skipped
+- [x] **Railway deployed** — `scheduler: running`, all env vars set, 26+ jobs registered
+- [x] **First slot fires 8:00 AM EST** — LinkedIn, then cascade through all platforms
+
+### Git Commits This Session
+1. `0d34edd` - feat(slasherbot): daily automated posting with Google Chat approval
+
+### Railway Env Vars Added
+- `GCHAT_WEBHOOK_SOCIAL_SLASH` — SLASHERBOT space webhook
+- `APPROVAL_TOKEN_SECRET` — HMAC-SHA256 signing key
+- `SCHEDULER_ENABLED=true` — gates scheduler startup
+
+---
+
+## Previous Session (2026-02-20 - Session 21)
+
+### Completed - Auto-Image for Instagram/TikTok + Dependency Pin
+
+- [x] **Live tested all 8 text-capable platforms**
+  - LinkedIn, Twitter, Threads, Facebook, Reddit, Google Business → all posted ✅
+  - Instagram, TikTok → required media (fixed below)
+
+- [x] **Auto-image generation for media-required platforms** (`lib/mcp/server.py`)
+  - `MEDIA_REQUIRED_PLATFORMS: frozenset = {"instagram", "tiktok"}`
+  - `_auto_generate_image(content, platform)` — derives prompt from post content → Imagen 4 → Late upload
+  - `post_to_platform` + `post_to_multiple` both updated with `auto_image: bool = True`
+  - Instagram uses 1:1, TikTok uses 9:16 via `ImagenClient.get_preset()`
+
+- [x] **media_items format fix** (`lib/api_clients/late_client.py`)
+  - Root cause: Late API requires `[{"type": "image", "url": "..."}]` not raw URL strings
+  - Added conversion loop with video type auto-detection by file extension
+
+- [x] **late-sdk version pin** (both requirements files)
+  - Changed `late-sdk>=1.2.17` → `late-sdk==1.2.17`
+  - Newer version drops `TikTokSettings` → `ImportError` on startup → Railway health check fails
+  - Fix resolved 5+ hours of Railway deployment failures
+
+- [x] **Railway deployed and verified**
+  - Commit `b106d33` → auto-deploy → `[1/1] Healthcheck succeeded!`
+  - Live test via MCP: Instagram `status: success` + `auto_generated_image` ✅
+  - Live test via MCP: TikTok `status: success` + `auto_generated_image` ✅
+
+### Git Commits This Session
+1. `55f47fb` - feat(mcp): auto-generate AI image for Instagram and TikTok posts
+2. `14bd50d` - fix(late-client): format media_items as dicts with type+url
+3. `b106d33` - fix(deps): pin late-sdk to 1.2.17 to prevent breaking version upgrade
+
+---
+
+## Previous Session (2026-02-19 - Session 20)
+
+### Completed - Writing Tools Enhancement (tone, energy, platform expansion)
+- [x] `tone` param (10 options), `energy` param (low/medium/high) on writing tools
+- [x] Markdown output format for `writing_generate_post`
+- [x] `PLATFORM_CONFIGS` expanded from 8 → 15 platforms
+- [x] `post_type="auto"` routing via `determine_response_type()`
+- [x] `vibe_coder` CEO format documented in server instructions
+- [x] 211 tests passing, committed `b72f068` → Railway deployed
+
+---
+
+## Previous Session (2026-02-12 - Session 18)
 
 ### Completed - AI Image Generation (Google Imagen 3)
 
