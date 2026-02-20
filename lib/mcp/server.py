@@ -993,6 +993,7 @@ async def health_check(request: Request) -> JSONResponse:
             "OAUTH_CLIENT_ID": "set" if os.getenv("OAUTH_CLIENT_ID") else "MISSING",
             "GCHAT_WEBHOOK_SOCIAL_SLASH": "set" if os.getenv("GCHAT_WEBHOOK_SOCIAL_SLASH") else "MISSING",
             "APPROVAL_TOKEN_SECRET": "set" if os.getenv("APPROVAL_TOKEN_SECRET") else "MISSING",
+            "GCHAT_BOT_SECRET": "set" if os.getenv("GCHAT_BOT_SECRET") else "unset (open)",
         },
     })
 
@@ -1008,6 +1009,7 @@ async def root(request: Request) -> JSONResponse:
             "approval": "/approval",
             "scheduler_status": "/scheduler/status",
             "scheduler_trigger": "/scheduler/trigger",
+            "gchat_bot": "/gchat/events",
         },
         "auth": "OAuth 2.0 (Authorization Code + PKCE)",
     })
@@ -1132,6 +1134,43 @@ async def approval_handler(request: Request) -> HTMLResponse:
         f"<p>Choice: <code>{choice}</code></p><p>{preview}…</p>",
         "#3fb950",
     )
+
+
+# ============================================================================
+# SLASHERBOT GOOGLE CHAT TWO-WAY BOT
+# ============================================================================
+
+
+@mcp.custom_route("/gchat/events", methods=["POST"])
+async def gchat_events_handler(request: Request) -> JSONResponse:
+    """Receive Google Chat App events for two-way SLASHERBOT conversation.
+
+    Configure in Google Cloud Console → APIs & Services → Chat API:
+      App URL: https://web-production-c9cb9.up.railway.app/gchat/events?secret=<GCHAT_BOT_SECRET>
+
+    Security: validate the pre-shared GCHAT_BOT_SECRET query parameter.
+    Leave GCHAT_BOT_SECRET unset in local dev to disable auth.
+    """
+    bot_secret = os.getenv("GCHAT_BOT_SECRET", "")
+    if bot_secret:
+        incoming = request.query_params.get("secret", "")
+        if incoming != bot_secret:
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+
+    try:
+        from lib.scheduler.gchat_bot import SlasherbotChatHandler
+        handler = SlasherbotChatHandler(scheduler=_get_scheduler())
+        response = handler.handle_event(body)
+    except Exception as exc:
+        logger.error(f"[gchat-bot] Event handling error: {exc}")
+        return JSONResponse({"text": f"⚠️ Internal error: {exc}"})
+
+    return JSONResponse(response)
 
 
 # ============================================================================

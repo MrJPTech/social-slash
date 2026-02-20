@@ -121,6 +121,23 @@ class ApprovalStore:
             ).fetchall()
         return [self._row_to_bundle(r) for r in rows]
 
+    def get_pending_active(self) -> List["ContentBundle"]:
+        """Return all non-posted bundles ordered by expires_at ascending."""
+        with _conn() as con:
+            rows = con.execute(
+                "SELECT * FROM approvals WHERE posted = 0 ORDER BY expires_at ASC"
+            ).fetchall()
+        return [self._row_to_bundle(r) for r in rows]
+
+    def get_by_prefix(self, slot_prefix: str) -> Optional["ContentBundle"]:
+        """Look up a bundle by the first N characters of its slot_id."""
+        with _conn() as con:
+            row = con.execute(
+                "SELECT * FROM approvals WHERE slot_id LIKE ? LIMIT 1",
+                (f"{slot_prefix}%",),
+            ).fetchone()
+        return self._row_to_bundle(row) if row else None
+
     def cleanup_old(self, days: int = 7) -> int:
         """Delete records older than `days` days. Returns count deleted."""
         from datetime import timedelta
