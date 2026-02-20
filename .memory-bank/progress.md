@@ -4,7 +4,58 @@
 **Current Sprint**: Sprint 4 - SLASHERBOT Daily Automation
 **Sprint Goal**: Fully autonomous daily posting with human-in-the-loop approval
 
-## Latest Session (2026-02-20 - Session 22)
+## Latest Session (2026-02-20 - Session 24)
+
+### Completed - Railway Log Analysis + Slash Command Routing Fix
+
+- [x] **Analyzed 366-entry Railway JSON log file** — identified 4 restart cycles, 25 unique message types
+- [x] **Root cause**: Google Chat sends `commandId` (int) not `commandName` (string) in slash commands
+- [x] **`_COMMAND_ID_MAP`** added to `gchat_bot.py` — maps ids 1-8 to command name strings
+- [x] **Refactored `handle_event()`** → `_handle_message()` + `_handle_slash_command()` helpers
+- [x] **Empty event type handling** — returns `{}` silently for Google verification pings
+- [x] **`timeout_graceful_shutdown=5`** on uvicorn.Config — reduces ASGI noise on Railway rolling deploys
+- [x] **12 new tests** — `TestCommandIdMap` (4) + `TestSlashCommandByCommandId` (5) + `TestHandleEvent` empty-type (3)
+- [x] **336 total tests passing**, 1 skipped
+- [x] **Commit `fa9cbb9`** → pushed → Railway auto-deployed
+- [x] **Local simulation confirmed**: all commandIds route correctly, empty type returns `{}`
+- [x] **Railway health**: `scheduler: running`, `GCHAT_BOT_SECRET: set`
+
+### Git Commits This Session
+1. `fa9cbb9` - fix(gchat): route slash commands by commandId, handle empty event type
+
+---
+
+## Previous Session (2026-02-20 - Session 23)
+
+### Completed - SLASHERBOT Two-Way Google Chat Bot
+
+- [x] **`SlasherbotChatHandler` class** (`lib/scheduler/gchat_bot.py`, ~300 lines)
+  - Handles `ADDED_TO_SPACE`, `REMOVED_FROM_SPACE`, `MESSAGE`, `CARD_CLICKED` events
+  - 8 slash commands: help, status, pending, approve, skip, trigger, write, post
+  - Freetext routing: any unknown input → `write` command
+  - Short slot IDs via `ApprovalStore.get_by_prefix()` (first 8 chars)
+  - Scheduler injection via constructor param
+
+- [x] **`/gchat/events` route** added to `lib/mcp/server.py`
+  - Registered via `@mcp.custom_route("POST", "/gchat/events")`
+  - `GCHAT_BOT_SECRET` query param auth (skipped in dev if unset)
+  - `_gchat_handler` singleton with `_get_scheduler()` injection
+
+- [x] **`ApprovalStore` new methods**: `get_pending_active()` + `get_by_prefix()`
+
+- [x] **39 new tests** (324 total, 1 skipped)
+  - `tests/test_gchat_bot.py` — covers all event types, all commands, edge cases
+
+- [x] **Test isolation fix**: `import lib.mcp._client_helpers` at top prevents `AttributeError: module 'lib' has no attribute 'mcp'`
+
+- [x] **Commit `d08f6d6`** → pushed → Railway auto-deployed
+
+### Git Commits This Session
+1. `d08f6d6` - feat(slasherbot): add two-way Google Chat bot handler
+
+---
+
+## Previous Session (2026-02-20 - Session 22)
 
 ### Completed - SLASHERBOT Daily Automation (Full Feature)
 

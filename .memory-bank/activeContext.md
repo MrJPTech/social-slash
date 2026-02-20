@@ -1,6 +1,6 @@
 # Active Context
 
-**Last Updated**: 2026-02-20 (Session 22)
+**Last Updated**: 2026-02-20 (Session 24)
 **Project**: social-slash
 
 ## Current Focus
@@ -25,7 +25,63 @@
 - [x] **RAILWAY HEALTHY** (Session 21) - All 3 platforms (Instagram, TikTok, LinkedIn etc.) posting live
 - [x] **SLASHERBOT SCHEDULER** (Session 22) - Daily automated posting with Google Chat approval cards
 - [x] **SLASHERBOT LIVE** (Session 22) - Scheduler running on Railway, all 26+ jobs registered
+- [x] **SLASHERBOT GCHAT BOT** (Session 23) - Two-way interactive Google Chat bot (SlasherbotChatHandler)
+- [x] **SLASH CMD ROUTING FIXED** (Session 24) - commandId-based routing, empty event handling, graceful shutdown
 - [ ] Fix Docker networking (Late API calls timeout from container)
+
+## Session 24 Accomplishments - Railway Log Analysis + Slash Command Routing Fix
+
+### Problem
+SLASHERBOT slash commands (e.g., `/status`) were silently returning help text instead of routing correctly. Railway logs showed "Unhandled Google Chat event type: " with empty strings.
+
+### Root Cause (from 366-entry Railway JSON log analysis)
+Google Chat API sends `commandId` (int) in `slashCommand` objects, NOT `commandName` (string). Old code `slash_cmd.get("commandName", "")` always returned `""` → every slash command fell through to help text.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `lib/scheduler/gchat_bot.py` | Added `_COMMAND_ID_MAP: dict[int,str]` (ids 1-8), refactored `handle_event()` into helper methods `_handle_message()` + `_handle_slash_command()` |
+| `lib/mcp/server.py` | Added `timeout_graceful_shutdown=5` to uvicorn.Config (reduces ASGI noise during Railway rolling deploys) |
+| `tests/test_gchat_bot.py` | Added `_COMMAND_ID_MAP` import + 12 new tests (`TestCommandIdMap` × 4 + `TestSlashCommandByCommandId` × 5 + `TestHandleEvent` empty-type × 3) |
+
+### Key Fixes
+1. **`_COMMAND_ID_MAP`**: `{1: "status", 2: "help", 3: "pending", 4: "approve", 5: "skip", 6: "trigger", 7: "write", 8: "post"}`
+2. **`_handle_slash_command()`**: tries `commandName` first (strip `/`), falls back to `commandId` lookup
+3. **Empty event type**: returns `{}` silently for `type=""` (Google verification pings); checks top-level `slashCommand` before returning
+4. **ASGI shutdown noise**: `timeout_graceful_shutdown=5` gives 5s for streaming connections to close
+
+### Test Results & Deployment
+- **336 tests passing, 1 skipped** (12 new)
+- Commit `fa9cbb9` → pushed → Railway auto-deployed
+- Local simulation confirmed: commandId 1→status, 2→help, 3→pending, 6→trigger all route correctly
+- Railway health confirmed: `scheduler: running`, `GCHAT_BOT_SECRET: set`, 24 tools
+
+---
+
+## Session 23 Accomplishments - SLASHERBOT Two-Way Google Chat Bot
+
+### What Was Built
+Interactive two-way bot for Google Chat space. Users can type commands, get live status, approve/skip bundles via text.
+
+| File | Purpose |
+|------|---------|
+| `lib/scheduler/gchat_bot.py` | `SlasherbotChatHandler` class — event routing, 8 commands, freetext |
+| `lib/mcp/server.py` | Added `/gchat/events` custom route, `_gchat_handler` singleton |
+| `tests/test_gchat_bot.py` | 39 new tests (324 total, 1 skipped) |
+
+### Architecture
+- Endpoint: `POST /gchat/events?secret=<GCHAT_BOT_SECRET>` (registered via `@mcp.custom_route`)
+- Commands: `help`, `status`, `pending`, `approve <id> <choice>`, `skip <id>`, `trigger <platform>`, `write <topic>`, `post <platform> <topic>`, freetext→write
+- Short slot IDs: `get_by_prefix()` — users type first 8 chars (e.g., `approve aabbccdd A1`)
+- Response: `{"text": "..."}` — synchronous Google Chat bot message
+- Auth: `GCHAT_BOT_SECRET` query param; skipped if env var unset (dev mode)
+
+### Railway Setup Required
+- `GCHAT_BOT_SECRET` env var on Railway
+- Google Cloud Console → Chat API → Configuration → App URL = `https://web-production-c9cb9.up.railway.app/gchat/events?secret=<TOKEN>`
+
+---
 
 ## Session 22 Accomplishments - SLASHERBOT Daily Automation
 
