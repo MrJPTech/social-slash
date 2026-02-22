@@ -996,6 +996,8 @@ async def health_check(request: Request) -> JSONResponse:
             "GCHAT_WEBHOOK_SOCIAL_SLASH": "set" if os.getenv("GCHAT_WEBHOOK_SOCIAL_SLASH") else "MISSING",
             "APPROVAL_TOKEN_SECRET": "set" if os.getenv("APPROVAL_TOKEN_SECRET") else "MISSING",
             "GCHAT_BOT_SECRET": "set" if os.getenv("GCHAT_BOT_SECRET") else "unset (open)",
+            "SUPABASE_URL": "set" if os.getenv("SUPABASE_URL") else "unset (Late fallback)",
+            "SUPABASE_SERVICE_KEY": "set" if os.getenv("SUPABASE_SERVICE_KEY") else "unset (Late fallback)",
         },
     })
 
