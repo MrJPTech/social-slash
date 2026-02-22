@@ -4,7 +4,83 @@
 **Current Sprint**: Sprint 4 - SLASHERBOT Daily Automation
 **Sprint Goal**: Fully autonomous daily posting with human-in-the-loop approval
 
-## Latest Session (2026-02-20 - Session 24)
+## Latest Session (2026-02-21 - Session 26)
+
+### Completed - GChat Image Previews + Supabase Storage
+
+- [x] **GChat cardsV2 `image` widgets** — all 3 card functions now show inline image previews
+  - `send_approval_card()`: Image 1 + Image 2 rendered as `image` widgets; fallback `textParagraph` if URL empty
+  - `send_confirmation_card()`: Shows chosen image based on choice (A1/A2/B1/B2)
+  - `send_auto_post_card()`: Shows `image_1_url` inline
+
+- [x] **`lib/storage/media_store.py`** (new) — unified image upload abstraction
+  - Primary: Supabase Storage (own domain, permanent URLs)
+  - Fallback: Late SDK (`media.getlate.dev`, temp URLs)
+  - Opt-in via `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` env vars — no breaking changes
+
+- [x] **`lib/ai/imagen_client.py` updated** — `generate_and_upload()` routes through `media_store`
+
+- [x] **Supabase Storage bucket created** — `social-media` (public) in `eiflgtwltjapsgjvhzxf`
+
+- [x] **Railway env vars set** — `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `MEDIA_BUCKET=social-media`
+
+- [x] **Live verified** — `/health` shows both Supabase vars as "set"; own-domain URL confirmed
+
+- [x] **6 new tests** in `TestImageWidgets` — 20/20 gchat_cards tests passing
+
+### Git Commits This Session
+1. `6f8672f` - feat(gchat): inline image previews in cardsV2 + Supabase Storage media hosting
+2. `cf7f7da` - feat(health): show SUPABASE_URL and SUPABASE_SERVICE_KEY status in /health
+
+---
+
+## Previous Session (2026-02-21 - Session 25)
+
+### Completed - JordanWardPersona Rewrite + ContentCurator Agent
+
+- [x] **Full JordanWardPersona identity rewrite** (`lib/persona/swizz_persona.py`)
+  - Authentic Jordan Ward voice: Novi MI, Swizzimatic videography, self-taught Vibe Coder, faith, accessibility mission
+  - New VOCAB_MAP: conversational not corporate (stuff→tools, bad→broken, figure out→break down, etc.)
+  - New EMOJI_CONTEXT_MAP with accessibility, real_talk, snowboarding contexts
+  - 11 CEO content formats (was 8) — added bridge_builder, real_talk, ask_the_audience
+  - HOOK_TEMPLATES, ORIGIN_STORY, FAITH, MISSION constants from real Jordan stories
+  - System prompt: 2,170 chars of real voice — NEVER rules block brag/corporate/LinkedIn energy
+  - Brand voice: storytelling + accessibility, not thought leadership metrics
+
+- [x] **SwizzPersona router updated** — new keyword detection for 3 new formats
+  - `bridge_builder`: accessible, everyday, barber, aunt, small business, for everybody, zip code
+  - `real_talk`: grew up, story, personal, learned, novi, videography, swizzimatic, snowboard
+  - `ask_the_audience`: real question, what would you, what is stopping, drop it, tell me
+
+- [x] **MCP server instructions updated** — CEO formats list 8 → 11
+
+- [x] **ContentCurator agent created** (`lib/agents/content_curator.py`, new)
+  - Intelligence layer between personal curation and public content strategy
+  - FORMAT_SIGNALS, STORY_ANCHORS (7 Jordan story refs), curate(), analyze_angle(), suggest_formats()
+  - Exported from `lib/agents/__init__.py`
+
+- [x] **8 Jordan Ward tests fixed** (old evidence-based assertions → authentic voice)
+  - `test_formality_is_high`: 0.7 → 0.65
+  - `test_polished_transforms`: old corporate vocab → new conversational vocab
+  - `test_apply_vocab_transform`: checked "tools" in result
+  - `test_formats_defined`: updated expected set to 11 formats
+  - `test_system_prompt_contains_voice_rules`: VOICE RULES/educational/NEVER vs old evidence/CTA
+  - `test_system_prompt_never_rules`: brag/linkedin/corporate vs old slang/gonna
+  - `test_brand_voice_mentions_evidence` → renamed `test_brand_voice_emphasizes_authenticity`
+  - `test_ceo_delegates_vocab_transform`: tools/broken vs old the data shows/systems
+
+- [x] **6 new routing detection tests** for bridge_builder, real_talk, ask_the_audience
+
+- [x] **53/53 Jordan Ward tests passing**
+
+- [x] **Commit `5bf943b`** → pushed → Railway auto-deploying
+
+### Git Commits This Session
+1. `5bf943b` - feat(persona): rewrite JordanWardPersona + add 3 CEO formats + ContentCurator agent
+
+---
+
+## Previous Session (2026-02-20 - Session 24)
 
 ### Completed - Railway Log Analysis + Slash Command Routing Fix
 

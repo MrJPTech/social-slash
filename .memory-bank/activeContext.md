@@ -1,6 +1,6 @@
 # Active Context
 
-**Last Updated**: 2026-02-20 (Session 24)
+**Last Updated**: 2026-02-21 (Session 26)
 **Project**: social-slash
 
 ## Current Focus
@@ -27,7 +27,90 @@
 - [x] **SLASHERBOT LIVE** (Session 22) - Scheduler running on Railway, all 26+ jobs registered
 - [x] **SLASHERBOT GCHAT BOT** (Session 23) - Two-way interactive Google Chat bot (SlasherbotChatHandler)
 - [x] **SLASH CMD ROUTING FIXED** (Session 24) - commandId-based routing, empty event handling, graceful shutdown
+- [x] **JORDAN WARD PERSONA REWRITE** (Session 25) - Authentic voice, 11 CEO formats, ContentCurator agent
+- [x] **GCHAT IMAGE PREVIEWS** (Session 26) - cardsV2 `image` widgets replace decoratedText URL text
+- [x] **SUPABASE MEDIA STORAGE** (Session 26) - media_store.py owns image hosting (own-domain URLs)
+- [x] **RAILWAY SUPABASE VARS SET** (Session 26) - SUPABASE_URL + SUPABASE_SERVICE_KEY + MEDIA_BUCKET live
 - [ ] Fix Docker networking (Late API calls timeout from container)
+- [ ] Deploy FileUploader.gs (Google Drive → GChat image previews via Apps Script IDE)
+
+## Session 26 Accomplishments - GChat Image Previews + Supabase Storage
+
+### What Changed
+Two interconnected improvements: (1) GChat approval cards now show actual inline image previews (cardsV2 `image` widgets) instead of text URL labels, and (2) AI-generated images are now hosted on our own Supabase Storage domain instead of the third-party `media.getlate.dev`.
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `lib/scheduler/gchat_cards.py` | Replaced `decoratedText` URL widgets with `image` widgets in all 3 card functions |
+| `lib/storage/media_store.py` | **NEW** — Supabase Storage primary + Late SDK fallback; opt-in via env vars |
+| `lib/ai/imagen_client.py` | `generate_and_upload()` now routes through `media_store.upload_image()` |
+| `requirements.txt` | Added `supabase>=2.0.0` |
+| `tests/test_gchat_cards.py` | Added `TestImageWidgets` class (6 tests) |
+| `lib/mcp/server.py` | `/health` endpoint shows SUPABASE_URL + SUPABASE_SERVICE_KEY status |
+
+### GChat Image Widgets
+- `send_approval_card()`: Image 1 + Image 2 as `image` widgets side-by-side; `textParagraph` fallback if URL empty
+- `send_confirmation_card()`: Shows chosen image (A1→img1, A2→img2, B1→img1, B2→img2)
+- `send_auto_post_card()`: Shows `image_1_url` (auto-post always uses Option A + Image 1)
+
+### Supabase Storage Setup
+- **Bucket**: `social-media` (public) in PRSMTECH Supabase project `eiflgtwltjapsgjvhzxf`
+- **Railway env vars set**: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `MEDIA_BUCKET=social-media`
+- **Own-domain URLs**: `https://eiflgtwltjapsgjvhzxf.supabase.co/storage/v1/object/public/social-media/...`
+- **Fallback**: Late SDK (`media.getlate.dev`) still used if Supabase env vars not set
+
+### Test Results & Deployment
+- **20/20 gchat_cards tests passing** (6 new TestImageWidgets)
+- **~340 tests passing total**, 1 skipped
+- **Commit `6f8672f`** (gchat image + media_store) + **Commit `cf7f7da`** (health endpoint) → pushed → Railway live
+- **Verified live**: `/health` shows both SUPABASE vars as "set"; test upload to own-domain confirmed
+
+---
+
+## Session 25 Accomplishments - JordanWardPersona Rewrite + ContentCurator
+
+### What Changed
+Full identity overhaul of JordanWardPersona — from generic "evidence-based CEO thought leadership" to authentic Jordan Ward voice (Novi MI upbringing, Swizzimatic videography, self-taught Vibe Coder, faith, accessibility mission).
+
+### Changes Made
+
+| File | Change |
+|------|--------|
+| `lib/persona/swizz_persona.py` | Full JordanWardPersona rewrite — new VOCAB_MAP, EMOJI_CONTEXT_MAP, 11 content formats, HOOK_TEMPLATES, ORIGIN_STORY, FAITH, MISSION constants, system prompt, brand voice, examples |
+| `lib/mcp/server.py` | CEO content formats list updated: 8 → 11 (added bridge_builder, real_talk, ask_the_audience) |
+| `lib/agents/content_curator.py` | **NEW** — ContentCurator intelligence layer (FORMAT_SIGNALS, STORY_ANCHORS, curate/analyze_angle/suggest_formats) |
+| `lib/agents/__init__.py` | ContentCurator imported + exported |
+| `tests/test_jordan_ward_persona.py` | 8 tests fixed (old evidence-based assertions → authentic voice), 6 new routing detection tests added |
+
+### Key Persona Changes
+- **VOCAB_MAP**: conversational not corporate (`stuff→tools`, `bad→broken`, `figure out→break down`, etc.)
+- **EMOJI_CONTEXT_MAP**: includes `accessibility`, `real_talk`, `snowboarding` contexts
+- **11 CEO formats** (was 8): added `bridge_builder` (make tech accessible), `real_talk` (personal story + lesson), `ask_the_audience` (question-first)
+- **System prompt**: 2,170 chars — no "evidence", no "CTA", no "data shows". NEVER rules block brag/corporate/LinkedIn energy
+- **Brand voice**: storytelling + accessibility, not thought leadership metrics
+- **SwizzPersona router**: new keyword sets detect all 3 new formats
+
+### New CONTENT_FORMATS (+3)
+- **bridge_builder**: Make tech accessible to everyday people (barber, aunt, small business owner)
+- **real_talk**: Personal story (Novi MI, videography, reinvention) tied to one real lesson
+- **ask_the_audience**: Question-first — post starts with the question, ends with an invite to respond
+
+### ContentCurator Agent (new)
+Intelligence layer: raw "I found something interesting" input → Jordan Ward content strategy
+- `FORMAT_SIGNALS`: keyword → format routing dict
+- `STORY_ANCHORS`: 7 real Jordan story reference points for authentic connection
+- `curate(description, context, platforms)`: full pipeline
+- `analyze_angle(description, context)`: themes, Jordan connection, audience value, tone
+- `suggest_formats(description)`: ranked list of best-fit CEO formats
+
+### Test Results & Deployment
+- **53/53 Jordan Ward tests passing** (8 fixed + 6 new routing detection tests)
+- **Full suite**: ~340 passing (excluding pre-existing API-key failures)
+- **Commit `5bf943b`** → pushed → Railway auto-deploying
+
+---
 
 ## Session 24 Accomplishments - Railway Log Analysis + Slash Command Routing Fix
 
