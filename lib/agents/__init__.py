@@ -9,6 +9,7 @@ Provides automated response agents for:
 - Content writing in SWIZZ voice
 - Content research and strategy
 - Media captioning and formatting
+- Content curation intelligence layer
 """
 
 from lib.agents.base_agent import BaseAgent, AgentState
@@ -19,6 +20,10 @@ from lib.agents.writing_agent import WritingAgent
 from lib.agents.research_agent import ResearchAgent
 from lib.agents.media_agent import MediaAgent
 from lib.agents.image_agent import ImageAgent
+try:
+    from lib.agents.content_curator import ContentCurator
+except ImportError:
+    ContentCurator = None  # SwizzPersona dependency not available
 
 __all__ = [
     'BaseAgent',
@@ -30,4 +35,5 @@ __all__ = [
     'ResearchAgent',
     'MediaAgent',
     'ImageAgent',
+    'ContentCurator',
 ]

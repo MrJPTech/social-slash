@@ -70,6 +70,7 @@ Available tools are prefixed by group:
 - media_*      : Reel/story/carousel captions, alt text, format suggestions
 - image_*      : AI image generation (Imagen 4) with platform-optimized aspect ratios
 - post_*       : Publish or dry-run posts to platforms
+- content_*    : Content curation intelligence (turn screenshots/ideas into content strategy)
 
 Voice personas:
 - professional : @swizzimatic casual-professional voice
@@ -85,7 +86,8 @@ Energy levels (all writing tools):
 
 CEO content formats (use with persona_mode="ceo"):
   problem_solution, myth_busting, quick_tips, day_in_life,
-  case_study, industry_commentary, quick_wins, vibe_coder
+  case_study, industry_commentary, quick_wins, vibe_coder,
+  bridge_builder, real_talk, ask_the_audience
 
 Platform character limits:
   twitter=280, threads=500, instagram=2200, linkedin=3000,
@@ -1362,6 +1364,81 @@ async def token_exchange(request: Request) -> JSONResponse:
         "access_token": auth_token,
         "token_type": "Bearer",
     })
+
+
+# ============================================================================
+# GROUP 7: CONTENT CURATION TOOLS (no API keys needed)
+# ============================================================================
+
+
+@mcp.tool()
+def content_curate(
+    description: str,
+    context: str = "",
+    platforms: list[str] | None = None,
+) -> dict[str, Any]:
+    """Full content curation pipeline.
+
+    Takes something Jordan found valuable (screenshot description, article,
+    observation, idea) and returns:
+    - The Jordan Ward angle (WHY this matters through his lens)
+    - Best content formats (bridge_builder, real_talk, ask_the_audience, etc.)
+    - Story connections (which life experiences connect)
+    - Draft angles per platform (hook + framing guidance)
+
+    Args:
+        description: What you found — describe the screenshot, article, or idea
+        context: Why it caught your eye (optional)
+        platforms: Target platforms (default: linkedin, twitter, instagram)
+    """
+    from lib.agents import content_curator as _cc
+
+    curator = _cc.ContentCurator(persona_mode="ceo")
+    return curator.curate(description, context, platforms)
+
+
+@mcp.tool()
+def content_analyze_angle(
+    description: str,
+    context: str = "",
+) -> dict[str, Any]:
+    """Analyze the Jordan Ward angle on content.
+
+    Determines WHY this matters through Jordan's lens — his background
+    (Novi MI, Swizzimatic videography, reinvention, faith, mission)
+    makes him uniquely positioned to talk about it.
+
+    Returns themes, jordan_connection, audience_value, and tone suggestion.
+
+    Args:
+        description: What was found
+        context: Why it caught his eye (optional)
+    """
+    from lib.agents import content_curator as _cc
+
+    curator = _cc.ContentCurator(persona_mode="ceo")
+    return curator.analyze_angle(description, context)
+
+
+@mcp.tool()
+def content_suggest_formats(
+    description: str,
+) -> list[dict[str, Any]]:
+    """Rank which CEO content formats best fit this content.
+
+    Scores each format (bridge_builder, real_talk, ask_the_audience,
+    problem_solution, myth_busting, quick_tips, industry_commentary,
+    vibe_coder, case_study, day_in_life) based on signal matching.
+
+    Returns ranked list with scores, descriptions, and when-to-use guidance.
+
+    Args:
+        description: Content description to analyze
+    """
+    from lib.agents import content_curator as _cc
+
+    curator = _cc.ContentCurator(persona_mode="ceo")
+    return curator.suggest_formats(description)
 
 
 # ============================================================================

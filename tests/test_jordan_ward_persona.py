@@ -34,7 +34,7 @@ class TestJordanWardToneConfig:
     def test_formality_is_high(self):
         """CEO voice is more formal than SWIZZ voices."""
         config = self.persona.get_tone_config()
-        assert config['formality'] == 0.7
+        assert config['formality'] == 0.65
 
     def test_emoji_frequency_is_low(self):
         """CEO voice uses emojis sparingly."""
@@ -73,18 +73,16 @@ class TestJordanWardVocabMap:
         )
 
     def test_polished_transforms(self):
-        """Vocab transforms are polished/professional."""
+        """Vocab transforms are conversational but elevated — not corporate."""
         vocab = self.persona.get_vocab_map()
-        assert vocab.get("I think") == "the data shows"
-        assert vocab.get("stuff") == "systems"
-        assert vocab.get("fix") == "optimize"
+        assert vocab.get("stuff") == "tools"
+        assert vocab.get("bad") == "broken"
+        assert vocab.get("figure out") == "break down"
 
     def test_apply_vocab_transform(self):
         """Vocab transform applies correctly to text."""
         result = self.persona.apply_vocab_transform("I think we should fix the stuff")
-        assert "the data shows" in result
-        assert "optimize" in result
-        assert "systems" in result
+        assert "tools" in result  # "stuff" → "tools"
 
 
 class TestJordanWardContentFormats:
@@ -94,11 +92,11 @@ class TestJordanWardContentFormats:
         self.persona = JordanWardPersona()
 
     def test_formats_defined(self):
-        """All 8 content formats are defined (7 CEO + vibe_coder)."""
+        """All 11 content formats are defined."""
         expected = {
             'problem_solution', 'myth_busting', 'quick_tips',
             'day_in_life', 'case_study', 'industry_commentary', 'quick_wins',
-            'vibe_coder',
+            'vibe_coder', 'bridge_builder', 'real_talk', 'ask_the_audience',
         }
         assert set(self.persona.CONTENT_FORMATS.keys()) == expected
 
@@ -136,12 +134,12 @@ class TestJordanWardSystemPrompt:
         self.persona = JordanWardPersona()
 
     def test_system_prompt_contains_voice_rules(self):
-        """System prompt includes evidence-based voice rules."""
+        """System prompt includes authentic identity and voice rules."""
         prompt = self.persona.get_system_prompt("business")
         assert "Jordan Ward" in prompt
-        assert "evidence" in prompt.lower() or "data" in prompt.lower()
-        assert "hook" in prompt.lower()
-        assert "CTA" in prompt
+        assert "VOICE RULES" in prompt
+        assert "educational" in prompt.lower() or "accessible" in prompt.lower()
+        assert "NEVER" in prompt
 
     def test_system_prompt_includes_format_structure(self):
         """When context_type is a content format, structure is appended."""
@@ -159,8 +157,8 @@ class TestJordanWardSystemPrompt:
         """System prompt includes NEVER rules for CEO voice."""
         prompt = self.persona.get_system_prompt("business")
         assert "NEVER" in prompt
-        # Should not use slang
-        assert "slang" in prompt.lower() or "gonna" in prompt.lower()
+        # Should reject corporate / brag / LinkedIn poster energy
+        assert "brag" in prompt.lower() or "linkedin" in prompt.lower() or "corporate" in prompt.lower()
 
 
 class TestJordanWardBrandVoice:
@@ -169,10 +167,10 @@ class TestJordanWardBrandVoice:
     def setup_method(self):
         self.persona = JordanWardPersona()
 
-    def test_brand_voice_mentions_evidence(self):
-        """Brand voice emphasizes evidence-based approach."""
+    def test_brand_voice_emphasizes_authenticity(self):
+        """Brand voice emphasizes authentic storytelling and accessibility."""
         voice = self.persona.get_brand_voice()
-        assert "evidence" in voice.lower() or "data" in voice.lower()
+        assert "educational" in voice.lower() or "accessible" in voice.lower() or "authentic" in voice.lower() or "story" in voice.lower()
 
     def test_brand_voice_mentions_jordan(self):
         """Brand voice identifies as Jordan Ward."""
@@ -302,9 +300,8 @@ class TestSwizzPersonaCEOMode:
         """CEO mode applies CEO vocab transforms."""
         persona = SwizzPersona(mode="ceo")
         result = persona.apply_vocab_transform("I think the stuff is bad")
-        assert "the data shows" in result
-        assert "systems" in result
-        assert "ineffective" in result
+        assert "tools" in result   # "stuff" → "tools"
+        assert "broken" in result  # "bad" → "broken"
 
     def test_switch_between_all_three_modes(self):
         """Can switch between all three modes."""
@@ -354,6 +351,21 @@ class TestSwizzPersonaCEOResponseRouting:
     def test_quick_wins_detection(self):
         """Detects quick_wins keywords."""
         assert self.persona.determine_response_type("A quick win for your dev team") == "quick_wins"
+
+    def test_bridge_builder_detection(self):
+        """Detects bridge_builder keywords (accessibility focus)."""
+        assert self.persona.determine_response_type("Your aunt could use this for her small business") == "bridge_builder"
+        assert self.persona.determine_response_type("AI is for everybody, not just tech people") == "bridge_builder"
+
+    def test_real_talk_detection(self):
+        """Detects real_talk keywords (personal story)."""
+        assert self.persona.determine_response_type("I grew up in a suburb and saw both sides") == "real_talk"
+        assert self.persona.determine_response_type("My videography changed my perspective forever") == "real_talk"
+
+    def test_ask_the_audience_detection(self):
+        """Detects ask_the_audience keywords (question-first format)."""
+        assert self.persona.determine_response_type("Real question: what would you automate first?") == "ask_the_audience"
+        assert self.persona.determine_response_type("What is stopping you from learning this?") == "ask_the_audience"
 
     def test_default_thought_leadership(self):
         """Unmatched content defaults to thought_leadership in CEO mode."""
