@@ -163,22 +163,20 @@ def send_approval_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
                                 }
                             ],
                         },
-                        # Image previews
+                        # Image previews — inline renders via cardsV2 image widget
                         {
-                            "header": "Images",
+                            "header": "🖼 Images",
                             "widgets": [
-                                {
-                                    "decoratedText": {
-                                        "text": "🖼 Image 1",
-                                        "bottomLabel": bundle.image_1_url[:80] if bundle.image_1_url else "(not generated)",
-                                    }
-                                },
-                                {
-                                    "decoratedText": {
-                                        "text": "🖼 Image 2",
-                                        "bottomLabel": bundle.image_2_url[:80] if bundle.image_2_url else "(not generated)",
-                                    }
-                                },
+                                *(
+                                    [{"image": {"imageUrl": bundle.image_1_url, "altText": "Image 1 — vibrant"}}]
+                                    if bundle.image_1_url
+                                    else [{"textParagraph": {"text": "⚠️ Image 1 not generated"}}]
+                                ),
+                                *(
+                                    [{"image": {"imageUrl": bundle.image_2_url, "altText": "Image 2 — minimal"}}]
+                                    if bundle.image_2_url
+                                    else [{"textParagraph": {"text": "⚠️ Image 2 not generated"}}]
+                                ),
                             ],
                         },
                         # Approval buttons
@@ -225,6 +223,7 @@ def send_confirmation_card(
     content_preview = _truncate(getattr(bundle, option_key, {}).get("content", ""), 150)
     post_id = post_result.get("post_id", "")
     status = post_result.get("status", "unknown")
+    image_url = bundle.image_1_url if choice.endswith("1") else bundle.image_2_url
 
     card = {
         "cardsV2": [
@@ -242,6 +241,11 @@ def send_confirmation_card(
                             ]
                         }
                     ]
+                    + (
+                        [{"widgets": [{"image": {"imageUrl": image_url, "altText": f"Posted image ({choice})"}}]}]
+                        if image_url
+                        else []
+                    )
                     + (
                         [{"widgets": [{"textParagraph": {"text": f"Post ID: `{post_id}`"}}]}]
                         if post_id
@@ -284,7 +288,12 @@ def send_auto_post_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
                                 {"textParagraph": {"text": content_preview}},
                             ]
                         }
-                    ],
+                    ]
+                    + (
+                        [{"widgets": [{"image": {"imageUrl": bundle.image_1_url, "altText": "Auto-posted image"}}]}]
+                        if bundle.image_1_url
+                        else []
+                    ),
                 },
             }
         ]

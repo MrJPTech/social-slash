@@ -194,9 +194,10 @@ class ImagenClient:
         num_images: int = 1,
     ) -> List[str]:
         """
-        Generate images and upload them via Late SDK.
+        Generate images and upload to media storage.
 
         End-to-end: generate -> save temp -> upload -> cleanup -> return URLs.
+        Uses Supabase Storage (own domain) if configured, else Late SDK.
 
         Args:
             prompt: Text description
@@ -217,7 +218,7 @@ class ImagenClient:
         urls = []
         for r in results:
             try:
-                url = self._upload_to_late(r["local_path"])
+                url = self._upload_to_storage(r["local_path"])
                 urls.append(url)
             finally:
                 # Clean up temp file
@@ -226,7 +227,7 @@ class ImagenClient:
                 except OSError:
                     pass
 
-        print(f"[SUCCESS] Uploaded {len(urls)} image(s) to Late")
+        print(f"[SUCCESS] Uploaded {len(urls)} image(s) to media storage")
         return urls
 
     def _save_to_temp(self, image_bytes: bytes) -> str:
@@ -244,9 +245,27 @@ class ImagenClient:
         tmp.close()
         return tmp.name
 
+    def _upload_to_storage(self, local_path: str) -> str:
+        """
+        Upload a local image file to persistent media storage.
+
+        Routes through lib.storage.media_store which tries Supabase Storage
+        first (own domain), then falls back to Late SDK temp hosting.
+
+        Args:
+            local_path: Path to the local image file
+
+        Returns:
+            Public URL for the uploaded media
+        """
+        from lib.storage.media_store import upload_image
+        return upload_image(local_path, prefix="generated")
+
     def _upload_to_late(self, local_path: str) -> str:
         """
         Upload a local image file to Late SDK media hosting.
+
+        Kept for direct use when bypassing media_store is needed.
 
         Args:
             local_path: Path to the local image file

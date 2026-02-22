@@ -176,3 +176,94 @@ class TestAutoPostCard:
         payload = mock_post.call_args[1]["json"]
         header_title = payload["cardsV2"][0]["card"]["header"]["title"]
         assert "Auto-posted" in header_title
+
+
+class TestImageWidgets:
+    """Verify cardsV2 image widgets are used instead of decoratedText URL text."""
+
+    def _get_all_widgets(self, payload: dict) -> list:
+        card = payload["cardsV2"][0]["card"]
+        widgets = []
+        for section in card["sections"]:
+            widgets.extend(section.get("widgets", []))
+        return widgets
+
+    def test_approval_card_has_image_widgets(self):
+        """Image URLs appear as 'image' widgets, not as text."""
+        bundle = _make_bundle()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        with patch("requests.post", return_value=mock_resp) as mock_post:
+            from lib.scheduler.gchat_cards import send_approval_card
+            send_approval_card(bundle, "https://webhook.url")
+        widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
+        image_urls = [w["image"]["imageUrl"] for w in widgets if "image" in w]
+        assert "https://media.getlate.dev/temp/img1.jpg" in image_urls
+        assert "https://media.getlate.dev/temp/img2.jpg" in image_urls
+
+    def test_approval_card_no_decoratedtext_for_images(self):
+        """The Images section does NOT use decoratedText to display URLs."""
+        bundle = _make_bundle()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        with patch("requests.post", return_value=mock_resp) as mock_post:
+            from lib.scheduler.gchat_cards import send_approval_card
+            send_approval_card(bundle, "https://webhook.url")
+        widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
+        # decoratedText may still appear elsewhere (e.g. post info), but the
+        # image URLs must NOT appear inside decoratedText bottom labels
+        for w in widgets:
+            if "decoratedText" in w:
+                bottom = w["decoratedText"].get("bottomLabel", "")
+                assert "media.getlate.dev" not in bottom
+
+    def test_approval_card_missing_image_shows_fallback(self):
+        """When image URLs are empty, a textParagraph fallback appears."""
+        bundle = _make_bundle()
+        bundle.image_1_url = ""
+        bundle.image_2_url = ""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        with patch("requests.post", return_value=mock_resp) as mock_post:
+            from lib.scheduler.gchat_cards import send_approval_card
+            send_approval_card(bundle, "https://webhook.url")
+        widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
+        texts = [w["textParagraph"]["text"] for w in widgets if "textParagraph" in w]
+        assert any("not generated" in t for t in texts)
+
+    def test_confirmation_card_shows_image(self):
+        """Confirmation card includes image widget for the chosen image."""
+        bundle = _make_bundle()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        with patch("requests.post", return_value=mock_resp) as mock_post:
+            from lib.scheduler.gchat_cards import send_confirmation_card
+            send_confirmation_card(bundle, "A1", {"status": "success"}, "https://webhook.url")
+        widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
+        image_urls = [w["image"]["imageUrl"] for w in widgets if "image" in w]
+        # Choice A1 → image_1_url
+        assert "https://media.getlate.dev/temp/img1.jpg" in image_urls
+
+    def test_confirmation_card_choice_a2_shows_image2(self):
+        """Choice A2 shows image_2_url in confirmation card."""
+        bundle = _make_bundle()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        with patch("requests.post", return_value=mock_resp) as mock_post:
+            from lib.scheduler.gchat_cards import send_confirmation_card
+            send_confirmation_card(bundle, "A2", {"status": "success"}, "https://webhook.url")
+        widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
+        image_urls = [w["image"]["imageUrl"] for w in widgets if "image" in w]
+        assert "https://media.getlate.dev/temp/img2.jpg" in image_urls
+
+    def test_auto_post_card_shows_image1(self):
+        """Auto-post card includes image_1 widget (always posts Option A + Image 1)."""
+        bundle = _make_bundle()
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        with patch("requests.post", return_value=mock_resp) as mock_post:
+            from lib.scheduler.gchat_cards import send_auto_post_card
+            send_auto_post_card(bundle, "https://webhook.url")
+        widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
+        image_urls = [w["image"]["imageUrl"] for w in widgets if "image" in w]
+        assert "https://media.getlate.dev/temp/img1.jpg" in image_urls
