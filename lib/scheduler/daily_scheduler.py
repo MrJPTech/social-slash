@@ -15,6 +15,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -112,6 +113,18 @@ class DailyScheduler:
             id="library_scan",
             replace_existing=True,
         )
+
+        # Local folder sync: every 15 minutes (iCloud/Desktop → Supabase)
+        # Only registers if at least one sync folder actually exists on disk.
+        if self._local_folders_exist():
+            self.scheduler.add_job(
+                self._sync_local_folders,
+                trigger="interval",
+                minutes=15,
+                id="local_folder_sync",
+                replace_existing=True,
+            )
+            logger.info("[scheduler] Local folder sync enabled (15-min interval)")
 
         # Daily DB cleanup: every day at 03:00
         self.scheduler.add_job(
@@ -275,6 +288,40 @@ class DailyScheduler:
             pass  # Supabase not configured — skip silently
         except Exception as exc:
             logger.warning(f"[scheduler] Library scan failed: {exc}")
+
+    def _sync_local_folders(self) -> None:
+        """Sync local iCloud/Desktop folders into the media library."""
+        try:
+            from lib.media_library.local_scanner import LocalFolderScanner
+            scanner = LocalFolderScanner()
+            result = scanner.ingest_new()
+            if result["ingested"] > 0:
+                logger.info(
+                    f"[scheduler] Local sync: ingested {result['ingested']}, "
+                    f"skipped {result['skipped']}"
+                )
+                if result["details"]:
+                    for d in result["details"]:
+                        logger.info(
+                            f"[scheduler]   [{d['category']}] {d['filename']}: "
+                            f"{d['description']}"
+                        )
+        except ValueError:
+            pass  # Supabase not configured — skip silently
+        except Exception as exc:
+            logger.warning(f"[scheduler] Local folder sync failed: {exc}")
+
+    @staticmethod
+    def _local_folders_exist() -> bool:
+        """Check if any configured local sync folders exist on disk."""
+        try:
+            from lib.media_library.local_scanner import LocalFolderScanner
+            scanner = LocalFolderScanner()
+            return any(
+                Path(f["path"]).exists() for f in scanner.folders
+            )
+        except Exception:
+            return False
 
     def _cleanup_old_records(self) -> None:
         deleted = self.store.cleanup_old(days=7)

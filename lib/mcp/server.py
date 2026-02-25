@@ -71,7 +71,7 @@ Available tools are prefixed by group:
 - image_*      : AI image generation (Imagen 4) with platform-optimized aspect ratios
 - post_*       : Publish or dry-run posts to platforms
 - content_*    : Content curation intelligence (turn screenshots/ideas into content strategy)
-- media_library_* : Manage screenshot/photo library for authentic posts
+- media_library_* : Manage screenshot/photo library (scan, search, sync local folders)
 
 Voice personas:
 - professional : @swizzimatic casual-professional voice
@@ -1530,6 +1530,80 @@ def media_library_preview(item_id: str) -> str:
         return json.dumps(item, indent=2, default=str)
     except Exception as e:
         return f"Error previewing item: {e}"
+
+
+@mcp.tool()
+def media_library_sync_local() -> str:
+    """Sync media from local iCloud/Desktop folders into the library.
+
+    Scans configured local folders for new photos, screenshots, and videos.
+    Uploads them to Supabase Storage, analyzes with Gemini Vision, and
+    indexes in the catalog for content matching.
+
+    Default folders (iCloud):
+      .../SocialSlasher/Media/photos
+      .../SocialSlasher/Media/videos
+      .../SocialSlasher/Media/screenshots
+
+    Override with MEDIA_SYNC_FOLDERS env var (pipe-delimited: path|category).
+    Requires SUPABASE_URL, SUPABASE_SERVICE_KEY, and GOOGLE_API_KEY.
+    """
+    try:
+        from lib.media_library.local_scanner import LocalFolderScanner
+
+        scanner = LocalFolderScanner()
+
+        # Show folder stats first
+        stats = scanner.get_folder_stats()
+        accessible = sum(1 for f in stats["folders"] if f["exists"])
+        if accessible == 0:
+            folder_lines = "\n".join(
+                f"  - {f['path']} ({f['category']})" for f in stats["folders"]
+            )
+            return (
+                f"No sync folders accessible.\n"
+                f"Configured folders:\n{folder_lines}\n\n"
+                f"Make sure the folders exist or set MEDIA_SYNC_FOLDERS env var."
+            )
+
+        result = scanner.ingest_new()
+
+        parts = [
+            f"Local sync: {result['ingested']} ingested, {result['skipped']} skipped",
+            f"Folders: {accessible}/{stats['total_folders']} accessible, "
+            f"{stats['total_files']} total files",
+        ]
+
+        if result["details"]:
+            parts.append("\nNew items:")
+            for d in result["details"]:
+                parts.append(
+                    f"  [{d['category']}] {d['filename']}: {d['description']}"
+                )
+
+        if result["errors"]:
+            parts.append(f"\nErrors: {', '.join(result['errors'])}")
+
+        return "\n".join(parts)
+    except Exception as e:
+        return f"Error syncing local folders: {e}"
+
+
+@mcp.tool()
+def media_library_folder_stats() -> str:
+    """Show configured local media sync folders and file counts.
+
+    Lists each folder path, whether it exists, and how many media files
+    are in it. Useful for verifying iCloud sync is working.
+    """
+    try:
+        from lib.media_library.local_scanner import LocalFolderScanner
+
+        scanner = LocalFolderScanner()
+        stats = scanner.get_folder_stats()
+        return json.dumps(stats, indent=2)
+    except Exception as e:
+        return f"Error getting folder stats: {e}"
 
 
 # ============================================================================
