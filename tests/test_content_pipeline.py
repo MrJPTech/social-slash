@@ -33,10 +33,6 @@ _MOCK_WRITE_RESULT_B = {
 }
 
 
-def _mock_imagen_urls():
-    return ["https://media.getlate.dev/temp/abc.jpg"]
-
-
 def _patched_pipeline():
     """Return a ContentPipeline with all external calls mocked."""
     pipeline = ContentPipeline()
@@ -73,16 +69,19 @@ class TestContentBundleDataclass:
 
 
 class TestContentPipelineGenerateBundle:
-    @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_image")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_copy")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
-    def test_bundle_structure(self, mock_topic, mock_copy, mock_image):
+    def test_bundle_structure(self, mock_topic, mock_copy, mock_library):
         mock_topic.return_value = "AI coding assistants"
         mock_copy.side_effect = [
             {"content": "Option A", "hashtags": [], "persona_mode": "professional"},
             {"content": "Option B", "hashtags": [], "persona_mode": "ceo"},
         ]
-        mock_image.side_effect = ["https://img1.jpg", "https://img2.jpg"]
+        mock_library.return_value = [
+            {"item_id": "img-1", "storage_url": "https://img1.jpg", "description": "Screenshot of code editor", "score": 0.9, "match_reasons": []},
+            {"item_id": "img-2", "storage_url": "https://img2.jpg", "description": "Terminal with tests passing", "score": 0.8, "match_reasons": []},
+        ]
 
         pipeline = ContentPipeline()
         bundle = pipeline.generate_bundle(
@@ -95,23 +94,23 @@ class TestContentPipelineGenerateBundle:
         assert bundle.platform == "twitter"
         assert bundle.pillar == "building in public"
         assert bundle.topic == "AI coding assistants"
-        assert bundle.option_a["persona_mode"] == "professional"
-        assert bundle.option_b["persona_mode"] == "ceo"
         assert bundle.image_1_url == "https://img1.jpg"
         assert bundle.image_2_url == "https://img2.jpg"
+        assert bundle.image_source == "library"
+        assert bundle.library_item_ids == ["img-1", "img-2"]
         assert bundle.posted is False
 
-    @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_image")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_copy")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
-    def test_slot_id_is_uuid(self, mock_topic, mock_copy, mock_image):
+    def test_slot_id_is_uuid(self, mock_topic, mock_copy, mock_library):
         import re
         mock_topic.return_value = "topic"
         mock_copy.side_effect = [
             {"content": "A", "hashtags": [], "persona_mode": "professional"},
             {"content": "B", "hashtags": [], "persona_mode": "ceo"},
         ]
-        mock_image.side_effect = ["", ""]
+        mock_library.return_value = []
 
         pipeline = ContentPipeline()
         bundle = pipeline.generate_bundle("linkedin", "08:00", "startup mindset")
@@ -120,16 +119,16 @@ class TestContentPipelineGenerateBundle:
             bundle.slot_id,
         )
 
-    @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_image")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_copy")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
-    def test_reddit_subreddit_passed_through(self, mock_topic, mock_copy, mock_image):
+    def test_reddit_subreddit_passed_through(self, mock_topic, mock_copy, mock_library):
         mock_topic.return_value = "topic"
         mock_copy.side_effect = [
             {"content": "A", "hashtags": [], "persona_mode": "professional"},
             {"content": "B", "hashtags": [], "persona_mode": "ceo"},
         ]
-        mock_image.side_effect = ["", ""]
+        mock_library.return_value = []
 
         pipeline = ContentPipeline()
         bundle = pipeline.generate_bundle(
@@ -137,21 +136,74 @@ class TestContentPipelineGenerateBundle:
         )
         assert bundle.subreddit == "r/SideProject"
 
-    @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_image")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_copy")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
-    def test_expires_at_is_in_future(self, mock_topic, mock_copy, mock_image):
+    def test_expires_at_is_in_future(self, mock_topic, mock_copy, mock_library):
         mock_topic.return_value = "topic"
         mock_copy.side_effect = [
             {"content": "A", "hashtags": [], "persona_mode": "professional"},
             {"content": "B", "hashtags": [], "persona_mode": "ceo"},
         ]
-        mock_image.side_effect = ["", ""]
+        mock_library.return_value = []
 
         pipeline = ContentPipeline()
         bundle = pipeline.generate_bundle("twitter", "09:00", "AI tools")
         now = datetime.now(timezone.utc)
         assert bundle.expires_at > now
+
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_copy")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
+    def test_media_required_returns_none_when_no_library(self, mock_topic, mock_copy, mock_library):
+        """Instagram/TikTok return None when library is empty (no AI fallback)."""
+        mock_topic.return_value = "topic"
+        mock_library.return_value = []
+
+        pipeline = ContentPipeline()
+        bundle = pipeline.generate_bundle("instagram", "12:00", "building in public")
+        assert bundle is None
+
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_copy")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
+    def test_text_only_when_no_library(self, mock_topic, mock_copy, mock_library):
+        """Non-media platforms get text-only bundles when library is empty."""
+        mock_topic.return_value = "topic"
+        mock_copy.side_effect = [
+            {"content": "A", "hashtags": [], "persona_mode": "professional"},
+            {"content": "B", "hashtags": [], "persona_mode": "ceo"},
+        ]
+        mock_library.return_value = []
+
+        pipeline = ContentPipeline()
+        bundle = pipeline.generate_bundle("twitter", "09:00", "AI tools")
+        assert bundle is not None
+        assert bundle.image_1_url == ""
+        assert bundle.image_2_url == ""
+        assert bundle.image_source == "none"
+        assert bundle.library_item_ids == []
+
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_copy")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
+    def test_single_library_match(self, mock_topic, mock_copy, mock_library):
+        """One library match: first image from library, second empty."""
+        mock_topic.return_value = "topic"
+        mock_copy.side_effect = [
+            {"content": "A", "hashtags": [], "persona_mode": "professional"},
+            {"content": "B", "hashtags": [], "persona_mode": "ceo"},
+        ]
+        mock_library.return_value = [
+            {"item_id": "img-1", "storage_url": "https://img1.jpg", "description": "Screenshot", "score": 0.9, "match_reasons": []},
+        ]
+
+        pipeline = ContentPipeline()
+        bundle = pipeline.generate_bundle("twitter", "09:00", "AI tools")
+        assert bundle.image_1_url == "https://img1.jpg"
+        assert bundle.image_2_url == ""
+        assert bundle.image_source == "library"
+        assert bundle.library_item_ids == ["img-1"]
 
 
 class TestTopicVariationFallback:
@@ -166,17 +218,17 @@ class TestTopicVariationFallback:
 
 
 class TestCopyGenerationFallback:
-    @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_image")
+    @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._generate_copy")
     @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
-    def test_copy_failure_returns_error_content(self, mock_topic, mock_copy, mock_image):
+    def test_copy_failure_returns_error_content(self, mock_topic, mock_copy, mock_library):
         mock_topic.return_value = "some topic"
+        mock_library.return_value = []
         # _generate_copy returns an error dict (not raises) on internal failure
         mock_copy.side_effect = [
             {"content": "[Content generation failed: Network error]", "hashtags": [], "persona_mode": "professional"},
             {"content": "B", "hashtags": [], "persona_mode": "ceo"},
         ]
-        mock_image.side_effect = ["", ""]
 
         pipeline = ContentPipeline()
         bundle = pipeline.generate_bundle("twitter", "09:00", "pillar")

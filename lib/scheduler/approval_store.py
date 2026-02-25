@@ -32,9 +32,17 @@ CREATE TABLE IF NOT EXISTS approvals (
     scheduled_time TEXT NOT NULL,
     expires_at   TEXT NOT NULL,
     posted       INTEGER NOT NULL DEFAULT 0,
-    choice       TEXT
+    choice       TEXT,
+    image_source TEXT DEFAULT 'none',
+    library_item_ids TEXT DEFAULT '[]'
 );
 """
+
+# Migration: add new columns to existing tables (idempotent)
+_MIGRATIONS = [
+    "ALTER TABLE approvals ADD COLUMN image_source TEXT DEFAULT 'none'",
+    "ALTER TABLE approvals ADD COLUMN library_item_ids TEXT DEFAULT '[]'",
+]
 
 
 @contextmanager
@@ -45,6 +53,12 @@ def _conn():
     con.row_factory = sqlite3.Row
     try:
         con.execute(_CREATE_TABLE)
+        # Run migrations (safe on new tables — column already exists → no-op)
+        for migration in _MIGRATIONS:
+            try:
+                con.execute(migration)
+            except sqlite3.OperationalError:
+                pass  # Column already exists
         con.commit()
         yield con
         con.commit()
@@ -63,8 +77,9 @@ class ApprovalStore:
                 INSERT OR REPLACE INTO approvals
                   (slot_id, platform, subreddit, pillar, topic,
                    option_a, option_b, image_1_url, image_2_url,
-                   scheduled_time, expires_at, posted, choice)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   scheduled_time, expires_at, posted, choice,
+                   image_source, library_item_ids)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     bundle.slot_id,
@@ -80,6 +95,8 @@ class ApprovalStore:
                     bundle.expires_at.isoformat(),
                     1 if bundle.posted else 0,
                     bundle.choice,
+                    getattr(bundle, "image_source", "none"),
+                    json.dumps(getattr(bundle, "library_item_ids", [])),
                 ),
             )
 
@@ -155,6 +172,16 @@ class ApprovalStore:
     def _row_to_bundle(row: sqlite3.Row) -> "ContentBundle":
         from lib.scheduler.content_pipeline import ContentBundle  # local import
 
+        # Safely read new columns (may be absent in old DBs before migration)
+        try:
+            image_source = row["image_source"] or "none"
+        except (IndexError, KeyError):
+            image_source = "none"
+        try:
+            library_ids = json.loads(row["library_item_ids"] or "[]")
+        except (IndexError, KeyError, json.JSONDecodeError):
+            library_ids = []
+
         return ContentBundle(
             slot_id=row["slot_id"],
             platform=row["platform"],
@@ -169,4 +196,6 @@ class ApprovalStore:
             expires_at=datetime.fromisoformat(row["expires_at"]),
             posted=bool(row["posted"]),
             choice=row["choice"],
+            image_source=image_source,
+            library_item_ids=library_ids,
         )

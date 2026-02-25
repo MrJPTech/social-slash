@@ -71,6 +71,7 @@ Available tools are prefixed by group:
 - image_*      : AI image generation (Imagen 4) with platform-optimized aspect ratios
 - post_*       : Publish or dry-run posts to platforms
 - content_*    : Content curation intelligence (turn screenshots/ideas into content strategy)
+- media_library_* : Manage screenshot/photo library for authentic posts
 
 Voice personas:
 - professional : @swizzimatic casual-professional voice
@@ -985,7 +986,7 @@ async def health_check(request: Request) -> JSONResponse:
     return JSONResponse({
         "status": "healthy",
         "service": "social-slash-mcp",
-        "tools": 24,
+        "tools": 28,
         "scheduler": "running" if (sched and sched.scheduler.running) else "disabled",
         "env": {
             "LATE_API_KEY": "set" if os.getenv("LATE_API_KEY") else "MISSING",
@@ -1441,6 +1442,94 @@ def content_suggest_formats(
 
     curator = _cc.ContentCurator(persona_mode="ceo")
     return curator.suggest_formats(description)
+
+
+# ============================================================================
+# GROUP 8: MEDIA LIBRARY TOOLS (Supabase + Google API key)
+# ============================================================================
+
+
+@mcp.tool()
+def media_library_scan() -> str:
+    """Scan Supabase bucket for new unindexed images and ingest them.
+
+    Looks in the social-media/library/ prefix for images not yet in the
+    catalog, analyzes them with Gemini Vision, and indexes them for
+    content matching.
+
+    Requires SUPABASE_URL, SUPABASE_SERVICE_KEY, and GOOGLE_API_KEY.
+    """
+    try:
+        from lib.media_library.scanner import BucketScanner
+        scanner = BucketScanner()
+        result = scanner.ingest_new()
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return f"Error scanning library: {e}"
+
+
+@mcp.tool()
+def media_library_search(
+    query: str = "",
+    pillar: str = "",
+    platform: str = "",
+    limit: int = 5,
+) -> str:
+    """Search the media library for images matching criteria.
+
+    Args:
+        query: Text to match against tags and descriptions
+        pillar: Content pillar to filter by affinity
+        platform: Target platform to filter by fit
+        limit: Max results to return (default 5)
+    """
+    try:
+        from lib.media_library.catalog import MediaCatalog
+        catalog = MediaCatalog()
+
+        if pillar:
+            items = catalog.find_by_pillar(pillar, platform, limit)
+        elif query:
+            items = catalog.find_by_query(query, limit)
+        else:
+            items = catalog.get_available(limit)
+
+        return json.dumps(items, indent=2, default=str)
+    except Exception as e:
+        return f"Error searching library: {e}"
+
+
+@mcp.tool()
+def media_library_stats() -> str:
+    """Show media library statistics.
+
+    Returns total/available/used counts and category breakdown.
+    """
+    try:
+        from lib.media_library.catalog import MediaCatalog
+        catalog = MediaCatalog()
+        stats = catalog.get_stats()
+        return json.dumps(stats, indent=2)
+    except Exception as e:
+        return f"Error getting library stats: {e}"
+
+
+@mcp.tool()
+def media_library_preview(item_id: str) -> str:
+    """Get full vision analysis details for a single library image.
+
+    Args:
+        item_id: The media item UUID to look up
+    """
+    try:
+        from lib.media_library.catalog import MediaCatalog
+        catalog = MediaCatalog()
+        item = catalog.get_item(item_id)
+        if not item:
+            return f"Item {item_id} not found in library"
+        return json.dumps(item, indent=2, default=str)
+    except Exception as e:
+        return f"Error previewing item: {e}"
 
 
 # ============================================================================

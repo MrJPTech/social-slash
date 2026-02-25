@@ -84,6 +84,16 @@ def _hashtag_line(hashtags: list[str]) -> str:
     return f"\n`{tags}`"
 
 
+def _source_label(bundle: "ContentBundle") -> str:
+    """Return a short label indicating the image source."""
+    source = getattr(bundle, "image_source", "none")
+    if source == "library":
+        return "📷 Real"
+    elif source == "ai_generated":
+        return "🎨 AI"
+    return "📝 Text"
+
+
 def send_approval_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
     """Send a cardsV2 approval message to the SLASHERBOT space.
 
@@ -137,7 +147,7 @@ def send_approval_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
                 "card": {
                     "header": {
                         "title": f"📱 {platform_label}{subreddit_note} • {scheduled_str}",
-                        "subtitle": f"{bundle.pillar} • ⏰ Auto-posts in 2 hours",
+                        "subtitle": f"{bundle.pillar} • {_source_label(bundle)} • ⏰ Auto-posts in 2 hours",
                         "imageType": "CIRCLE",
                     },
                     "sections": [

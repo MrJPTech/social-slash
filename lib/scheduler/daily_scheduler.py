@@ -104,6 +104,15 @@ class DailyScheduler:
             replace_existing=True,
         )
 
+        # Library scan: every 30 minutes (ingest new uploads from Supabase)
+        self.scheduler.add_job(
+            self._scan_media_library,
+            trigger="interval",
+            minutes=30,
+            id="library_scan",
+            replace_existing=True,
+        )
+
         # Daily DB cleanup: every day at 03:00
         self.scheduler.add_job(
             self._cleanup_old_records,
@@ -184,6 +193,11 @@ class DailyScheduler:
             send_error_card(platform, str(exc), SLASHERBOT_WEBHOOK)
             return None
 
+        if bundle is None:
+            # Pipeline returns None when media-required platform has no library images
+            logger.warning(f"[scheduler] Skipping slot for {platform} — no media available")
+            return None
+
         self.store.save(bundle)
 
         from lib.scheduler.gchat_cards import send_approval_card
@@ -232,7 +246,35 @@ class DailyScheduler:
             )
 
         self.store.mark_posted(bundle.slot_id, choice)
+
+        # Mark library images as used
+        library_ids = getattr(bundle, "library_item_ids", [])
+        if library_ids:
+            try:
+                from lib.media_library.catalog import MediaCatalog
+                catalog = MediaCatalog()
+                for item_id in library_ids:
+                    catalog.mark_used(item_id, bundle.platform)
+            except Exception as exc:
+                logger.warning(f"[scheduler] Failed to mark library images used: {exc}")
+
         return result if isinstance(result, dict) else {}
+
+    def _scan_media_library(self) -> None:
+        """Scan Supabase bucket for new unindexed images and ingest them."""
+        try:
+            from lib.media_library.scanner import BucketScanner
+            scanner = BucketScanner()
+            result = scanner.ingest_new()
+            if result["ingested"] > 0:
+                logger.info(
+                    f"[scheduler] Library scan: ingested {result['ingested']}, "
+                    f"skipped {result['skipped']}"
+                )
+        except ValueError:
+            pass  # Supabase not configured — skip silently
+        except Exception as exc:
+            logger.warning(f"[scheduler] Library scan failed: {exc}")
 
     def _cleanup_old_records(self) -> None:
         deleted = self.store.cleanup_old(days=7)

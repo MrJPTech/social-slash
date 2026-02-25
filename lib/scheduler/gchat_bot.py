@@ -47,7 +47,10 @@ _HELP_TEXT = """\
 `trigger [platform]` — Manually fire a content slot (default: twitter)
 `write <topic>` — Generate a post in SWIZZ voice
 `post <content> --platform=<name>` — Post content directly
+`library` — Media library stats
 `help` — Show this message
+
+📷 *Send an image* — I'll analyze it and add it to the media library
 
 *Tip:* Type any topic and I'll write content for it.
 _Platforms: twitter, linkedin, instagram, tiktok, facebook, threads, reddit, bluesky, google_business_"""
@@ -121,8 +124,18 @@ class SlasherbotChatHandler:
         return {}
 
     def _handle_message(self, event: dict) -> dict:
-        """Handle MESSAGE events — slash commands or free-text @mentions."""
+        """Handle MESSAGE events — slash commands, image uploads, or free-text @mentions."""
         message = event.get("message", {})
+
+        # Check for image attachments FIRST — user sent a screenshot to the bot
+        attachments = message.get("attachment", [])
+        image_attachments = [
+            a for a in attachments
+            if a.get("contentType", "").startswith("image/")
+        ]
+        if image_attachments:
+            caption = message.get("argumentText", message.get("text", "")).strip()
+            return self._cmd_upload_image(image_attachments, caption)
 
         # Slash command: Google Chat populates message.slashCommand with commandId (int).
         # NOTE: Google's API sends commandId, NOT commandName — commandName is unreliable
@@ -175,6 +188,7 @@ class SlasherbotChatHandler:
             "trigger": self._cmd_trigger,
             "write": self._cmd_write,
             "post": self._cmd_post,
+            "library": self._cmd_library,
         }
 
         handler = router.get(cmd)
@@ -474,6 +488,95 @@ class SlasherbotChatHandler:
                 f"_{content[:100]}_"
             )
         }
+
+    def _cmd_library(self, _args: str) -> dict:
+        """Show media library stats."""
+        try:
+            from lib.media_library.catalog import MediaCatalog
+            catalog = MediaCatalog()
+            stats = catalog.get_stats()
+        except Exception as exc:
+            return {"text": f"⚠️ Library error: {exc}"}
+
+        lines = [
+            "*📷 Media Library*",
+            f"• Total images: {stats['total']}",
+            f"• Available: {stats['available']}",
+            f"• Used at least once: {stats['used_at_least_once']}",
+            f"• Archived: {stats['archived']}",
+        ]
+        cats = stats.get("categories", {})
+        if cats:
+            cat_str = ", ".join(f"{k}: {v}" for k, v in cats.items())
+            lines.append(f"• Categories: {cat_str}")
+        lines.append("")
+        lines.append("_Send an image to add it to the library._")
+        return {"text": "\n".join(lines)}
+
+    def _cmd_upload_image(self, attachments: list, caption: str = "") -> dict:
+        """Download image from GChat, analyze with Vision, index in library."""
+        results = []
+        for att in attachments[:4]:  # cap at 4 images per message
+            filename = att.get("contentName", "upload.png")
+            # Use thumbnailUri (public Google-hosted URL, typically 1600px+)
+            download_url = att.get("thumbnailUri", "") or att.get("downloadUri", "")
+
+            if not download_url:
+                results.append(f"⚠️ No download URL for {filename}")
+                continue
+
+            try:
+                # Download image bytes
+                image_bytes = self._download_gchat_attachment(download_url)
+
+                # Upload to Supabase Storage
+                import tempfile
+                ext = os.path.splitext(filename)[1] or ".png"
+                with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                    tmp.write(image_bytes)
+                    tmp_path = tmp.name
+
+                from lib.storage.media_store import upload_image
+                storage_url = upload_image(tmp_path, prefix="library")
+                os.unlink(tmp_path)
+
+                # Vision analysis
+                from lib.media_library.vision import VisionAnalyzer
+                analyzer = VisionAnalyzer()
+                content_type = att.get("contentType", "image/png")
+                vision_data = analyzer.analyze_bytes(image_bytes, content_type)
+
+                # Index in catalog
+                from lib.media_library.catalog import MediaCatalog
+                import uuid
+                catalog = MediaCatalog()
+                item_id = str(uuid.uuid4())
+                catalog.add(
+                    item_id, filename, storage_url, vision_data,
+                    mime_type=content_type, file_size=len(image_bytes),
+                )
+
+                desc_preview = vision_data.get("description", "")[:80]
+                tags_preview = ", ".join(vision_data.get("tags", [])[:5])
+                results.append(
+                    f"✅ *{filename}* indexed\n"
+                    f"  _{desc_preview}_\n"
+                    f"  Tags: `{tags_preview}`"
+                )
+
+            except Exception as exc:
+                results.append(f"❌ {filename}: {exc}")
+
+        header = f"📷 *{len(results)} image(s) processed*\n\n"
+        return {"text": header + "\n\n".join(results)}
+
+    @staticmethod
+    def _download_gchat_attachment(url: str) -> bytes:
+        """Download an image from a Google Chat thumbnail/download URL."""
+        import urllib.request
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+            return resp.read()
 
     def _cmd_freetext(self, text: str) -> dict:
         """Treat free-form text as a write topic."""
