@@ -17,7 +17,7 @@ async def health_check(request: Request) -> JSONResponse:
     return JSONResponse({
         "status": "healthy",
         "service": "social-slash-mcp",
-        "tools": 28,
+        "tools": 33,
         "scheduler": "running" if (sched and sched.scheduler.running) else "disabled",
         "env": {
             "LATE_API_KEY": "set" if os.getenv("LATE_API_KEY") else "MISSING",
