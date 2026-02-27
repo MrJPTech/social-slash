@@ -26,3 +26,6 @@ aiosqlite>=0.19.0
 
 # Scheduler (SLASHERBOT daily automation)
 apscheduler>=3.10.0
+
+# Storage (Supabase image hosting)
+supabase>=2.0.0
