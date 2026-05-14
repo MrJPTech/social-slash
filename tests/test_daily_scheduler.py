@@ -1,14 +1,15 @@
 """Tests for DailyScheduler — job registration, trigger, auto-post check."""
 
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch, call
+from datetime import UTC, datetime, timedelta, timezone
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
 
 def _make_bundle(slot_id="slot-test-001", posted=False, hours_to_expire=2):
     from lib.scheduler.content_pipeline import ContentBundle
-    now = datetime.now(timezone.utc)
+
+    now = datetime.now(UTC)
     return ContentBundle(
         slot_id=slot_id,
         platform="twitter",
@@ -29,6 +30,7 @@ class TestSchedulerInit:
     @patch("lib.scheduler.daily_scheduler.DailyScheduler.__init__", return_value=None)
     def test_init_does_not_raise(self, mock_init):
         from lib.scheduler.daily_scheduler import DailyScheduler
+
         sched = DailyScheduler()
         assert sched is not None
 
@@ -39,7 +41,8 @@ class TestJobRegistration:
         mock_sched = MagicMock()
         MockScheduler.return_value = mock_sched
 
-        from lib.scheduler.daily_scheduler import DailyScheduler, POSTING_SCHEDULE
+        from lib.scheduler.daily_scheduler import POSTING_SCHEDULE, DailyScheduler
+
         sched = DailyScheduler.__new__(DailyScheduler)
         sched.scheduler = mock_sched
         sched.pipeline = MagicMock()
@@ -55,6 +58,7 @@ class TestJobRegistration:
     @patch("apscheduler.schedulers.background.BackgroundScheduler")
     def test_twitter_jobs_registered(self, MockScheduler):
         from lib.scheduler.daily_scheduler import POSTING_SCHEDULE
+
         assert "twitter" in POSTING_SCHEDULE
         assert len(POSTING_SCHEDULE["twitter"]) == 4  # 4 slots per day
 
@@ -66,6 +70,7 @@ class TestTriggerSlot:
         MockScheduler.return_value = mock_sched
 
         from lib.scheduler.daily_scheduler import DailyScheduler
+
         sched = DailyScheduler.__new__(DailyScheduler)
         sched.scheduler = mock_sched
         sched.pipeline = MagicMock()
@@ -89,6 +94,7 @@ class TestTriggerSlot:
         MockScheduler.return_value = mock_sched
 
         from lib.scheduler.daily_scheduler import DailyScheduler
+
         sched = DailyScheduler.__new__(DailyScheduler)
         sched.scheduler = mock_sched
         sched.pipeline = MagicMock()
@@ -110,6 +116,7 @@ class TestAutoPostCheck:
         MockScheduler.return_value = mock_sched
 
         from lib.scheduler.daily_scheduler import DailyScheduler
+
         sched = DailyScheduler.__new__(DailyScheduler)
         sched.scheduler = mock_sched
         sched.pipeline = MagicMock()
@@ -131,6 +138,7 @@ class TestAutoPostCheck:
         MockScheduler.return_value = mock_sched
 
         from lib.scheduler.daily_scheduler import DailyScheduler
+
         sched = DailyScheduler.__new__(DailyScheduler)
         sched.scheduler = mock_sched
         sched.pipeline = MagicMock()
@@ -147,12 +155,14 @@ class TestAutoPostCheck:
 class TestPillarsLoader:
     def test_get_today_pillar_returns_string(self):
         from lib.scheduler.daily_scheduler import _get_today_pillar
+
         pillar = _get_today_pillar()
         assert isinstance(pillar, str)
         assert len(pillar) > 0
 
     def test_get_next_subreddit_returns_string(self, tmp_path):
         import json as _json
+
         pillars_data = {
             "subreddit_rotation": ["r/test1", "r/test2"],
             "subreddit_index": 0,
@@ -161,11 +171,13 @@ class TestPillarsLoader:
         path.write_text(_json.dumps(pillars_data))
         with patch("lib.scheduler.daily_scheduler._PILLARS_PATH", str(path)):
             from lib.scheduler.daily_scheduler import _get_next_subreddit
+
             sub = _get_next_subreddit()
         assert sub in ["r/test1", "r/test2"]
 
     def test_subreddit_index_increments(self, tmp_path):
         import json as _json
+
         pillars_data = {
             "subreddit_rotation": ["r/a", "r/b", "r/c"],
             "subreddit_index": 0,
@@ -174,6 +186,7 @@ class TestPillarsLoader:
         path.write_text(_json.dumps(pillars_data))
         with patch("lib.scheduler.daily_scheduler._PILLARS_PATH", str(path)):
             from lib.scheduler.daily_scheduler import _get_next_subreddit
+
             s1 = _get_next_subreddit()
             s2 = _get_next_subreddit()
         assert s1 != s2

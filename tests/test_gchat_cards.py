@@ -1,7 +1,7 @@
 """Tests for GChatCards — cardsV2 structure, HMAC tokens, button URLs."""
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,7 +10,7 @@ from lib.scheduler.content_pipeline import ContentBundle
 
 
 def _make_bundle(slot_id="slot-abc123"):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return ContentBundle(
         slot_id=slot_id,
         platform="twitter",
@@ -38,24 +38,28 @@ class TestHmacTokens:
     def test_make_and_verify_token(self):
         with patch("lib.scheduler.gchat_cards._TOKEN_SECRET", "test-secret-32-chars-abcdefghij"):
             from lib.scheduler.gchat_cards import _make_token, verify_token
+
             token = _make_token("slot-123", "A1")
             assert verify_token("slot-123", "A1", token)
 
     def test_wrong_choice_fails_verification(self):
         with patch("lib.scheduler.gchat_cards._TOKEN_SECRET", "test-secret-32-chars-abcdefghij"):
             from lib.scheduler.gchat_cards import _make_token, verify_token
+
             token = _make_token("slot-123", "A1")
             assert not verify_token("slot-123", "B2", token)
 
     def test_wrong_slot_fails_verification(self):
         with patch("lib.scheduler.gchat_cards._TOKEN_SECRET", "test-secret-32-chars-abcdefghij"):
             from lib.scheduler.gchat_cards import _make_token, verify_token
+
             token = _make_token("slot-123", "A1")
             assert not verify_token("slot-xyz", "A1", token)
 
     def test_no_secret_always_passes(self):
         with patch("lib.scheduler.gchat_cards._TOKEN_SECRET", ""):
             from lib.scheduler.gchat_cards import verify_token
+
             assert verify_token("anything", "A1", "garbage-token")
 
 
@@ -64,6 +68,7 @@ class TestApprovalUrl:
         with patch("lib.scheduler.gchat_cards._TOKEN_SECRET", "test-secret"):
             with patch("lib.scheduler.gchat_cards.APPROVAL_BASE_URL", "https://example.com"):
                 from lib.scheduler.gchat_cards import build_approval_url
+
                 url = build_approval_url("slot-123", "A1")
                 assert "slot=slot-123" in url
                 assert "choice=A1" in url
@@ -73,6 +78,7 @@ class TestApprovalUrl:
         with patch("lib.scheduler.gchat_cards._TOKEN_SECRET", "test-secret"):
             with patch("lib.scheduler.gchat_cards.APPROVAL_BASE_URL", "https://example.com"):
                 from lib.scheduler.gchat_cards import build_approval_url
+
                 url = build_approval_url("slot-123", "A1")
                 assert "token=" in url
 
@@ -84,7 +90,10 @@ class TestSendApprovalCard:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_approval_card
-            result = send_approval_card(bundle, "https://chat.googleapis.com/v1/spaces/FAKE/messages")
+
+            result = send_approval_card(
+                bundle, "https://chat.googleapis.com/v1/spaces/FAKE/messages"
+            )
         assert result is True
         mock_post.assert_called_once()
 
@@ -94,6 +103,7 @@ class TestSendApprovalCard:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_approval_card
+
             send_approval_card(bundle, "https://chat.googleapis.com/v1/spaces/FAKE/messages")
         call_kwargs = mock_post.call_args
         payload = call_kwargs[1].get("json") or call_kwargs[0][1]
@@ -105,6 +115,7 @@ class TestSendApprovalCard:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_approval_card
+
             send_approval_card(bundle, "https://chat.googleapis.com/v1/spaces/FAKE/messages")
         payload = mock_post.call_args[1]["json"]
         card = payload["cardsV2"][0]["card"]
@@ -126,6 +137,7 @@ class TestSendApprovalCard:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_approval_card
+
             send_approval_card(bundle, "https://chat.googleapis.com/v1/spaces/FAKE/messages")
         payload = mock_post.call_args[1]["json"]
         header_title = payload["cardsV2"][0]["card"]["header"]["title"]
@@ -135,6 +147,7 @@ class TestSendApprovalCard:
         bundle = _make_bundle()
         with patch("lib.scheduler.gchat_cards.SLASHERBOT_WEBHOOK", ""):
             from lib.scheduler.gchat_cards import send_approval_card
+
             result = send_approval_card(bundle, "")
         assert result is False
 
@@ -145,7 +158,10 @@ class TestSendApprovalCard:
         mock_resp.text = "Internal Server Error"
         with patch("requests.post", return_value=mock_resp):
             from lib.scheduler.gchat_cards import send_approval_card
-            result = send_approval_card(bundle, "https://chat.googleapis.com/v1/spaces/FAKE/messages")
+
+            result = send_approval_card(
+                bundle, "https://chat.googleapis.com/v1/spaces/FAKE/messages"
+            )
         assert result is False
 
 
@@ -156,7 +172,10 @@ class TestConfirmationCard:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_confirmation_card
-            result = send_confirmation_card(bundle, "A1", {"status": "success"}, "https://webhook.url")
+
+            result = send_confirmation_card(
+                bundle, "A1", {"status": "success"}, "https://webhook.url"
+            )
         assert result is True
         payload = mock_post.call_args[1]["json"]
         assert "cardsV2" in payload
@@ -171,6 +190,7 @@ class TestAutoPostCard:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_auto_post_card
+
             result = send_auto_post_card(bundle, "https://webhook.url")
         assert result is True
         payload = mock_post.call_args[1]["json"]
@@ -195,6 +215,7 @@ class TestImageWidgets:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_approval_card
+
             send_approval_card(bundle, "https://webhook.url")
         widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
         image_urls = [w["image"]["imageUrl"] for w in widgets if "image" in w]
@@ -208,6 +229,7 @@ class TestImageWidgets:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_approval_card
+
             send_approval_card(bundle, "https://webhook.url")
         widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
         # decoratedText may still appear elsewhere (e.g. post info), but the
@@ -226,6 +248,7 @@ class TestImageWidgets:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_approval_card
+
             send_approval_card(bundle, "https://webhook.url")
         widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
         texts = [w["textParagraph"]["text"] for w in widgets if "textParagraph" in w]
@@ -238,6 +261,7 @@ class TestImageWidgets:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_confirmation_card
+
             send_confirmation_card(bundle, "A1", {"status": "success"}, "https://webhook.url")
         widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
         image_urls = [w["image"]["imageUrl"] for w in widgets if "image" in w]
@@ -251,6 +275,7 @@ class TestImageWidgets:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_confirmation_card
+
             send_confirmation_card(bundle, "A2", {"status": "success"}, "https://webhook.url")
         widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
         image_urls = [w["image"]["imageUrl"] for w in widgets if "image" in w]
@@ -263,6 +288,7 @@ class TestImageWidgets:
         mock_resp.status_code = 200
         with patch("requests.post", return_value=mock_resp) as mock_post:
             from lib.scheduler.gchat_cards import send_auto_post_card
+
             send_auto_post_card(bundle, "https://webhook.url")
         widgets = self._get_all_widgets(mock_post.call_args[1]["json"])
         image_urls = [w["image"]["imageUrl"] for w in widgets if "image" in w]

@@ -9,10 +9,11 @@ import os
 import sys
 
 # Add lib to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
 
 from dotenv import load_dotenv
-load_dotenv('.env.local')
+
+load_dotenv(".env.local")
 
 
 def test_late_api():
@@ -32,8 +33,8 @@ def test_late_api():
 
         for acc in accounts:
             # Handle SocialAccount objects from Late SDK
-            platform = getattr(acc, 'platform', 'unknown')
-            name = getattr(acc, 'displayName', None) or getattr(acc, 'username', 'Unknown')
+            platform = getattr(acc, "platform", "unknown")
+            name = getattr(acc, "displayName", None) or getattr(acc, "username", "Unknown")
             print(f"  - {platform}: {name}")
 
         return True
@@ -57,9 +58,7 @@ def test_gemini_api():
 
         # Quick test with a simple prompt
         result = client.generate_hashtags(
-            content="Testing social media automation",
-            platform="linkedin",
-            count=3
+            content="Testing social media automation", platform="linkedin", count=3
         )
 
         print(f"[INFO] Generated hashtags: {result}")

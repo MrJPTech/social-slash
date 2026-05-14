@@ -1,12 +1,11 @@
 """Tests for ContentPipeline — bundle structure and agent integration."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from lib.scheduler.content_pipeline import ContentBundle, ContentPipeline
-
 
 # ---------------------------------------------------------------------------
 # Shared mocks
@@ -41,7 +40,7 @@ def _patched_pipeline():
 
 class TestContentBundleDataclass:
     def test_bundle_fields_present(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         bundle = ContentBundle(
             slot_id="abc",
             platform="twitter",
@@ -62,7 +61,8 @@ class TestContentBundleDataclass:
 
     def test_bundle_expires_at_is_2hrs_after_scheduled(self):
         from datetime import timedelta
-        now = datetime.now(timezone.utc)
+
+        now = datetime.now(UTC)
         expires = now + timedelta(hours=2)
         delta = (expires - now).total_seconds()
         assert abs(delta - 7200) < 5
@@ -79,8 +79,20 @@ class TestContentPipelineGenerateBundle:
             {"content": "Option B", "hashtags": [], "persona_mode": "ceo"},
         ]
         mock_library.return_value = [
-            {"item_id": "img-1", "storage_url": "https://img1.jpg", "description": "Screenshot of code editor", "score": 0.9, "match_reasons": []},
-            {"item_id": "img-2", "storage_url": "https://img2.jpg", "description": "Terminal with tests passing", "score": 0.8, "match_reasons": []},
+            {
+                "item_id": "img-1",
+                "storage_url": "https://img1.jpg",
+                "description": "Screenshot of code editor",
+                "score": 0.9,
+                "match_reasons": [],
+            },
+            {
+                "item_id": "img-2",
+                "storage_url": "https://img2.jpg",
+                "description": "Terminal with tests passing",
+                "score": 0.8,
+                "match_reasons": [],
+            },
         ]
 
         pipeline = ContentPipeline()
@@ -105,6 +117,7 @@ class TestContentPipelineGenerateBundle:
     @patch("lib.scheduler.content_pipeline.ContentPipeline._get_topic_variation")
     def test_slot_id_is_uuid(self, mock_topic, mock_copy, mock_library):
         import re
+
         mock_topic.return_value = "topic"
         mock_copy.side_effect = [
             {"content": "A", "hashtags": [], "persona_mode": "professional"},
@@ -149,7 +162,7 @@ class TestContentPipelineGenerateBundle:
 
         pipeline = ContentPipeline()
         bundle = pipeline.generate_bundle("twitter", "09:00", "AI tools")
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         assert bundle.expires_at > now
 
     @patch("lib.scheduler.content_pipeline.ContentPipeline._find_library_images")
@@ -195,7 +208,13 @@ class TestContentPipelineGenerateBundle:
             {"content": "B", "hashtags": [], "persona_mode": "ceo"},
         ]
         mock_library.return_value = [
-            {"item_id": "img-1", "storage_url": "https://img1.jpg", "description": "Screenshot", "score": 0.9, "match_reasons": []},
+            {
+                "item_id": "img-1",
+                "storage_url": "https://img1.jpg",
+                "description": "Screenshot",
+                "score": 0.9,
+                "match_reasons": [],
+            },
         ]
 
         pipeline = ContentPipeline()
@@ -226,7 +245,11 @@ class TestCopyGenerationFallback:
         mock_library.return_value = []
         # _generate_copy returns an error dict (not raises) on internal failure
         mock_copy.side_effect = [
-            {"content": "[Content generation failed: Network error]", "hashtags": [], "persona_mode": "professional"},
+            {
+                "content": "[Content generation failed: Network error]",
+                "hashtags": [],
+                "persona_mode": "professional",
+            },
             {"content": "B", "hashtags": [], "persona_mode": "ceo"},
         ]
 

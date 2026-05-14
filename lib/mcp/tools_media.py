@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import json
 
+from ._client_helpers import build_agent_config, suppress_stdout
 from ._shared import mcp
-from ._client_helpers import suppress_stdout, build_agent_config
 
 
 def _get_media_agent(persona_mode: str = "professional", platform: str = "instagram"):
     """Create a MediaAgent with stdout suppression."""
     with suppress_stdout():
         from lib.agents.media_agent import MediaAgent
+
         config = build_agent_config(persona_mode, platform)
         return MediaAgent(config)
 
@@ -52,7 +53,9 @@ def media_generate_story_text(context: str, persona_mode: str = "professional") 
             text = agent.generate_story_text(context, persona_mode=persona_mode)
         return text
     except Exception as e:
-        return f"Error generating story text: {e}\nEnsure GOOGLE_API_KEY or ANTHROPIC_API_KEY is set."
+        return (
+            f"Error generating story text: {e}\nEnsure GOOGLE_API_KEY or ANTHROPIC_API_KEY is set."
+        )
 
 
 @mcp.tool()

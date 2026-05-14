@@ -11,11 +11,10 @@ Usage:
 """
 
 import json
-import os
 import re
 from collections import Counter
-from typing import Dict, Any, List, Optional
 from pathlib import Path
+from typing import Any
 
 
 class InstagramParser:
@@ -38,11 +37,11 @@ class InstagramParser:
             base_path: Path to Instagram data export root
         """
         self.base_path = Path(base_path)
-        self.messages: List[Dict[str, Any]] = []
-        self.owner_messages: List[str] = []
+        self.messages: list[dict[str, Any]] = []
+        self.owner_messages: list[str] = []
         self._parsed = False
 
-    def parse_conversations(self, limit: int = 0) -> List[Dict[str, Any]]:
+    def parse_conversations(self, limit: int = 0) -> list[dict[str, Any]]:
         """
         Extract messages from inbox/*/message_*.json files.
 
@@ -76,28 +75,30 @@ class InstagramParser:
             # Parse all message_*.json files in conversation
             for msg_file in sorted(convo_dir.glob("message_*.json")):
                 try:
-                    with open(msg_file, 'r', encoding='utf-8') as f:
+                    with open(msg_file, encoding="utf-8") as f:
                         data = json.load(f)
 
-                    participants = [p.get('name', '') for p in data.get('participants', [])]
-                    for msg in data.get('messages', []):
-                        content = msg.get('content', '')
+                    participants = [p.get("name", "") for p in data.get("participants", [])]
+                    for msg in data.get("messages", []):
+                        content = msg.get("content", "")
                         if not content:
                             continue
 
                         # Fix Instagram's UTF-8 encoding
                         try:
-                            content = content.encode('latin-1').decode('utf-8')
+                            content = content.encode("latin-1").decode("utf-8")
                         except (UnicodeDecodeError, UnicodeEncodeError):
                             pass
 
-                        all_messages.append({
-                            'sender': msg.get('sender_name', ''),
-                            'content': content,
-                            'timestamp': msg.get('timestamp_ms', 0),
-                            'type': msg.get('type', 'Generic'),
-                            'participants': participants,
-                        })
+                        all_messages.append(
+                            {
+                                "sender": msg.get("sender_name", ""),
+                                "content": content,
+                                "timestamp": msg.get("timestamp_ms", 0),
+                                "type": msg.get("type", "Generic"),
+                                "participants": participants,
+                            }
+                        )
 
                 except (json.JSONDecodeError, OSError) as e:
                     print(f"Error reading {msg_file}: {e}")
@@ -107,7 +108,7 @@ class InstagramParser:
         print(f"Parsed {len(all_messages)} messages from {len(conversations)} conversations")
         return all_messages
 
-    def _get_owner_messages(self) -> List[str]:
+    def _get_owner_messages(self) -> list[str]:
         """Get messages sent by the account owner (first participant or most frequent sender)."""
         if self.owner_messages:
             return self.owner_messages
@@ -116,19 +117,18 @@ class InstagramParser:
             self.parse_conversations()
 
         # Find owner by most frequent sender
-        sender_counts = Counter(m['sender'] for m in self.messages)
+        sender_counts = Counter(m["sender"] for m in self.messages)
         if not sender_counts:
             return []
 
         owner = sender_counts.most_common(1)[0][0]
         self.owner_messages = [
-            m['content'] for m in self.messages
-            if m['sender'] == owner and m['content']
+            m["content"] for m in self.messages if m["sender"] == owner and m["content"]
         ]
         print(f"Owner identified as '{owner}' with {len(self.owner_messages)} messages")
         return self.owner_messages
 
-    def extract_vocabulary_patterns(self) -> Dict[str, int]:
+    def extract_vocabulary_patterns(self) -> dict[str, int]:
         """
         Analyze messages for vocabulary and slang frequency.
 
@@ -137,33 +137,33 @@ class InstagramParser:
         """
         messages = self._get_owner_messages()
         vocab_patterns = {
-            'ya': r'\bya\b',
-            'gonna': r'\bgonna\b',
-            'wanna': r'\bwanna\b',
-            'gotta': r'\bgotta\b',
-            'tho': r'\btho\b',
-            'cuz': r'\bcuz\b',
-            'dis': r'\bdis\b',
-            'fo': r'\bfo\b',
-            'imma': r'\bimma\b',
-            'finna': r'\bfinna\b',
-            'sumn': r'\bsumn\b',
-            'fasho': r'\bfasho+\b',
-            'fr': r'\bfr\b',
-            'nah': r'\bnah\b',
-            'ion': r'\bion\b',
-            'ight': r'\bight\b',
-            'aight': r'\baight\b',
+            "ya": r"\bya\b",
+            "gonna": r"\bgonna\b",
+            "wanna": r"\bwanna\b",
+            "gotta": r"\bgotta\b",
+            "tho": r"\btho\b",
+            "cuz": r"\bcuz\b",
+            "dis": r"\bdis\b",
+            "fo": r"\bfo\b",
+            "imma": r"\bimma\b",
+            "finna": r"\bfinna\b",
+            "sumn": r"\bsumn\b",
+            "fasho": r"\bfasho+\b",
+            "fr": r"\bfr\b",
+            "nah": r"\bnah\b",
+            "ion": r"\bion\b",
+            "ight": r"\bight\b",
+            "aight": r"\baight\b",
         }
 
         results = {}
-        text_blob = ' '.join(messages).lower()
+        text_blob = " ".join(messages).lower()
         for term, pattern in vocab_patterns.items():
             results[term] = len(re.findall(pattern, text_blob, re.IGNORECASE))
 
         return dict(sorted(results.items(), key=lambda x: x[1], reverse=True))
 
-    def extract_emoji_patterns(self) -> Dict[str, int]:
+    def extract_emoji_patterns(self) -> dict[str, int]:
         """
         Count and categorize emoji usage.
 
@@ -173,15 +173,15 @@ class InstagramParser:
         messages = self._get_owner_messages()
         emoji_pattern = re.compile(
             "["
-            "\U0001F600-\U0001F64F"  # emoticons
-            "\U0001F300-\U0001F5FF"  # symbols & pictographs
-            "\U0001F680-\U0001F6FF"  # transport & map
-            "\U0001F1E0-\U0001F1FF"  # flags
-            "\U00002702-\U000027B0"  # dingbats
-            "\U0001F900-\U0001F9FF"  # supplemental symbols
-            "\U0001FA00-\U0001FA6F"  # chess symbols
-            "\U0001FA70-\U0001FAFF"  # symbols extended-A
-            "\U00002600-\U000026FF"  # misc symbols
+            "\U0001f600-\U0001f64f"  # emoticons
+            "\U0001f300-\U0001f5ff"  # symbols & pictographs
+            "\U0001f680-\U0001f6ff"  # transport & map
+            "\U0001f1e0-\U0001f1ff"  # flags
+            "\U00002702-\U000027b0"  # dingbats
+            "\U0001f900-\U0001f9ff"  # supplemental symbols
+            "\U0001fa00-\U0001fa6f"  # chess symbols
+            "\U0001fa70-\U0001faff"  # symbols extended-A
+            "\U00002600-\U000026ff"  # misc symbols
             "]+",
             flags=re.UNICODE,
         )
@@ -195,7 +195,7 @@ class InstagramParser:
 
         return dict(emoji_counts.most_common(50))
 
-    def extract_response_patterns(self) -> Dict[str, Any]:
+    def extract_response_patterns(self) -> dict[str, Any]:
         """
         Analyze response length and style distributions.
 
@@ -219,20 +219,20 @@ class InstagramParser:
         caps_messages = sum(1 for m in messages if m.isupper() and len(m) > 1)
 
         return {
-            'total_messages': total,
-            'avg_word_count': round(sum(word_counts) / total, 1) if total else 0,
-            'avg_char_count': round(sum(char_counts) / total, 1) if total else 0,
-            'median_word_count': sorted(word_counts)[total // 2] if total else 0,
-            'distribution': {
-                'ultra_short_pct': round(ultra_short / total * 100, 1) if total else 0,
-                'short_pct': round(short / total * 100, 1) if total else 0,
-                'medium_pct': round(medium / total * 100, 1) if total else 0,
-                'long_pct': round(long / total * 100, 1) if total else 0,
+            "total_messages": total,
+            "avg_word_count": round(sum(word_counts) / total, 1) if total else 0,
+            "avg_char_count": round(sum(char_counts) / total, 1) if total else 0,
+            "median_word_count": sorted(word_counts)[total // 2] if total else 0,
+            "distribution": {
+                "ultra_short_pct": round(ultra_short / total * 100, 1) if total else 0,
+                "short_pct": round(short / total * 100, 1) if total else 0,
+                "medium_pct": round(medium / total * 100, 1) if total else 0,
+                "long_pct": round(long / total * 100, 1) if total else 0,
             },
-            'caps_emphasis_pct': round(caps_messages / total * 100, 1) if total else 0,
+            "caps_emphasis_pct": round(caps_messages / total * 100, 1) if total else 0,
         }
 
-    def extract_address_terms(self) -> Dict[str, int]:
+    def extract_address_terms(self) -> dict[str, int]:
         """
         Find address term frequency (gang, twin, fam, etc.).
 
@@ -241,22 +241,35 @@ class InstagramParser:
         """
         messages = self._get_owner_messages()
         terms = [
-            'gang', 'twin', 'ganger', 'fam', 'dawg', 'broski',
-            'slime', 'folks', 'bro', 'bruh', 'cuz', 'homie',
-            'king', 'queen', 'g', 'big dawg',
+            "gang",
+            "twin",
+            "ganger",
+            "fam",
+            "dawg",
+            "broski",
+            "slime",
+            "folks",
+            "bro",
+            "bruh",
+            "cuz",
+            "homie",
+            "king",
+            "queen",
+            "g",
+            "big dawg",
         ]
 
-        text_blob = ' '.join(messages).lower()
+        text_blob = " ".join(messages).lower()
         results = {}
         for term in terms:
-            pattern = r'\b' + re.escape(term) + r'\b'
+            pattern = r"\b" + re.escape(term) + r"\b"
             count = len(re.findall(pattern, text_blob))
             if count > 0:
                 results[term] = count
 
         return dict(sorted(results.items(), key=lambda x: x[1], reverse=True))
 
-    def extract_agreement_patterns(self) -> Dict[str, int]:
+    def extract_agreement_patterns(self) -> dict[str, int]:
         """
         Find agreement term frequency (bet, fasho, say less, etc.).
 
@@ -265,22 +278,33 @@ class InstagramParser:
         """
         messages = self._get_owner_messages()
         terms = [
-            'bet', 'fasho', 'say less', 'say no more', 'no cap',
-            'facts', 'real talk', 'on god', 'ong', 'yessir',
-            'yessirskii', 'for sure', 'hundred percent', 'word',
+            "bet",
+            "fasho",
+            "say less",
+            "say no more",
+            "no cap",
+            "facts",
+            "real talk",
+            "on god",
+            "ong",
+            "yessir",
+            "yessirskii",
+            "for sure",
+            "hundred percent",
+            "word",
         ]
 
-        text_blob = ' '.join(messages).lower()
+        text_blob = " ".join(messages).lower()
         results = {}
         for term in terms:
-            pattern = r'\b' + re.escape(term) + r'\b'
+            pattern = r"\b" + re.escape(term) + r"\b"
             count = len(re.findall(pattern, text_blob))
             if count > 0:
                 results[term] = count
 
         return dict(sorted(results.items(), key=lambda x: x[1], reverse=True))
 
-    def get_training_samples(self, count: int = 20) -> List[str]:
+    def get_training_samples(self, count: int = 20) -> list[str]:
         """
         Return formatted message samples for few-shot prompting.
 
@@ -311,7 +335,7 @@ class InstagramParser:
 
         return samples[:count]
 
-    def export_persona_data(self, output_path: str) -> Dict[str, Any]:
+    def export_persona_data(self, output_path: str) -> dict[str, Any]:
         """
         Export all extracted speech patterns as JSON.
 
@@ -325,20 +349,20 @@ class InstagramParser:
             self.parse_conversations()
 
         data = {
-            'source': str(self.base_path),
-            'total_messages_parsed': len(self.messages),
-            'owner_messages_count': len(self._get_owner_messages()),
-            'vocabulary_patterns': self.extract_vocabulary_patterns(),
-            'emoji_patterns': self.extract_emoji_patterns(),
-            'response_patterns': self.extract_response_patterns(),
-            'address_terms': self.extract_address_terms(),
-            'agreement_patterns': self.extract_agreement_patterns(),
-            'training_samples': self.get_training_samples(20),
+            "source": str(self.base_path),
+            "total_messages_parsed": len(self.messages),
+            "owner_messages_count": len(self._get_owner_messages()),
+            "vocabulary_patterns": self.extract_vocabulary_patterns(),
+            "emoji_patterns": self.extract_emoji_patterns(),
+            "response_patterns": self.extract_response_patterns(),
+            "address_terms": self.extract_address_terms(),
+            "agreement_patterns": self.extract_agreement_patterns(),
+            "training_samples": self.get_training_samples(20),
         }
 
         output = Path(output_path)
         output.parent.mkdir(parents=True, exist_ok=True)
-        with open(output, 'w', encoding='utf-8') as f:
+        with open(output, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
         print(f"Exported persona data to {output_path}")
@@ -350,52 +374,56 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Instagram Export Speech Pattern Parser")
-    parser.add_argument('--path', required=True, help='Path to Instagram data export directory')
-    parser.add_argument('--output', default='persona_data.json', help='Output JSON file path')
-    parser.add_argument('--limit', type=int, default=0, help='Max conversations to parse (0=all)')
-    parser.add_argument('--action', choices=['full', 'vocab', 'emoji', 'response', 'address', 'agreement', 'samples'],
-                       default='full', help='What to extract')
+    parser.add_argument("--path", required=True, help="Path to Instagram data export directory")
+    parser.add_argument("--output", default="persona_data.json", help="Output JSON file path")
+    parser.add_argument("--limit", type=int, default=0, help="Max conversations to parse (0=all)")
+    parser.add_argument(
+        "--action",
+        choices=["full", "vocab", "emoji", "response", "address", "agreement", "samples"],
+        default="full",
+        help="What to extract",
+    )
 
     args = parser.parse_args()
 
     ig_parser = InstagramParser(args.path)
     ig_parser.parse_conversations(limit=args.limit)
 
-    if args.action == 'full':
+    if args.action == "full":
         data = ig_parser.export_persona_data(args.output)
         print(f"\nExported {len(data)} categories to {args.output}")
 
-    elif args.action == 'vocab':
+    elif args.action == "vocab":
         results = ig_parser.extract_vocabulary_patterns()
         print("\nVocabulary Patterns:")
         for term, count in results.items():
             print(f"  {term}: {count}")
 
-    elif args.action == 'emoji':
+    elif args.action == "emoji":
         results = ig_parser.extract_emoji_patterns()
         print("\nEmoji Patterns:")
         for emoji, count in list(results.items())[:20]:
             print(f"  {emoji}: {count}")
 
-    elif args.action == 'response':
+    elif args.action == "response":
         results = ig_parser.extract_response_patterns()
         print("\nResponse Patterns:")
         for key, value in results.items():
             print(f"  {key}: {value}")
 
-    elif args.action == 'address':
+    elif args.action == "address":
         results = ig_parser.extract_address_terms()
         print("\nAddress Terms:")
         for term, count in results.items():
             print(f"  {term}: {count}")
 
-    elif args.action == 'agreement':
+    elif args.action == "agreement":
         results = ig_parser.extract_agreement_patterns()
         print("\nAgreement Patterns:")
         for term, count in results.items():
             print(f"  {term}: {count}")
 
-    elif args.action == 'samples':
+    elif args.action == "samples":
         samples = ig_parser.get_training_samples(20)
         print(f"\nTraining Samples ({len(samples)}):")
         for i, s in enumerate(samples, 1):

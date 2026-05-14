@@ -15,19 +15,19 @@ import argparse
 import json
 import os
 import sys
-from typing import Dict, List, Optional, Any
+from typing import Any
 
 # Add lib to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api_clients.late_client import LateDistributionClient
 from models.platform_options import (
-    PlatformOptions,
     InstagramOptions,
     LinkedInOptions,
+    PlatformOptions,
+    RedditOptions,
     ThreadsOptions,
     TwitterOptions,
-    RedditOptions,
 )
 
 
@@ -75,15 +75,17 @@ class Poster:
         try:
             if provider == "gemini":
                 from ai.gemini_client import GeminiClient
+
                 self.ai_client = GeminiClient()
                 self._ai_provider = "gemini"
-                print(f"[INFO] AI enhancement enabled (Gemini)")
+                print("[INFO] AI enhancement enabled (Gemini)")
 
             elif provider == "anthropic":
                 from ai.anthropic_client import AnthropicClient
+
                 self.ai_client = AnthropicClient()
                 self._ai_provider = "anthropic"
-                print(f"[INFO] AI enhancement enabled (Anthropic)")
+                print("[INFO] AI enhancement enabled (Anthropic)")
 
             else:
                 raise ValueError(f"Unknown AI provider: {provider}")
@@ -95,12 +97,7 @@ class Poster:
             print(f"[WARNING] AI client not configured: {e}")
             self.ai_client = None
 
-    def enhance_content(
-        self,
-        content: str,
-        platform: str,
-        provider: str = "gemini"
-    ) -> str:
+    def enhance_content(self, content: str, platform: str, provider: str = "gemini") -> str:
         """
         Enhance content using AI.
 
@@ -120,11 +117,11 @@ class Poster:
 
         try:
             result = self.ai_client.enhance_content(content, platform)
-            enhanced = result.get('enhanced_content', content)
+            enhanced = result.get("enhanced_content", content)
 
             if enhanced != content:
                 print(f"[INFO] Content enhanced for {platform}")
-                changes = result.get('changes_made', [])
+                changes = result.get("changes_made", [])
                 for change in changes[:3]:
                     print(f"  - {change}")
 
@@ -137,14 +134,14 @@ class Poster:
     def post(
         self,
         content: str,
-        platforms: List[str],
+        platforms: list[str],
         enhance: bool = False,
         ai_provider: str = "gemini",
-        media_urls: Optional[List[str]] = None,
-        schedule: Optional[str] = None,
+        media_urls: list[str] | None = None,
+        schedule: str | None = None,
         dry_run: bool = False,
-        platform_options: Optional[PlatformOptions] = None
-    ) -> Dict[str, Any]:
+        platform_options: PlatformOptions | None = None,
+    ) -> dict[str, Any]:
         """
         Post content to specified platforms.
 
@@ -184,9 +181,9 @@ class Poster:
                     platform_data_summary[platform] = data
 
             # Get Reddit title if posting to Reddit
-            if 'reddit' in [p.lower() for p in platforms]:
+            if "reddit" in [p.lower() for p in platforms]:
                 reddit_title = platform_options.get_reddit_title(content)
-                platform_data_summary['reddit_title'] = reddit_title
+                platform_data_summary["reddit_title"] = reddit_title
 
         # Dry run mode
         if dry_run:
@@ -198,7 +195,7 @@ class Poster:
                 "media": media_urls,
                 "schedule": schedule,
                 "platform_options": platform_data_summary,
-                "would_post": True
+                "would_post": True,
             }
 
         # Single platform posting
@@ -206,33 +203,31 @@ class Poster:
             platform = platforms[0]
             try:
                 # Build platform-specific parameters
-                post_kwargs = self._build_post_kwargs(
-                    platform, content, platform_options
-                )
+                post_kwargs = self._build_post_kwargs(platform, content, platform_options)
 
                 result = self.late_client.post_to_platform(
                     content=content,
                     platform=platform,
                     media_urls=media_urls,
                     scheduled_for=schedule,
-                    **post_kwargs
+                    **post_kwargs,
                 )
                 return {
                     "status": "success",
                     "platform": platform,
-                    "post_id": result.get('id'),
-                    "url": result.get('url'),
+                    "post_id": result.get("id"),
+                    "url": result.get("url"),
                     "content": content,
                     "enhanced": enhance,
                     "scheduled": schedule is not None,
-                    "platform_options": platform_data_summary.get(platform)
+                    "platform_options": platform_data_summary.get(platform),
                 }
             except Exception as e:
                 return {
                     "status": "error",
                     "platform": platform,
                     "error": str(e),
-                    "content": content
+                    "content": content,
                 }
 
         # Multi-platform distribution with platform-specific options
@@ -241,25 +236,22 @@ class Poster:
             platforms=platforms,
             media_urls=media_urls,
             scheduled_for=schedule,
-            platform_options=platform_options
+            platform_options=platform_options,
         )
 
         return {
-            "status": "success" if result['summary']['failed'] == 0 else "partial",
-            "results": result['results'],
-            "summary": result['summary'],
+            "status": "success" if result["summary"]["failed"] == 0 else "partial",
+            "results": result["results"],
+            "summary": result["summary"],
             "content": content,
             "enhanced": enhance,
             "scheduled": schedule is not None,
-            "platform_options": platform_data_summary
+            "platform_options": platform_data_summary,
         }
 
     def _build_post_kwargs(
-        self,
-        platform: str,
-        content: str,
-        options: Optional[PlatformOptions]
-    ) -> Dict[str, Any]:
+        self, platform: str, content: str, options: PlatformOptions | None
+    ) -> dict[str, Any]:
         """
         Build platform-specific kwargs for late_client.post_to_platform().
 
@@ -281,22 +273,22 @@ class Poster:
         # Get platform-specific data
         platform_data = options.get_platform_data(platform)
         if platform_data:
-            kwargs['platform_specific_data'] = platform_data
+            kwargs["platform_specific_data"] = platform_data
 
         # Handle Reddit title (passed as top-level param, not platformSpecificData)
-        if platform == 'reddit':
-            kwargs['title'] = options.get_reddit_title(content)
+        if platform == "reddit":
+            kwargs["title"] = options.get_reddit_title(content)
 
         return kwargs
 
     def _distribute_with_options(
         self,
         content: str,
-        platforms: List[str],
-        media_urls: Optional[List[str]],
-        scheduled_for: Optional[str],
-        platform_options: Optional[PlatformOptions]
-    ) -> Dict[str, Any]:
+        platforms: list[str],
+        media_urls: list[str] | None,
+        scheduled_for: str | None,
+        platform_options: PlatformOptions | None,
+    ) -> dict[str, Any]:
         """
         Distribute to multiple platforms with individual platform options.
 
@@ -321,47 +313,32 @@ class Poster:
 
         for platform in platforms:
             try:
-                post_kwargs = self._build_post_kwargs(
-                    platform, content, platform_options
-                )
+                post_kwargs = self._build_post_kwargs(platform, content, platform_options)
 
                 result = self.late_client.post_to_platform(
                     content=content,
                     platform=platform,
                     media_urls=media_urls,
                     scheduled_for=scheduled_for,
-                    **post_kwargs
+                    **post_kwargs,
                 )
-                results[platform] = {
-                    'success': True,
-                    'data': result
-                }
+                results[platform] = {"success": True, "data": result}
                 successful += 1
 
             except Exception as e:
-                results[platform] = {
-                    'success': False,
-                    'error': str(e)
-                }
+                results[platform] = {"success": False, "error": str(e)}
                 failed += 1
 
-        summary = {
-            'total': len(platforms),
-            'successful': successful,
-            'failed': failed
-        }
+        summary = {"total": len(platforms), "successful": successful, "failed": failed}
 
-        print(f"\n[SUMMARY] Distribution complete")
+        print("\n[SUMMARY] Distribution complete")
         print(f"  Successful: {successful}/{len(platforms)}")
         print(f"  Failed: {failed}/{len(platforms)}")
 
-        return {
-            'results': results,
-            'summary': summary
-        }
+        return {"results": results, "summary": summary}
 
 
-def _build_platform_options(args) -> Optional[PlatformOptions]:
+def _build_platform_options(args) -> PlatformOptions | None:
     """
     Build PlatformOptions from CLI arguments.
 
@@ -378,13 +355,13 @@ def _build_platform_options(args) -> Optional[PlatformOptions]:
     if any([args.ig_type, args.ig_first_comment, args.ig_collaborators, args.ig_no_feed]):
         collaborators = None
         if args.ig_collaborators:
-            collaborators = [c.strip() for c in args.ig_collaborators.split(',')]
+            collaborators = [c.strip() for c in args.ig_collaborators.split(",")]
 
         instagram = InstagramOptions(
             content_type=args.ig_type,
             first_comment=args.ig_first_comment,
             share_to_feed=not args.ig_no_feed,
-            collaborators=collaborators
+            collaborators=collaborators,
         )
         has_options = True
 
@@ -392,8 +369,7 @@ def _build_platform_options(args) -> Optional[PlatformOptions]:
     linkedin = None
     if any([args.li_first_comment, args.li_no_link_preview]):
         linkedin = LinkedInOptions(
-            first_comment=args.li_first_comment,
-            disable_link_preview=args.li_no_link_preview
+            first_comment=args.li_first_comment, disable_link_preview=args.li_no_link_preview
         )
         has_options = True
 
@@ -401,8 +377,7 @@ def _build_platform_options(args) -> Optional[PlatformOptions]:
     threads = None
     if any([args.threads_auto_thread, args.threads_number]):
         threads = ThreadsOptions(
-            auto_thread=args.threads_auto_thread,
-            thread_number=args.threads_number
+            auto_thread=args.threads_auto_thread, thread_number=args.threads_number
         )
         has_options = True
 
@@ -436,14 +411,14 @@ def _build_platform_options(args) -> Optional[PlatformOptions]:
         threads=threads,
         twitter=twitter,
         reddit=reddit,
-        raw_platform_data=raw_platform_data
+        raw_platform_data=raw_platform_data,
     )
 
 
 def main():
     """CLI entry point for the poster."""
     parser = argparse.ArgumentParser(
-        description='Social Slash Content Poster',
+        description="Social Slash Content Poster",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -464,136 +439,104 @@ Platform-Specific Examples:
 
   # Threads auto-threading
   python poster.py --content "Long content..." --platforms threads --threads-auto-thread
-        """
+        """,
     )
 
+    parser.add_argument("--content", "-c", required=True, help="Content to post")
+
     parser.add_argument(
-        '--content', '-c',
+        "--platforms",
+        "-p",
         required=True,
-        help='Content to post'
+        help="Comma-separated list of platforms (e.g., linkedin,twitter)",
     )
 
     parser.add_argument(
-        '--platforms', '-p',
-        required=True,
-        help='Comma-separated list of platforms (e.g., linkedin,twitter)'
+        "--enhance", "-e", action="store_true", help="Enable AI content enhancement"
     )
 
     parser.add_argument(
-        '--enhance', '-e',
-        action='store_true',
-        help='Enable AI content enhancement'
+        "--ai-provider",
+        choices=["gemini", "anthropic"],
+        default="gemini",
+        help="AI provider for enhancement (default: gemini)",
+    )
+
+    parser.add_argument("--media", "-m", help="Comma-separated list of media URLs")
+
+    parser.add_argument(
+        "--schedule", "-s", help="ISO datetime for scheduling (e.g., 2024-12-01T10:00:00Z)"
     )
 
     parser.add_argument(
-        '--ai-provider',
-        choices=['gemini', 'anthropic'],
-        default='gemini',
-        help='AI provider for enhancement (default: gemini)'
+        "--dry-run", action="store_true", help="Simulate posting without actually posting"
     )
 
-    parser.add_argument(
-        '--media', '-m',
-        help='Comma-separated list of media URLs'
-    )
-
-    parser.add_argument(
-        '--schedule', '-s',
-        help='ISO datetime for scheduling (e.g., 2024-12-01T10:00:00Z)'
-    )
-
-    parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Simulate posting without actually posting'
-    )
-
-    parser.add_argument(
-        '--json',
-        action='store_true',
-        help='Output results as JSON'
-    )
+    parser.add_argument("--json", action="store_true", help="Output results as JSON")
 
     # ==========================================================================
     # Platform-Specific Options
     # ==========================================================================
 
     # Reddit options
-    reddit_group = parser.add_argument_group('Reddit Options')
+    reddit_group = parser.add_argument_group("Reddit Options")
     reddit_group.add_argument(
-        '--reddit-title',
-        help='Post title (auto-generated from first line if not provided)'
+        "--reddit-title", help="Post title (auto-generated from first line if not provided)"
     )
 
     # Instagram options
-    ig_group = parser.add_argument_group('Instagram Options')
+    ig_group = parser.add_argument_group("Instagram Options")
     ig_group.add_argument(
-        '--ig-type',
-        choices=['story', 'post', 'reel'],
-        help='Content type (default: auto-detect from media)'
+        "--ig-type",
+        choices=["story", "post", "reel"],
+        help="Content type (default: auto-detect from media)",
+    )
+    ig_group.add_argument("--ig-first-comment", help="First comment to post after publishing")
+    ig_group.add_argument(
+        "--ig-collaborators", help="Collaborator usernames (comma-separated, max 3)"
     )
     ig_group.add_argument(
-        '--ig-first-comment',
-        help='First comment to post after publishing'
-    )
-    ig_group.add_argument(
-        '--ig-collaborators',
-        help='Collaborator usernames (comma-separated, max 3)'
-    )
-    ig_group.add_argument(
-        '--ig-no-feed',
-        action='store_true',
-        help='For reels, do not show on main feed'
+        "--ig-no-feed", action="store_true", help="For reels, do not show on main feed"
     )
 
     # LinkedIn options
-    li_group = parser.add_argument_group('LinkedIn Options')
+    li_group = parser.add_argument_group("LinkedIn Options")
+    li_group.add_argument("--li-first-comment", help="First comment to post after publishing")
     li_group.add_argument(
-        '--li-first-comment',
-        help='First comment to post after publishing'
-    )
-    li_group.add_argument(
-        '--li-no-link-preview',
-        action='store_true',
-        help='Disable link preview card'
+        "--li-no-link-preview", action="store_true", help="Disable link preview card"
     )
 
     # Threads options
-    threads_group = parser.add_argument_group('Threads Options')
+    threads_group = parser.add_argument_group("Threads Options")
     threads_group.add_argument(
-        '--threads-auto-thread',
-        action='store_true',
-        help='Auto-break long content into threaded replies'
+        "--threads-auto-thread",
+        action="store_true",
+        help="Auto-break long content into threaded replies",
     )
     threads_group.add_argument(
-        '--threads-number',
-        action='store_true',
-        help='Add numbering to thread posts (1/n, 2/n...)'
+        "--threads-number", action="store_true", help="Add numbering to thread posts (1/n, 2/n...)"
     )
 
     # Twitter options
-    twitter_group = parser.add_argument_group('Twitter/X Options')
+    twitter_group = parser.add_argument_group("Twitter/X Options")
     twitter_group.add_argument(
-        '--twitter-thread',
-        action='store_true',
-        help='Auto-break long content into tweet thread'
+        "--twitter-thread", action="store_true", help="Auto-break long content into tweet thread"
     )
 
     # Advanced: Raw JSON platform options
     parser.add_argument(
-        '--platform-options',
-        help='JSON string with raw platform-specific options (advanced)'
+        "--platform-options", help="JSON string with raw platform-specific options (advanced)"
     )
 
     args = parser.parse_args()
 
     # Parse platforms
-    platforms = [p.strip().lower() for p in args.platforms.split(',')]
+    platforms = [p.strip().lower() for p in args.platforms.split(",")]
 
     # Parse media URLs
     media_urls = None
     if args.media:
-        media_urls = [u.strip() for u in args.media.split(',')]
+        media_urls = [u.strip() for u in args.media.split(",")]
 
     # Build platform-specific options
     platform_options = _build_platform_options(args)
@@ -609,30 +552,32 @@ Platform-Specific Examples:
         media_urls=media_urls,
         schedule=args.schedule,
         dry_run=args.dry_run,
-        platform_options=platform_options
+        platform_options=platform_options,
     )
 
     # Output results
     if args.json:
         print(json.dumps(result, indent=2))
     else:
-        status = result.get('status', 'unknown')
+        status = result.get("status", "unknown")
 
         if args.dry_run:
             print("\n[DRY-RUN] Would post:")
-            print(f"  Content: {result.get('enhanced_content') or result.get('original_content', '')[:100]}...")
+            print(
+                f"  Content: {result.get('enhanced_content') or result.get('original_content', '')[:100]}..."
+            )
             print(f"  Platforms: {', '.join(result.get('platforms', []))}")
-            if result.get('media'):
+            if result.get("media"):
                 print(f"  Media: {len(result['media'])} files")
-            if result.get('schedule'):
+            if result.get("schedule"):
                 print(f"  Scheduled for: {result['schedule']}")
 
             # Display platform-specific options
-            platform_opts = result.get('platform_options', {})
+            platform_opts = result.get("platform_options", {})
             if platform_opts:
                 print("\n  Platform Options:")
                 for platform, opts in platform_opts.items():
-                    if platform == 'reddit_title':
+                    if platform == "reddit_title":
                         print(f"    Reddit Title: {opts}")
                     elif isinstance(opts, dict):
                         print(f"    {platform.title()}:")
@@ -641,32 +586,32 @@ Platform-Specific Examples:
 
             print("\n  No actual post was made.")
 
-        elif status == 'success':
+        elif status == "success":
             print(f"\n[SUCCESS] Posted to: {', '.join(platforms)}")
 
-            if 'post_id' in result:
+            if "post_id" in result:
                 print(f"  Post ID: {result['post_id']}")
-            if 'url' in result:
+            if "url" in result:
                 print(f"  URL: {result['url']}")
 
-            if 'summary' in result:
-                summary = result['summary']
+            if "summary" in result:
+                summary = result["summary"]
                 print(f"  Successful: {summary['successful']}/{summary['total']}")
 
-        elif status == 'partial':
-            print(f"\n[PARTIAL] Some posts failed:")
-            summary = result.get('summary', {})
+        elif status == "partial":
+            print("\n[PARTIAL] Some posts failed:")
+            summary = result.get("summary", {})
             print(f"  Successful: {summary.get('successful', 0)}/{summary.get('total', 0)}")
             print(f"  Failed: {summary.get('failed', 0)}")
 
-        elif status == 'error':
+        elif status == "error":
             print(f"\n[ERROR] Failed to post to {result.get('platform', 'unknown')}")
             print(f"  Error: {result.get('error', 'Unknown error')}")
 
-        if result.get('enhanced'):
+        if result.get("enhanced"):
             print(f"\n  AI Enhancement: Enabled ({args.ai_provider})")
 
-        if result.get('scheduled'):
+        if result.get("scheduled"):
             print(f"  Scheduled: {args.schedule}")
 
 

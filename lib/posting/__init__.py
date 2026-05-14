@@ -2,4 +2,4 @@
 
 from .poster import Poster
 
-__all__ = ['Poster']
+__all__ = ["Poster"]

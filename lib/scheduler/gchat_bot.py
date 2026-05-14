@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +55,19 @@ _HELP_TEXT = """\
 *Tip:* Type any topic and I'll write content for it.
 _Platforms: twitter, linkedin, instagram, tiktok, facebook, threads, reddit, bluesky, google_business_"""
 
-_VALID_PLATFORMS = frozenset({
-    "twitter", "linkedin", "instagram", "tiktok", "facebook",
-    "threads", "reddit", "bluesky", "google_business",
-})
+_VALID_PLATFORMS = frozenset(
+    {
+        "twitter",
+        "linkedin",
+        "instagram",
+        "tiktok",
+        "facebook",
+        "threads",
+        "reddit",
+        "bluesky",
+        "google_business",
+    }
+)
 
 # Map Google Chat commandId integers → command names.
 # IDs must match those registered in Google Cloud Console →
@@ -130,8 +139,7 @@ class SlasherbotChatHandler:
         # Check for image attachments FIRST — user sent a screenshot to the bot
         attachments = message.get("attachment", [])
         image_attachments = [
-            a for a in attachments
-            if a.get("contentType", "").startswith("image/")
+            a for a in attachments if a.get("contentType", "").startswith("image/")
         ]
         if image_attachments:
             caption = message.get("argumentText", message.get("text", "")).strip()
@@ -231,6 +239,7 @@ class SlasherbotChatHandler:
 
         try:
             from lib.scheduler.approval_store import ApprovalStore
+
             store = ApprovalStore()
             pending = store.get_pending_active()
             expired = store.get_pending_expired()
@@ -245,6 +254,7 @@ class SlasherbotChatHandler:
         """List all pending approval bundles."""
         try:
             from lib.scheduler.approval_store import ApprovalStore
+
             store = ApprovalStore()
             bundles = store.get_pending_active()
         except Exception as exc:
@@ -291,6 +301,7 @@ class SlasherbotChatHandler:
 
         try:
             from lib.scheduler.approval_store import ApprovalStore
+
             store = ApprovalStore()
             bundle = store.get_by_prefix(slot_prefix)
         except Exception as exc:
@@ -299,8 +310,7 @@ class SlasherbotChatHandler:
         if not bundle:
             return {
                 "text": (
-                    f"❌ Slot `{slot_prefix}` not found.\n"
-                    "Run `pending` to see active slot IDs."
+                    f"❌ Slot `{slot_prefix}` not found.\nRun `pending` to see active slot IDs."
                 )
             }
 
@@ -317,8 +327,10 @@ class SlasherbotChatHandler:
 
         try:
             from lib.mcp._client_helpers import suppress_stdout
+
             with suppress_stdout():
                 from lib.posting.poster import Poster
+
                 poster = Poster()
                 result = poster.post(
                     content=content,
@@ -337,6 +349,7 @@ class SlasherbotChatHandler:
         # Send confirmation card to SLASHERBOT webhook as well
         try:
             from lib.scheduler.gchat_cards import send_confirmation_card
+
             send_confirmation_card(bundle, choice, result if isinstance(result, dict) else {})
         except Exception:
             pass
@@ -358,6 +371,7 @@ class SlasherbotChatHandler:
 
         try:
             from lib.scheduler.approval_store import ApprovalStore
+
             store = ApprovalStore()
             bundle = store.get_by_prefix(slot_prefix)
         except Exception as exc:
@@ -384,9 +398,7 @@ class SlasherbotChatHandler:
             }
 
         if not self._scheduler:
-            return {
-                "text": "⚠️ Scheduler not running. Set `SCHEDULER_ENABLED=true` on Railway."
-            }
+            return {"text": "⚠️ Scheduler not running. Set `SCHEDULER_ENABLED=true` on Railway."}
 
         try:
             slot_id = self._scheduler.trigger_slot(platform, "manual", "professional")
@@ -401,7 +413,7 @@ class SlasherbotChatHandler:
                     "Check this space in a moment for the approval card."
                 )
             }
-        return {"text": f"⚠️ Trigger returned no slot — check Railway logs."}
+        return {"text": "⚠️ Trigger returned no slot — check Railway logs."}
 
     def _cmd_write(self, args: str) -> dict:
         """write <topic> [--platform=twitter] [--persona=professional] [--tone=authentic]"""
@@ -420,9 +432,11 @@ class SlasherbotChatHandler:
         topic = _strip_flags(args).strip() or args.strip()
 
         try:
-            from lib.mcp._client_helpers import suppress_stdout, build_agent_config
+            from lib.mcp._client_helpers import build_agent_config, suppress_stdout
+
             with suppress_stdout():
                 from lib.agents.writing_agent import WritingAgent
+
                 config = build_agent_config(persona, platform)
                 agent = WritingAgent(config)
                 result = agent.generate_post(
@@ -451,10 +465,12 @@ class SlasherbotChatHandler:
         ]
         if hashtag_str:
             lines.extend(["", f"`{hashtag_str}`"])
-        lines.extend([
-            "",
-            f"_→ `post {content[:40].replace(chr(10), ' ')}... --platform={platform}` to publish_",
-        ])
+        lines.extend(
+            [
+                "",
+                f"_→ `post {content[:40].replace(chr(10), ' ')}... --platform={platform}` to publish_",
+            ]
+        )
 
         return {"text": "\n".join(lines)}
 
@@ -473,8 +489,10 @@ class SlasherbotChatHandler:
 
         try:
             from lib.mcp._client_helpers import suppress_stdout
+
             with suppress_stdout():
                 from lib.posting.poster import Poster
+
                 poster = Poster()
                 result = poster.post(content=content, platforms=[platform])
         except Exception as exc:
@@ -482,17 +500,14 @@ class SlasherbotChatHandler:
 
         status = result.get("status", "posted") if isinstance(result, dict) else "posted"
         return {
-            "text": (
-                f"✅ *Posted to {platform.upper()}!*\n"
-                f"Status: {status}\n"
-                f"_{content[:100]}_"
-            )
+            "text": (f"✅ *Posted to {platform.upper()}!*\nStatus: {status}\n_{content[:100]}_")
         }
 
     def _cmd_library(self, _args: str) -> dict:
         """Show media library stats."""
         try:
             from lib.media_library.catalog import MediaCatalog
+
             catalog = MediaCatalog()
             stats = catalog.get_stats()
         except Exception as exc:
@@ -531,37 +546,44 @@ class SlasherbotChatHandler:
 
                 # Upload to Supabase Storage
                 import tempfile
+
                 ext = os.path.splitext(filename)[1] or ".png"
                 with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
                     tmp.write(image_bytes)
                     tmp_path = tmp.name
 
                 from lib.storage.media_store import upload_image
+
                 storage_url = upload_image(tmp_path, prefix="library")
                 os.unlink(tmp_path)
 
                 # Vision analysis
                 from lib.media_library.vision import VisionAnalyzer
+
                 analyzer = VisionAnalyzer()
                 content_type = att.get("contentType", "image/png")
                 vision_data = analyzer.analyze_bytes(image_bytes, content_type)
 
                 # Index in catalog
-                from lib.media_library.catalog import MediaCatalog
                 import uuid
+
+                from lib.media_library.catalog import MediaCatalog
+
                 catalog = MediaCatalog()
                 item_id = str(uuid.uuid4())
                 catalog.add(
-                    item_id, filename, storage_url, vision_data,
-                    mime_type=content_type, file_size=len(image_bytes),
+                    item_id,
+                    filename,
+                    storage_url,
+                    vision_data,
+                    mime_type=content_type,
+                    file_size=len(image_bytes),
                 )
 
                 desc_preview = vision_data.get("description", "")[:80]
                 tags_preview = ", ".join(vision_data.get("tags", [])[:5])
                 results.append(
-                    f"✅ *{filename}* indexed\n"
-                    f"  _{desc_preview}_\n"
-                    f"  Tags: `{tags_preview}`"
+                    f"✅ *{filename}* indexed\n  _{desc_preview}_\n  Tags: `{tags_preview}`"
                 )
 
             except Exception as exc:
@@ -574,6 +596,7 @@ class SlasherbotChatHandler:
     def _download_gchat_attachment(url: str) -> bytes:
         """Download an image from a Google Chat thumbnail/download URL."""
         import urllib.request
+
         req = urllib.request.Request(url)
         with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
             return resp.read()
@@ -610,7 +633,7 @@ class SlasherbotChatHandler:
 # ---------------------------------------------------------------------------
 
 
-def _extract_flag(text: str, flag: str) -> Optional[str]:
+def _extract_flag(text: str, flag: str) -> str | None:
     """Extract --flag=value or --flag value from text, return the value or None."""
     # --flag=value
     m = re.search(rf"--{flag}=(\S+)", text)

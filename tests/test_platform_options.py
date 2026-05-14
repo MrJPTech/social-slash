@@ -4,20 +4,21 @@ Unit tests for platform-specific options.
 Tests the PlatformOptions data models and their conversion to Late SDK format.
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add lib to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'lib'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "lib"))
 
 from models.platform_options import (
-    PlatformOptions,
     InstagramOptions,
     LinkedInOptions,
+    PlatformOptions,
+    RedditOptions,
     ThreadsOptions,
     TwitterOptions,
-    RedditOptions,
 )
 
 
@@ -31,51 +32,45 @@ class TestInstagramOptions:
 
     def test_story_content_type(self):
         """Story content type should be passed."""
-        opts = InstagramOptions(content_type='story')
+        opts = InstagramOptions(content_type="story")
         data = opts.to_platform_data()
-        assert data == {'contentType': 'story'}
+        assert data == {"contentType": "story"}
 
     def test_reel_content_type(self):
         """Reel content type should be passed."""
-        opts = InstagramOptions(content_type='reel')
+        opts = InstagramOptions(content_type="reel")
         data = opts.to_platform_data()
-        assert data == {'contentType': 'reel'}
+        assert data == {"contentType": "reel"}
 
     def test_first_comment(self):
         """First comment should be included."""
         opts = InstagramOptions(first_comment="Follow for more!")
         data = opts.to_platform_data()
-        assert data == {'firstComment': 'Follow for more!'}
+        assert data == {"firstComment": "Follow for more!"}
 
     def test_no_feed_option(self):
         """Share to feed=False should be included."""
         opts = InstagramOptions(share_to_feed=False)
         data = opts.to_platform_data()
-        assert data == {'shareToFeed': False}
+        assert data == {"shareToFeed": False}
 
     def test_collaborators(self):
         """Collaborators should be included."""
-        opts = InstagramOptions(collaborators=['user1', 'user2'])
+        opts = InstagramOptions(collaborators=["user1", "user2"])
         data = opts.to_platform_data()
-        assert data == {'collaborators': ['user1', 'user2']}
+        assert data == {"collaborators": ["user1", "user2"]}
 
     def test_collaborators_max_three(self):
         """Collaborators should be truncated to max 3."""
-        opts = InstagramOptions(collaborators=['user1', 'user2', 'user3', 'user4'])
+        opts = InstagramOptions(collaborators=["user1", "user2", "user3", "user4"])
         data = opts.to_platform_data()
-        assert data == {'collaborators': ['user1', 'user2', 'user3']}
+        assert data == {"collaborators": ["user1", "user2", "user3"]}
 
     def test_combined_options(self):
         """Multiple options should be combined."""
-        opts = InstagramOptions(
-            content_type='story',
-            first_comment='Check link in bio!'
-        )
+        opts = InstagramOptions(content_type="story", first_comment="Check link in bio!")
         data = opts.to_platform_data()
-        assert data == {
-            'contentType': 'story',
-            'firstComment': 'Check link in bio!'
-        }
+        assert data == {"contentType": "story", "firstComment": "Check link in bio!"}
 
 
 class TestLinkedInOptions:
@@ -90,31 +85,25 @@ class TestLinkedInOptions:
         """First comment should be included."""
         opts = LinkedInOptions(first_comment="See link in comments")
         data = opts.to_platform_data()
-        assert data == {'firstComment': 'See link in comments'}
+        assert data == {"firstComment": "See link in comments"}
 
     def test_disable_link_preview(self):
         """Disable link preview should be included."""
         opts = LinkedInOptions(disable_link_preview=True)
         data = opts.to_platform_data()
-        assert data == {'disableLinkPreview': True}
+        assert data == {"disableLinkPreview": True}
 
     def test_organization_urn(self):
         """Organization URN should be included."""
-        opts = LinkedInOptions(organization_urn='urn:li:organization:12345')
+        opts = LinkedInOptions(organization_urn="urn:li:organization:12345")
         data = opts.to_platform_data()
-        assert data == {'organizationUrn': 'urn:li:organization:12345'}
+        assert data == {"organizationUrn": "urn:li:organization:12345"}
 
     def test_combined_options(self):
         """Multiple options should be combined."""
-        opts = LinkedInOptions(
-            first_comment='More info in comments',
-            disable_link_preview=True
-        )
+        opts = LinkedInOptions(first_comment="More info in comments", disable_link_preview=True)
         data = opts.to_platform_data()
-        assert data == {
-            'firstComment': 'More info in comments',
-            'disableLinkPreview': True
-        }
+        assert data == {"firstComment": "More info in comments", "disableLinkPreview": True}
 
 
 class TestThreadsOptions:
@@ -129,19 +118,19 @@ class TestThreadsOptions:
         """Auto thread should be included."""
         opts = ThreadsOptions(auto_thread=True)
         data = opts.to_platform_data()
-        assert data == {'thread': True}
+        assert data == {"thread": True}
 
     def test_thread_number(self):
         """Thread numbering should be included."""
         opts = ThreadsOptions(thread_number=True)
         data = opts.to_platform_data()
-        assert data == {'threadNumber': True}
+        assert data == {"threadNumber": True}
 
     def test_combined_options(self):
         """Multiple options should be combined."""
         opts = ThreadsOptions(auto_thread=True, thread_number=True)
         data = opts.to_platform_data()
-        assert data == {'thread': True, 'threadNumber': True}
+        assert data == {"thread": True, "threadNumber": True}
 
 
 class TestTwitterOptions:
@@ -172,49 +161,41 @@ class TestPlatformOptions:
 
     def test_get_platform_data_instagram(self):
         """Should return Instagram-specific data."""
-        options = PlatformOptions(
-            instagram=InstagramOptions(content_type='story')
-        )
-        data = options.get_platform_data('instagram')
-        assert data == {'contentType': 'story'}
+        options = PlatformOptions(instagram=InstagramOptions(content_type="story"))
+        data = options.get_platform_data("instagram")
+        assert data == {"contentType": "story"}
 
     def test_get_platform_data_linkedin(self):
         """Should return LinkedIn-specific data."""
-        options = PlatformOptions(
-            linkedin=LinkedInOptions(first_comment='Comment!')
-        )
-        data = options.get_platform_data('linkedin')
-        assert data == {'firstComment': 'Comment!'}
+        options = PlatformOptions(linkedin=LinkedInOptions(first_comment="Comment!"))
+        data = options.get_platform_data("linkedin")
+        assert data == {"firstComment": "Comment!"}
 
     def test_get_platform_data_threads(self):
         """Should return Threads-specific data."""
-        options = PlatformOptions(
-            threads=ThreadsOptions(auto_thread=True)
-        )
-        data = options.get_platform_data('threads')
-        assert data == {'thread': True}
+        options = PlatformOptions(threads=ThreadsOptions(auto_thread=True))
+        data = options.get_platform_data("threads")
+        assert data == {"thread": True}
 
     def test_get_platform_data_unknown_returns_none(self):
         """Should return None for unknown platform."""
         options = PlatformOptions()
-        assert options.get_platform_data('unknown') is None
+        assert options.get_platform_data("unknown") is None
 
     def test_get_platform_data_case_insensitive(self):
         """Platform name should be case insensitive."""
-        options = PlatformOptions(
-            instagram=InstagramOptions(content_type='story')
-        )
-        assert options.get_platform_data('INSTAGRAM') == {'contentType': 'story'}
-        assert options.get_platform_data('Instagram') == {'contentType': 'story'}
+        options = PlatformOptions(instagram=InstagramOptions(content_type="story"))
+        assert options.get_platform_data("INSTAGRAM") == {"contentType": "story"}
+        assert options.get_platform_data("Instagram") == {"contentType": "story"}
 
     def test_raw_platform_data_override(self):
         """Raw platform data should override typed options."""
         options = PlatformOptions(
-            instagram=InstagramOptions(content_type='story'),
-            raw_platform_data={'instagram': {'contentType': 'reel', 'extra': 'value'}}
+            instagram=InstagramOptions(content_type="story"),
+            raw_platform_data={"instagram": {"contentType": "reel", "extra": "value"}},
         )
-        data = options.get_platform_data('instagram')
-        assert data == {'contentType': 'reel', 'extra': 'value'}
+        data = options.get_platform_data("instagram")
+        assert data == {"contentType": "reel", "extra": "value"}
 
 
 class TestRedditTitleExtraction:
@@ -222,11 +203,9 @@ class TestRedditTitleExtraction:
 
     def test_explicit_title(self):
         """Explicit title should be used if provided."""
-        options = PlatformOptions(
-            reddit=RedditOptions(title='My Explicit Title')
-        )
-        title = options.get_reddit_title('Content here')
-        assert title == 'My Explicit Title'
+        options = PlatformOptions(reddit=RedditOptions(title="My Explicit Title"))
+        title = options.get_reddit_title("Content here")
+        assert title == "My Explicit Title"
 
     def test_auto_extract_from_first_line(self):
         """Title should be extracted from first line."""
@@ -248,7 +227,7 @@ class TestRedditTitleExtraction:
         content = "A" * 400
         title = options.get_reddit_title(content)
         assert len(title) <= 300
-        assert title.endswith('...')
+        assert title.endswith("...")
 
     def test_auto_extract_empty_returns_default(self):
         """Empty/hashtag-only content returns default title."""
@@ -263,45 +242,37 @@ class TestPlatformOptionsValidation:
 
     def test_validate_matching_platforms(self):
         """No warnings when options match platforms."""
-        options = PlatformOptions(
-            instagram=InstagramOptions(content_type='story')
-        )
-        warnings = options.validate_for_platforms(['instagram'])
+        options = PlatformOptions(instagram=InstagramOptions(content_type="story"))
+        warnings = options.validate_for_platforms(["instagram"])
         assert len(warnings) == 0
 
     def test_validate_mismatched_instagram(self):
         """Warning when Instagram options but not posting to Instagram."""
-        options = PlatformOptions(
-            instagram=InstagramOptions(content_type='story')
-        )
-        warnings = options.validate_for_platforms(['twitter'])
+        options = PlatformOptions(instagram=InstagramOptions(content_type="story"))
+        warnings = options.validate_for_platforms(["twitter"])
         assert len(warnings) == 1
-        assert 'Instagram' in warnings[0]
+        assert "Instagram" in warnings[0]
 
     def test_validate_mismatched_linkedin(self):
         """Warning when LinkedIn options but not posting to LinkedIn."""
-        options = PlatformOptions(
-            linkedin=LinkedInOptions(first_comment='Comment')
-        )
-        warnings = options.validate_for_platforms(['twitter'])
+        options = PlatformOptions(linkedin=LinkedInOptions(first_comment="Comment"))
+        warnings = options.validate_for_platforms(["twitter"])
         assert len(warnings) == 1
-        assert 'LinkedIn' in warnings[0]
+        assert "LinkedIn" in warnings[0]
 
     def test_validate_multiple_mismatches(self):
         """Multiple warnings for multiple mismatches."""
         options = PlatformOptions(
-            instagram=InstagramOptions(content_type='story'),
-            linkedin=LinkedInOptions(first_comment='Comment')
+            instagram=InstagramOptions(content_type="story"),
+            linkedin=LinkedInOptions(first_comment="Comment"),
         )
-        warnings = options.validate_for_platforms(['twitter'])
+        warnings = options.validate_for_platforms(["twitter"])
         assert len(warnings) == 2
 
     def test_validate_case_insensitive(self):
         """Validation should be case insensitive."""
-        options = PlatformOptions(
-            instagram=InstagramOptions(content_type='story')
-        )
-        warnings = options.validate_for_platforms(['INSTAGRAM'])
+        options = PlatformOptions(instagram=InstagramOptions(content_type="story"))
+        warnings = options.validate_for_platforms(["INSTAGRAM"])
         assert len(warnings) == 0
 
 
@@ -311,33 +282,33 @@ class TestCLIOptionsBuilding:
     def test_build_instagram_options(self):
         """Test building Instagram options from CLI-like args."""
         instagram = InstagramOptions(
-            content_type='story',
-            first_comment='Links in bio!',
-            collaborators=['user1', 'user2'],
-            share_to_feed=False
+            content_type="story",
+            first_comment="Links in bio!",
+            collaborators=["user1", "user2"],
+            share_to_feed=False,
         )
         data = instagram.to_platform_data()
         assert data == {
-            'contentType': 'story',
-            'firstComment': 'Links in bio!',
-            'collaborators': ['user1', 'user2'],
-            'shareToFeed': False
+            "contentType": "story",
+            "firstComment": "Links in bio!",
+            "collaborators": ["user1", "user2"],
+            "shareToFeed": False,
         }
 
     def test_build_combined_platform_options(self):
         """Test building combined options for multi-platform posting."""
         options = PlatformOptions(
-            instagram=InstagramOptions(content_type='story'),
-            linkedin=LinkedInOptions(first_comment='DM me!'),
+            instagram=InstagramOptions(content_type="story"),
+            linkedin=LinkedInOptions(first_comment="DM me!"),
             threads=ThreadsOptions(auto_thread=True),
-            reddit=RedditOptions(title='My Reddit Post')
+            reddit=RedditOptions(title="My Reddit Post"),
         )
 
-        assert options.get_platform_data('instagram') == {'contentType': 'story'}
-        assert options.get_platform_data('linkedin') == {'firstComment': 'DM me!'}
-        assert options.get_platform_data('threads') == {'thread': True}
-        assert options.get_reddit_title('Any content') == 'My Reddit Post'
+        assert options.get_platform_data("instagram") == {"contentType": "story"}
+        assert options.get_platform_data("linkedin") == {"firstComment": "DM me!"}
+        assert options.get_platform_data("threads") == {"thread": True}
+        assert options.get_reddit_title("Any content") == "My Reddit Post"
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

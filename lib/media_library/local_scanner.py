@@ -18,17 +18,15 @@ import os
 import re
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # ── Default iCloud sync folders ──────────────────────────────────────────
 
-_ICLOUD_BASE = (
-    r"D:\ICLOUD-OCTOBER'25\iCloudDrive\DAILY-UPDATES\SocialSlasher\Media"
-)
+_ICLOUD_BASE = r"D:\ICLOUD-OCTOBER'25\iCloudDrive\DAILY-UPDATES\SocialSlasher\Media"
 
-DEFAULT_SYNC_FOLDERS: List[Dict[str, str]] = [
+DEFAULT_SYNC_FOLDERS: list[dict[str, str]] = [
     {"path": os.path.join(_ICLOUD_BASE, "photos"), "category": "photo"},
     {"path": os.path.join(_ICLOUD_BASE, "videos"), "category": "video"},
     {"path": os.path.join(_ICLOUD_BASE, "screenshots"), "category": "screenshot"},
@@ -36,13 +34,11 @@ DEFAULT_SYNC_FOLDERS: List[Dict[str, str]] = [
 
 # ── Supported file types ─────────────────────────────────────────────────
 
-IMAGE_EXTENSIONS = frozenset(
-    {".png", ".jpg", ".jpeg", ".gif", ".webp", ".heic", ".heif"}
-)
+IMAGE_EXTENSIONS = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".heic", ".heif"})
 VIDEO_EXTENSIONS = frozenset({".mp4", ".mov", ".avi", ".mkv", ".webm"})
 ALL_MEDIA_EXTENSIONS = IMAGE_EXTENSIONS | VIDEO_EXTENSIONS
 
-MIME_MAP: Dict[str, str] = {
+MIME_MAP: dict[str, str] = {
     ".png": "image/png",
     ".jpg": "image/jpeg",
     ".jpeg": "image/jpeg",
@@ -75,13 +71,13 @@ class LocalFolderScanner:
     ``path|category`` pairs, pipe-delimited to avoid Windows colon issues).
     """
 
-    def __init__(self, folders: Optional[List[Dict[str, str]]] = None) -> None:
+    def __init__(self, folders: list[dict[str, str]] | None = None) -> None:
         self._folders = folders or self._load_folders()
 
     # ── Configuration ────────────────────────────────────────────────────
 
     @staticmethod
-    def _load_folders() -> List[Dict[str, str]]:
+    def _load_folders() -> list[dict[str, str]]:
         """Load folder config from env or use defaults."""
         env_val = os.getenv("MEDIA_SYNC_FOLDERS", "")
         if not env_val:
@@ -89,7 +85,7 @@ class LocalFolderScanner:
 
         # Format: "path|category,path|category,..."
         # Uses pipe (|) separator so Windows drive letters (C:\) don't clash.
-        folders: List[Dict[str, str]] = []
+        folders: list[dict[str, str]] = []
         for entry in env_val.split(","):
             entry = entry.strip()
             if "|" in entry:
@@ -100,13 +96,13 @@ class LocalFolderScanner:
         return folders
 
     @property
-    def folders(self) -> List[Dict[str, str]]:
+    def folders(self) -> list[dict[str, str]]:
         """Return the configured folder list (for inspection / testing)."""
         return list(self._folders)
 
     # ── Scanning ─────────────────────────────────────────────────────────
 
-    def scan(self) -> List[Dict[str, Any]]:
+    def scan(self) -> list[dict[str, Any]]:
         """Find new media files across all configured folders.
 
         Skips files already indexed in the catalog (by expected storage URL).
@@ -117,7 +113,7 @@ class LocalFolderScanner:
         from lib.media_library.catalog import MediaCatalog
 
         catalog = MediaCatalog()
-        new_files: List[Dict[str, Any]] = []
+        new_files: list[dict[str, Any]] = []
 
         for folder_cfg in self._folders:
             folder_path = Path(folder_cfg["path"])
@@ -140,9 +136,7 @@ class LocalFolderScanner:
                 safe_name = _sanitize_filename(file_path.name)
                 storage_name = f"{file_hash}_{safe_name}"
                 storage_prefix = f"library/{category}"
-                expected_url = self._build_expected_url(
-                    f"{storage_prefix}/{storage_name}"
-                )
+                expected_url = self._build_expected_url(f"{storage_prefix}/{storage_name}")
 
                 if catalog.exists_by_url(expected_url):
                     continue
@@ -170,7 +164,7 @@ class LocalFolderScanner:
 
     # ── Ingestion ────────────────────────────────────────────────────────
 
-    def ingest_new(self) -> Dict[str, Any]:
+    def ingest_new(self) -> dict[str, Any]:
         """Full pipeline: scan → upload to Supabase → vision analyze → index.
 
         Returns:
@@ -197,8 +191,8 @@ class LocalFolderScanner:
 
         ingested = 0
         skipped = 0
-        errors: List[str] = []
-        details: List[Dict[str, str]] = []
+        errors: list[str] = []
+        details: list[dict[str, str]] = []
 
         for file_info in new_files:
             local_path = file_info["local_path"]
@@ -249,10 +243,7 @@ class LocalFolderScanner:
                         "tags": tags,
                     }
                 )
-                logger.info(
-                    f"[local_scanner] Ingested: {filename} ({category}) "
-                    f"-> {item_id[:8]}"
-                )
+                logger.info(f"[local_scanner] Ingested: {filename} ({category}) -> {item_id[:8]}")
 
             except Exception as exc:
                 errors.append(f"{filename}: {exc}")
@@ -268,9 +259,9 @@ class LocalFolderScanner:
 
     # ── Stats ────────────────────────────────────────────────────────────
 
-    def get_folder_stats(self) -> Dict[str, Any]:
+    def get_folder_stats(self) -> dict[str, Any]:
         """Return info about each configured sync folder."""
-        stats: List[Dict[str, Any]] = []
+        stats: list[dict[str, Any]] = []
         total_files = 0
 
         for folder_cfg in self._folders:
@@ -320,9 +311,7 @@ class LocalFolderScanner:
         """Construct the canonical Supabase public URL for a storage path."""
         supabase_url = os.getenv("SUPABASE_URL", "")
         bucket = os.getenv("MEDIA_BUCKET", "social-media")
-        return (
-            f"{supabase_url}/storage/v1/object/public/{bucket}/{storage_path}"
-        )
+        return f"{supabase_url}/storage/v1/object/public/{bucket}/{storage_path}"
 
     @staticmethod
     def _upload_file(
@@ -356,7 +345,7 @@ class LocalFolderScanner:
         return str(bucket.get_public_url(storage_path))
 
     @staticmethod
-    def _video_metadata(filename: str, category: str) -> Dict[str, Any]:
+    def _video_metadata(filename: str, category: str) -> dict[str, Any]:
         """Return placeholder vision data for video files."""
         return {
             "description": f"Video: {filename}",

@@ -2,13 +2,16 @@
 
 # Social Slash
 
-<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=22&pause=1000&color=FF3D00&center=true&vCenter=true&multiline=true&repeat=true&width=600&height=80&lines=19+MCP+Tools+%7C+13+Platforms+%7C+SWIZZ+Voice;OAuth+2.0+%7C+3+Access+Methods+%7C+Railway+Deploy" alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=22&pause=1000&color=6366F1&center=true&vCenter=true&multiline=true&repeat=true&width=600&height=80&lines=19+MCP+Tools+%7C+13+Platforms+%7C+SWIZZ+Voice;OAuth+2.0+%7C+3+Access+Methods+%7C+Railway+Deploy" alt="Typing SVG" />
 
-[![PRSMTECH](https://img.shields.io/badge/PRSMTECH-INTERNAL-FF3D00?style=for-the-badge&labelColor=0C0C0C)](https://github.com/MrJPTech)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![MCP](https://img.shields.io/badge/MCP-19_Tools-8B5CF6?style=for-the-badge)](https://modelcontextprotocol.io)
+[![MCP](https://img.shields.io/badge/MCP-19_Tools-6366F1?style=for-the-badge)](https://modelcontextprotocol.io)
 [![Late SDK](https://img.shields.io/badge/Late_SDK-13_Platforms-10B981?style=for-the-badge)](https://getlate.dev)
 [![Railway](https://img.shields.io/badge/Railway-Deployed-06B6D4?style=for-the-badge&logo=railway&logoColor=white)](https://railway.app)
+[![License](https://img.shields.io/badge/License-MIT-A855F7?style=for-the-badge)](LICENSE)
+
+[![PRSMTECH](https://img.shields.io/badge/maintained_by-PRSMTECH-6366F1?style=for-the-badge&labelColor=0C0C0C)](https://github.com/PRSMTECH)
+[![MrJPTech](https://img.shields.io/badge/mirror-MrJPTech-6366F1?style=for-the-badge&labelColor=0C0C0C)](https://github.com/MrJPTech)
 
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="rainbow line" width="100%"/>
 
@@ -27,9 +30,32 @@ Social Slash is a social media automation package that works across the entire C
 | **MCP Server** | stdio | Claude Desktop (Windows) |
 | **MCP Server** | streamable-http (Railway) | Claude Desktop (Mac), Claude.ai (OAuth) |
 
-19 tools across 5 groups: utility, writing, research, media, and posting. Optional AI content generation in the **SWIZZ** dual-mode voice persona (professional/personal).
+19 tools across 5 groups — utility, writing, research, media, and posting — with optional AI content generation in the **SWIZZ** dual-mode voice persona (professional/personal).
 
-## Architecture
+## Quick Start
+
+```bash
+git clone git@github.com:PRSMTECH/social-slash.git    # primary
+# or: git clone git@github.com:MrJPTech/social-slash.git    # mirror
+cd social-slash
+pip install -r requirements.txt
+cp .env.example .env.local
+# Add your API keys to .env.local
+```
+
+```powershell
+# Post to LinkedIn
+/social:post -Content "Lock in developers" -Platforms linkedin
+
+# Multi-platform with AI enhancement
+/social:post -Content "New content!" -Platforms linkedin,tiktok -Enhance
+
+# SWIZZ voice content generation
+/social:write -Topic "AI automation" -Platform instagram -PersonaMode professional
+```
+
+<details>
+<summary><b>🧭 Architecture</b></summary>
 
 ```
 Claude Code ──► PowerShell ──► Python Backend ──► Late SDK ──► Platform API
@@ -42,8 +68,7 @@ Claude.ai/Mac ──► MCP (HTTP/Railway) ┘
                         (Gemini 2.0 / Anthropic)
 ```
 
-<details>
-<summary><b>MCP Server Detail</b></summary>
+**MCP Server Detail:**
 
 ```
 Client (Desktop/Mobile) ──► MCP JSON-RPC
@@ -61,7 +86,8 @@ Transport auto-detection: `PORT` env var triggers streamable-http for Railway; n
 
 </details>
 
-## Features
+<details>
+<summary><b>✨ Features</b></summary>
 
 | Category | Features |
 |:---------|:---------|
@@ -72,7 +98,10 @@ Transport auto-detection: `PORT` env var triggers streamable-http for Railway; n
 | **Engagement** | Comment monitoring, DM auto-reply, bot management |
 | **MCP Server** | 19 tools for Claude Desktop + Claude.ai via Railway (OAuth 2.0) |
 
-## MCP Tools
+</details>
+
+<details>
+<summary><b>🛠️ MCP Tools (19)</b></summary>
 
 | Group | Tools | Requires |
 |:------|:------|:---------|
@@ -82,7 +111,10 @@ Transport auto-detection: `PORT` env var triggers streamable-http for Railway; n
 | **Media** (5) | `media_generate_caption`, `media_generate_story_text`, `media_generate_carousel`, `media_generate_alt_text`, `media_suggest_format` | AI key |
 | **Posting** (2) | `post_to_platform`, `post_to_multiple` | `LATE_API_KEY` |
 
-## Slash Commands
+</details>
+
+<details>
+<summary><b>⚡ Slash Commands</b></summary>
 
 | Command | Description |
 |:--------|:------------|
@@ -99,43 +131,10 @@ Transport auto-detection: `PORT` env var triggers streamable-http for Railway; n
 | `/social:analytics` | Post activity and engagement metrics |
 | `/social:status` | Project status dashboard |
 
-## Quick Start
+</details>
 
-### Installation
-
-```bash
-git clone git@github.com:MrJPTech/social-slash.git
-cd social-slash
-pip install -r requirements.txt
-cp .env.example .env.local
-# Add your API keys to .env.local
-```
-
-### Post to LinkedIn
-
-```powershell
-/social:post -Content "Lock in developers" -Platforms linkedin
-```
-
-### Multi-platform with AI
-
-```powershell
-/social:post -Content "New content!" -Platforms linkedin,tiktok -Enhance
-```
-
-### Dry run
-
-```powershell
-/social:post -Content "Test" -Platforms linkedin -DryRun
-```
-
-### Generate SWIZZ voice content
-
-```powershell
-/social:write -Topic "AI automation" -Platform instagram -PersonaMode professional
-```
-
-## Configuration
+<details>
+<summary><b>🔧 Configuration</b></summary>
 
 ### Environment Variables
 
@@ -143,7 +142,7 @@ cp .env.example .env.local
 # Required
 LATE_API_KEY=your_late_api_key
 
-# Optional (for AI agent tools)
+# Optional (AI agent tools)
 GOOGLE_API_KEY=your_google_api_key
 ANTHROPIC_API_KEY=your_anthropic_key
 
@@ -151,6 +150,11 @@ ANTHROPIC_API_KEY=your_anthropic_key
 MCP_AUTH_TOKEN=your_bearer_token
 OAUTH_CLIENT_ID=your_oauth_client_id
 OAUTH_CLIENT_SECRET=your_oauth_client_secret
+
+# Scheduler (optional daily automation)
+APPROVAL_TOKEN_SECRET=$(python -c "import secrets; print(secrets.token_hex(32))")
+SCHEDULER_ENABLED=false
+SCHEDULER_TIMEZONE=America/New_York
 ```
 
 ### API Keys
@@ -161,7 +165,12 @@ OAUTH_CLIENT_SECRET=your_oauth_client_secret
 | Gemini | [aistudio.google.com](https://aistudio.google.com) | AI content generation |
 | Anthropic | [console.anthropic.com](https://console.anthropic.com) | Alternative AI provider |
 
-## Deployment
+See [`.env.example`](.env.example) for the complete variable list.
+
+</details>
+
+<details>
+<summary><b>🚀 Deployment</b></summary>
 
 ### Claude Desktop (stdio)
 
@@ -184,16 +193,14 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-### Claude Desktop - Mac (Remote URL)
-
-Add to Mac's `claude_desktop_config.json`:
+### Claude Desktop — Mac (Remote URL)
 
 ```json
 {
     "mcpServers": {
         "social-slash": {
             "type": "url",
-            "url": "https://web-production-c9cb9.up.railway.app/mcp",
+            "url": "https://your-deploy.up.railway.app/mcp",
             "headers": {
                 "Authorization": "Bearer <MCP_AUTH_TOKEN>"
             }
@@ -204,20 +211,17 @@ Add to Mac's `claude_desktop_config.json`:
 
 ### Claude.ai (OAuth 2.0 Custom Connector)
 
-Deployed at `web-production-c9cb9.up.railway.app`. Auto-deploys from `master` branch.
-
-1. Go to **claude.ai** > **Settings** > **Integrations**
-2. **Add Custom Connector**
-3. Fill in:
+1. **claude.ai** → **Settings** → **Integrations** → **Add Custom Connector**
+2. Fill in:
    - **Name**: `Social Slash`
-   - **Remote MCP server URL**: `https://web-production-c9cb9.up.railway.app/mcp`
-   - **OAuth Client ID**: *(matching `OAUTH_CLIENT_ID` in Railway)*
-   - **OAuth Client Secret**: *(matching `OAUTH_CLIENT_SECRET` in Railway)*
-4. Save — Claude.ai completes OAuth flow automatically
+   - **Remote MCP server URL**: `https://your-deploy.up.railway.app/mcp`
+   - **OAuth Client ID**: matching `OAUTH_CLIENT_ID` in Railway
+   - **OAuth Client Secret**: matching `OAUTH_CLIENT_SECRET` in Railway
+3. Save — Claude.ai completes OAuth flow automatically
 
 ```bash
 # Verify deployment
-curl https://web-production-c9cb9.up.railway.app/health
+curl https://your-deploy.up.railway.app/health
 ```
 
 ### Docker
@@ -227,7 +231,10 @@ docker build -t social-slash-mcp .
 docker run -i --rm --env-file .env.local social-slash-mcp
 ```
 
-## Supported Platforms
+</details>
+
+<details>
+<summary><b>🌐 Supported Platforms (13)</b></summary>
 
 | Platform | Char Limit | Media Types |
 |:---------|:-----------|:------------|
@@ -245,10 +252,10 @@ docker run -i --rm --env-file .env.local social-slash-mcp
 | Telegram | 4,096 | text, image, video, document |
 | Google Business | 1,500 | text, image, offer, event |
 
-## Project Structure
+</details>
 
 <details>
-<summary><b>Full directory tree</b></summary>
+<summary><b>📁 Project Structure</b></summary>
 
 ```
 social-slash/
@@ -283,7 +290,10 @@ social-slash/
 
 </details>
 
-## Development
+<details>
+<summary><b>🧪 Development & Tech Stack</b></summary>
+
+### Development
 
 ```bash
 # Install all dependencies
@@ -292,6 +302,10 @@ pip install -r requirements.txt
 # Run tests (151 passing)
 pytest tests/
 
+# Lint
+ruff check .
+ruff format .
+
 # Local MCP server (stdio)
 PYTHONPATH=. python -m lib.mcp
 
@@ -299,7 +313,7 @@ PYTHONPATH=. python -m lib.mcp
 PORT=8000 PYTHONPATH=. python -m lib.mcp
 ```
 
-## Tech Stack
+### Tech Stack
 
 | Layer | Technology |
 |:------|:-----------|
@@ -313,14 +327,20 @@ PORT=8000 PYTHONPATH=. python -m lib.mcp
 | Container | Docker (python:3.12-slim) |
 | Data | Pydantic, SQLite, JSON configs |
 
+</details>
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
 <img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="rainbow line" width="100%"/>
 
 <div align="center">
 
-**Built with precision by PRSMTECH**
+**Maintained by [PRSMTECH](https://github.com/PRSMTECH) · mirrored at [MrJPTech](https://github.com/MrJPTech)**
 
-[![Back to top](https://img.shields.io/badge/Back%20to%20Top-↑-FF3D00?style=for-the-badge)](#)
+[![Back to top](https://img.shields.io/badge/Back%20to%20Top-↑-6366F1?style=for-the-badge)](#)
 
-![Footer](https://capsule-render.vercel.app/api?type=waving&color=FF3D00&height=100&section=footer)
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=100&section=footer" width="100%" />
 
 </div>

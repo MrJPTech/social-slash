@@ -14,9 +14,9 @@ Features:
 """
 
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Any
 
-from lib.agents.base_agent import BaseAgent, AgentState
+from lib.agents.base_agent import AgentState, BaseAgent
 from lib.persona.swizz_persona import SwizzPersona
 
 
@@ -30,9 +30,9 @@ class ResearchAgent(BaseAgent):
 
     def __init__(
         self,
-        config: Dict[str, Any],
-        persona: Optional[SwizzPersona] = None,
-        ai_provider: str = "gemini"
+        config: dict[str, Any],
+        persona: SwizzPersona | None = None,
+        ai_provider: str = "gemini",
     ):
         """
         Initialize the research agent.
@@ -44,12 +44,10 @@ class ResearchAgent(BaseAgent):
         """
         super().__init__(config, ai_provider, name="ResearchAgent")
 
-        self.persona = persona or SwizzPersona(
-            mode=config.get('persona_mode', 'professional')
-        )
+        self.persona = persona or SwizzPersona(mode=config.get("persona_mode", "professional"))
 
-        self.default_platform = config.get('default_platform', 'instagram')
-        self.poll_interval = config.get('poll_interval_seconds', 60)
+        self.default_platform = config.get("default_platform", "instagram")
+        self.poll_interval = config.get("poll_interval_seconds", 60)
 
         # Research task queue
         self._task_queue: asyncio.Queue = asyncio.Queue()
@@ -77,7 +75,7 @@ class ResearchAgent(BaseAgent):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self.stats['errors'] += 1
+                self.stats["errors"] += 1
                 self.transition(AgentState.ERROR)
                 self.logger.error(f"Research error: {e}")
                 await asyncio.sleep(self.poll_interval * 2)
@@ -92,7 +90,7 @@ class ResearchAgent(BaseAgent):
         if self._stop_event:
             self._stop_event.set()
 
-    async def process_item(self, research_task: Dict[str, Any]) -> bool:
+    async def process_item(self, research_task: dict[str, Any]) -> bool:
         """
         Execute a research task.
 
@@ -103,43 +101,43 @@ class ResearchAgent(BaseAgent):
             True if completed successfully
         """
         try:
-            task_type = research_task.get('task_type', 'suggest')
+            task_type = research_task.get("task_type", "suggest")
             self.transition(AgentState.PROCESSING)
 
-            if task_type == 'trending_topics':
-                platform = research_task.get('platform', self.default_platform)
-                result = self.analyze_trending(platform)
-            elif task_type == 'hashtag_research':
-                topic = research_task.get('topic', '')
-                platform = research_task.get('platform', self.default_platform)
-                result = self.research_hashtags(topic, platform)
-            elif task_type == 'content_ideas':
-                theme = research_task.get('theme', '')
-                count = research_task.get('count', 5)
-                result = self.suggest_content_ideas(theme, count)
-            elif task_type == 'content_calendar':
-                days = research_task.get('days', 7)
-                platforms = research_task.get('platforms', [self.default_platform])
-                result = self.build_content_calendar(days, platforms)
+            if task_type == "trending_topics":
+                platform = research_task.get("platform", self.default_platform)
+                _result = self.analyze_trending(platform)
+            elif task_type == "hashtag_research":
+                topic = research_task.get("topic", "")
+                platform = research_task.get("platform", self.default_platform)
+                _result = self.research_hashtags(topic, platform)
+            elif task_type == "content_ideas":
+                theme = research_task.get("theme", "")
+                count = research_task.get("count", 5)
+                _result = self.suggest_content_ideas(theme, count)
+            elif task_type == "content_calendar":
+                days = research_task.get("days", 7)
+                platforms = research_task.get("platforms", [self.default_platform])
+                _result = self.build_content_calendar(days, platforms)
             else:
                 self.logger.warning(f"Unknown task type: {task_type}")
                 return False
 
-            self.stats['items_processed'] += 1
-            self.format_console_output('success', f"Completed {task_type} research")
+            self.stats["items_processed"] += 1
+            self.format_console_output("success", f"Completed {task_type} research")
             self.transition(AgentState.MONITORING)
             return True
 
         except Exception as e:
             self.logger.error(f"Research task failed: {e}")
-            self.stats['errors'] += 1
+            self.stats["errors"] += 1
             return False
 
     def research_hashtags(
         self,
         topic: str,
         platform: str = "instagram",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Find relevant hashtags for a topic.
 
@@ -153,7 +151,7 @@ class ResearchAgent(BaseAgent):
         active = self.persona.get_active_persona()
         system_prompt = active.get_system_prompt("business")
         platform_config = self.persona.get_platform_config(platform)
-        max_hashtags = platform_config.get('hashtag_limit', 30)
+        max_hashtags = platform_config.get("hashtag_limit", 30)
 
         prompt = (
             f"{system_prompt}\n\n"
@@ -171,17 +169,17 @@ class ResearchAgent(BaseAgent):
         content = active.apply_vocab_transform(raw)
 
         return {
-            'topic': topic,
-            'platform': platform,
-            'max_hashtags': max_hashtags,
-            'research': content,
+            "topic": topic,
+            "platform": platform,
+            "max_hashtags": max_hashtags,
+            "research": content,
         }
 
     def suggest_content_ideas(
         self,
         theme: str,
         count: int = 5,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate content ideas for a theme.
 
@@ -210,15 +208,15 @@ class ResearchAgent(BaseAgent):
         content = active.apply_vocab_transform(raw)
 
         return {
-            'theme': theme,
-            'count': count,
-            'ideas': content,
+            "theme": theme,
+            "count": count,
+            "ideas": content,
         }
 
     def analyze_trending(
         self,
         platform: str = "instagram",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Identify trending topics on a platform.
 
@@ -246,15 +244,15 @@ class ResearchAgent(BaseAgent):
         content = active.apply_vocab_transform(raw)
 
         return {
-            'platform': platform,
-            'analysis': content,
+            "platform": platform,
+            "analysis": content,
         }
 
     def build_content_calendar(
         self,
         days: int = 7,
-        platforms: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        platforms: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Generate a content calendar.
 
@@ -289,12 +287,12 @@ class ResearchAgent(BaseAgent):
         content = active.apply_vocab_transform(raw)
 
         return {
-            'days': days,
-            'platforms': platforms,
-            'calendar': content,
+            "days": days,
+            "platforms": platforms,
+            "calendar": content,
         }
 
-    def queue_task(self, task_data: Dict[str, Any]):
+    def queue_task(self, task_data: dict[str, Any]):
         """Add a research task to the queue."""
         self._task_queue.put_nowait(task_data)
 
@@ -304,45 +302,50 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="SWIZZ Voice Research Agent")
-    parser.add_argument('--action', choices=['hashtags', 'suggest', 'trending', 'calendar', 'status'],
-                       default='status', help='Action to perform')
-    parser.add_argument('--topic', type=str, help='Research topic')
-    parser.add_argument('--theme', type=str, help='Content theme')
-    parser.add_argument('--platform', type=str, default='instagram',
-                       help='Target platform')
-    parser.add_argument('--count', type=int, default=5,
-                       help='Number of results')
-    parser.add_argument('--days', type=int, default=7,
-                       help='Calendar days')
-    parser.add_argument('--persona', type=str, default='professional',
-                       choices=['professional', 'personal'],
-                       help='Persona mode')
+    parser.add_argument(
+        "--action",
+        choices=["hashtags", "suggest", "trending", "calendar", "status"],
+        default="status",
+        help="Action to perform",
+    )
+    parser.add_argument("--topic", type=str, help="Research topic")
+    parser.add_argument("--theme", type=str, help="Content theme")
+    parser.add_argument("--platform", type=str, default="instagram", help="Target platform")
+    parser.add_argument("--count", type=int, default=5, help="Number of results")
+    parser.add_argument("--days", type=int, default=7, help="Calendar days")
+    parser.add_argument(
+        "--persona",
+        type=str,
+        default="professional",
+        choices=["professional", "personal"],
+        help="Persona mode",
+    )
 
     args = parser.parse_args()
 
     config = {
-        'persona_mode': args.persona,
-        'default_platform': args.platform,
+        "persona_mode": args.persona,
+        "default_platform": args.platform,
     }
 
     agent = ResearchAgent(config)
 
-    if args.action == 'status':
+    if args.action == "status":
         stats = agent.get_stats()
         print("\nResearch Agent Status:")
         for key, value in stats.items():
             print(f"  {key}: {value}")
 
-    elif args.action == 'hashtags':
+    elif args.action == "hashtags":
         if not args.topic:
             print("[ERROR] --topic required for hashtag research")
             return
 
         print(f"\n[INFO] Researching hashtags for '{args.topic}' on {args.platform}...\n")
         result = agent.research_hashtags(args.topic, args.platform)
-        print(result['research'])
+        print(result["research"])
 
-    elif args.action == 'suggest':
+    elif args.action == "suggest":
         theme = args.theme or args.topic
         if not theme:
             print("[ERROR] --theme or --topic required")
@@ -350,17 +353,17 @@ def main():
 
         print(f"\n[INFO] Generating {args.count} content ideas for '{theme}'...\n")
         result = agent.suggest_content_ideas(theme, args.count)
-        print(result['ideas'])
+        print(result["ideas"])
 
-    elif args.action == 'trending':
+    elif args.action == "trending":
         print(f"\n[INFO] Analyzing trends on {args.platform}...\n")
         result = agent.analyze_trending(args.platform)
-        print(result['analysis'])
+        print(result["analysis"])
 
-    elif args.action == 'calendar':
+    elif args.action == "calendar":
         print(f"\n[INFO] Building {args.days}-day content calendar...\n")
         result = agent.build_content_calendar(args.days, [args.platform])
-        print(result['calendar'])
+        print(result["calendar"])
 
 
 if __name__ == "__main__":

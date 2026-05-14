@@ -7,10 +7,7 @@ Provides:
 - Late API unified inbox client for cross-platform engagement
 """
 
-from lib.engagement.response_generator import ResponseGenerator
 from lib.engagement.late_engagement_client import LateEngagementClient
+from lib.engagement.response_generator import ResponseGenerator
 
-__all__ = [
-    'ResponseGenerator',
-    'LateEngagementClient'
-]
+__all__ = ["ResponseGenerator", "LateEngagementClient"]

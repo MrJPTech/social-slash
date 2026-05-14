@@ -5,12 +5,13 @@ Tests the JordanWardPersona class, SwizzPersona CEO mode routing,
 content format prompts, and integration with the writing agent.
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Add lib to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib.persona.swizz_persona import (
     BasePersona,
@@ -28,28 +29,35 @@ class TestJordanWardToneConfig:
     def test_tone_config_keys(self):
         """All required tone keys are present."""
         config = self.persona.get_tone_config()
-        expected_keys = {'formality', 'verbosity', 'emoji_frequency', 'directness', 'enthusiasm', 'caps_emphasis'}
+        expected_keys = {
+            "formality",
+            "verbosity",
+            "emoji_frequency",
+            "directness",
+            "enthusiasm",
+            "caps_emphasis",
+        }
         assert set(config.keys()) == expected_keys
 
     def test_formality_is_high(self):
         """CEO voice is more formal than SWIZZ voices."""
         config = self.persona.get_tone_config()
-        assert config['formality'] == 0.65
+        assert config["formality"] == 0.65
 
     def test_emoji_frequency_is_low(self):
         """CEO voice uses emojis sparingly."""
         config = self.persona.get_tone_config()
-        assert config['emoji_frequency'] == 0.15
+        assert config["emoji_frequency"] == 0.15
 
     def test_directness_is_high(self):
         """CEO voice is direct."""
         config = self.persona.get_tone_config()
-        assert config['directness'] == 0.85
+        assert config["directness"] == 0.85
 
     def test_caps_emphasis_is_low(self):
         """CEO voice rarely uses caps for emphasis."""
         config = self.persona.get_tone_config()
-        assert config['caps_emphasis'] == 0.02
+        assert config["caps_emphasis"] == 0.02
 
 
 class TestJordanWardVocabMap:
@@ -94,37 +102,45 @@ class TestJordanWardContentFormats:
     def test_formats_defined(self):
         """All 11 content formats are defined."""
         expected = {
-            'problem_solution', 'myth_busting', 'quick_tips',
-            'day_in_life', 'case_study', 'industry_commentary', 'quick_wins',
-            'vibe_coder', 'bridge_builder', 'real_talk', 'ask_the_audience',
+            "problem_solution",
+            "myth_busting",
+            "quick_tips",
+            "day_in_life",
+            "case_study",
+            "industry_commentary",
+            "quick_wins",
+            "vibe_coder",
+            "bridge_builder",
+            "real_talk",
+            "ask_the_audience",
         }
         assert set(self.persona.CONTENT_FORMATS.keys()) == expected
 
     def test_each_format_has_structure(self):
         """Each format defines a structure list."""
         for name, fmt in self.persona.CONTENT_FORMATS.items():
-            assert 'structure' in fmt, f"{name} missing structure"
-            assert isinstance(fmt['structure'], list), f"{name} structure is not a list"
-            assert len(fmt['structure']) >= 3, f"{name} structure has fewer than 3 steps"
+            assert "structure" in fmt, f"{name} missing structure"
+            assert isinstance(fmt["structure"], list), f"{name} structure is not a list"
+            assert len(fmt["structure"]) >= 3, f"{name} structure has fewer than 3 steps"
 
     def test_each_format_has_duration(self):
         """Each format defines a duration string."""
         for name, fmt in self.persona.CONTENT_FORMATS.items():
-            assert 'duration' in fmt, f"{name} missing duration"
-            assert 'seconds' in fmt['duration'], f"{name} duration doesn't mention seconds"
+            assert "duration" in fmt, f"{name} missing duration"
+            assert "seconds" in fmt["duration"], f"{name} duration doesn't mention seconds"
 
     def test_each_format_has_description(self):
         """Each format has a description."""
         for name, fmt in self.persona.CONTENT_FORMATS.items():
-            assert 'description' in fmt, f"{name} missing description"
-            assert len(fmt['description']) > 10, f"{name} description too short"
+            assert "description" in fmt, f"{name} missing description"
+            assert len(fmt["description"]) > 10, f"{name} description too short"
 
     def test_response_lengths_for_all_formats(self):
         """Each content format has matching response length config."""
         for name in self.persona.CONTENT_FORMATS:
             length = self.persona.RESPONSE_LENGTHS.get(name)
             assert length is not None, f"No response length for format '{name}'"
-            assert 'min' in length and 'max' in length
+            assert "min" in length and "max" in length
 
 
 class TestJordanWardSystemPrompt:
@@ -158,7 +174,11 @@ class TestJordanWardSystemPrompt:
         prompt = self.persona.get_system_prompt("business")
         assert "NEVER" in prompt
         # Should reject corporate / brag / LinkedIn poster energy
-        assert "brag" in prompt.lower() or "linkedin" in prompt.lower() or "corporate" in prompt.lower()
+        assert (
+            "brag" in prompt.lower()
+            or "linkedin" in prompt.lower()
+            or "corporate" in prompt.lower()
+        )
 
 
 class TestJordanWardBrandVoice:
@@ -170,7 +190,12 @@ class TestJordanWardBrandVoice:
     def test_brand_voice_emphasizes_authenticity(self):
         """Brand voice emphasizes authentic storytelling and accessibility."""
         voice = self.persona.get_brand_voice()
-        assert "educational" in voice.lower() or "accessible" in voice.lower() or "authentic" in voice.lower() or "story" in voice.lower()
+        assert (
+            "educational" in voice.lower()
+            or "accessible" in voice.lower()
+            or "authentic" in voice.lower()
+            or "story" in voice.lower()
+        )
 
     def test_brand_voice_mentions_jordan(self):
         """Brand voice identifies as Jordan Ward."""
@@ -191,7 +216,7 @@ class TestJordanWardExamples:
 
     def test_examples_exist_for_general_types(self):
         """Examples exist for casual, business, thought_leadership."""
-        for ctx in ['casual', 'business', 'thought_leadership']:
+        for ctx in ["casual", "business", "thought_leadership"]:
             examples = self.persona.get_few_shot_examples(ctx, count=3)
             assert len(examples) > 0, f"No examples for '{ctx}'"
 
@@ -204,7 +229,7 @@ class TestJordanWardExamples:
     def test_examples_contain_specifics(self):
         """Examples include numbers/metrics (evidence-based voice)."""
         # Check a few key format examples for numbers
-        for fmt in ['problem_solution', 'case_study', 'myth_busting']:
+        for fmt in ["problem_solution", "case_study", "myth_busting"]:
             examples = self.persona.get_few_shot_examples(fmt, count=1)
             text = examples[0]
             has_number = any(c.isdigit() for c in text)
@@ -222,7 +247,10 @@ class TestJordanWardContentFormatPrompt:
         prompt = self.persona.get_content_format_prompt("problem_solution", "Tech debt costs")
         assert prompt is not None
         assert "Tech debt costs" in prompt
-        assert "problem_solution" in prompt.lower().replace("_", "_") or "problem solution" in prompt.lower()
+        assert (
+            "problem_solution" in prompt.lower().replace("_", "_")
+            or "problem solution" in prompt.lower()
+        )
 
     def test_returns_none_for_invalid_format(self):
         """Returns None for unrecognized format name."""
@@ -252,12 +280,12 @@ class TestJordanWardEmojiMap:
     def test_business_appropriate_contexts(self):
         """Emoji map has business-appropriate contexts."""
         emoji_map = self.persona.get_emoji_map()
-        expected_contexts = {'business', 'tech', 'success', 'growth', 'insight', 'cta'}
+        expected_contexts = {"business", "tech", "success", "growth", "insight", "cta"}
         assert expected_contexts.issubset(set(emoji_map.keys()))
 
     def test_select_emojis(self):
         """Can select emojis from business context."""
-        emojis = self.persona.select_emojis('business', count=2)
+        emojis = self.persona.select_emojis("business", count=2)
         assert len(emojis) == 2
         assert all(isinstance(e, str) for e in emojis)
 
@@ -300,7 +328,7 @@ class TestSwizzPersonaCEOMode:
         """CEO mode applies CEO vocab transforms."""
         persona = SwizzPersona(mode="ceo")
         result = persona.apply_vocab_transform("I think the stuff is bad")
-        assert "tools" in result   # "stuff" → "tools"
+        assert "tools" in result  # "stuff" → "tools"
         assert "broken" in result  # "bad" → "broken"
 
     def test_switch_between_all_three_modes(self):
@@ -326,27 +354,43 @@ class TestSwizzPersonaCEOResponseRouting:
 
     def test_problem_solution_detection(self):
         """Detects problem_solution keywords."""
-        assert self.persona.determine_response_type("The cost of tech debt is a problem") == "problem_solution"
+        assert (
+            self.persona.determine_response_type("The cost of tech debt is a problem")
+            == "problem_solution"
+        )
 
     def test_myth_busting_detection(self):
         """Detects myth_busting keywords."""
-        assert self.persona.determine_response_type("The myth about enterprise software") == "myth_busting"
+        assert (
+            self.persona.determine_response_type("The myth about enterprise software")
+            == "myth_busting"
+        )
 
     def test_quick_tips_detection(self):
         """Detects quick_tips keywords."""
-        assert self.persona.determine_response_type("3 tips for scaling your startup") == "quick_tips"
+        assert (
+            self.persona.determine_response_type("3 tips for scaling your startup") == "quick_tips"
+        )
 
     def test_day_in_life_detection(self):
         """Detects day_in_life keywords."""
-        assert self.persona.determine_response_type("A day in the life of a tech CEO") == "day_in_life"
+        assert (
+            self.persona.determine_response_type("A day in the life of a tech CEO") == "day_in_life"
+        )
 
     def test_case_study_detection(self):
         """Detects case_study keywords."""
-        assert self.persona.determine_response_type("Case study: how we helped a client") == "case_study"
+        assert (
+            self.persona.determine_response_type("Case study: how we helped a client")
+            == "case_study"
+        )
 
     def test_industry_commentary_detection(self):
         """Detects industry_commentary keywords."""
-        assert self.persona.determine_response_type("The latest industry trend in AI") == "industry_commentary"
+        assert (
+            self.persona.determine_response_type("The latest industry trend in AI")
+            == "industry_commentary"
+        )
 
     def test_quick_wins_detection(self):
         """Detects quick_wins keywords."""
@@ -354,22 +398,43 @@ class TestSwizzPersonaCEOResponseRouting:
 
     def test_bridge_builder_detection(self):
         """Detects bridge_builder keywords (accessibility focus)."""
-        assert self.persona.determine_response_type("Your aunt could use this for her small business") == "bridge_builder"
-        assert self.persona.determine_response_type("AI is for everybody, not just tech people") == "bridge_builder"
+        assert (
+            self.persona.determine_response_type("Your aunt could use this for her small business")
+            == "bridge_builder"
+        )
+        assert (
+            self.persona.determine_response_type("AI is for everybody, not just tech people")
+            == "bridge_builder"
+        )
 
     def test_real_talk_detection(self):
         """Detects real_talk keywords (personal story)."""
-        assert self.persona.determine_response_type("I grew up in a suburb and saw both sides") == "real_talk"
-        assert self.persona.determine_response_type("My videography changed my perspective forever") == "real_talk"
+        assert (
+            self.persona.determine_response_type("I grew up in a suburb and saw both sides")
+            == "real_talk"
+        )
+        assert (
+            self.persona.determine_response_type("My videography changed my perspective forever")
+            == "real_talk"
+        )
 
     def test_ask_the_audience_detection(self):
         """Detects ask_the_audience keywords (question-first format)."""
-        assert self.persona.determine_response_type("Real question: what would you automate first?") == "ask_the_audience"
-        assert self.persona.determine_response_type("What is stopping you from learning this?") == "ask_the_audience"
+        assert (
+            self.persona.determine_response_type("Real question: what would you automate first?")
+            == "ask_the_audience"
+        )
+        assert (
+            self.persona.determine_response_type("What is stopping you from learning this?")
+            == "ask_the_audience"
+        )
 
     def test_default_thought_leadership(self):
         """Unmatched content defaults to thought_leadership in CEO mode."""
-        assert self.persona.determine_response_type("Leadership is about making decisions") == "thought_leadership"
+        assert (
+            self.persona.determine_response_type("Leadership is about making decisions")
+            == "thought_leadership"
+        )
 
     def test_non_ceo_mode_ignores_ceo_keywords(self):
         """Professional mode does NOT route to CEO formats."""
@@ -396,12 +461,12 @@ class TestJordanWardIsBasePersona:
         persona = JordanWardPersona()
         guide = persona.get_response_length_guide("business")
         assert isinstance(guide, dict)
-        assert 'min' in guide
-        assert 'max' in guide
-        assert guide['min'] < guide['max']
+        assert "min" in guide
+        assert "max" in guide
+        assert guide["min"] < guide["max"]
 
     def test_unknown_context_falls_back_to_business(self):
         """Unknown context type falls back to business defaults."""
         persona = JordanWardPersona()
         guide = persona.get_response_length_guide("nonexistent_type")
-        assert guide == persona.RESPONSE_LENGTHS['business']
+        assert guide == persona.RESPONSE_LENGTHS["business"]

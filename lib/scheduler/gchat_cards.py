@@ -84,7 +84,7 @@ def _hashtag_line(hashtags: list[str]) -> str:
     return f"\n`{tags}`"
 
 
-def _source_label(bundle: "ContentBundle") -> str:
+def _source_label(bundle: ContentBundle) -> str:
     """Return a short label indicating the image source."""
     source = getattr(bundle, "image_source", "none")
     if source == "library":
@@ -94,7 +94,7 @@ def _source_label(bundle: "ContentBundle") -> str:
     return "📝 Text"
 
 
-def send_approval_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
+def send_approval_card(bundle: ContentBundle, webhook_url: str = "") -> bool:
     """Send a cardsV2 approval message to the SLASHERBOT space.
 
     Args:
@@ -154,51 +154,45 @@ def send_approval_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
                         # Option A
                         {
                             "header": f"OPTION A — {persona_a}",
-                            "widgets": [
-                                {
-                                    "textParagraph": {
-                                        "text": f"{content_a}{hashtags_a}"
-                                    }
-                                }
-                            ],
+                            "widgets": [{"textParagraph": {"text": f"{content_a}{hashtags_a}"}}],
                         },
                         # Option B
                         {
                             "header": f"OPTION B — {persona_b}",
-                            "widgets": [
-                                {
-                                    "textParagraph": {
-                                        "text": f"{content_b}{hashtags_b}"
-                                    }
-                                }
-                            ],
+                            "widgets": [{"textParagraph": {"text": f"{content_b}{hashtags_b}"}}],
                         },
                         # Image previews — inline renders via cardsV2 image widget
                         {
                             "header": "🖼 Images",
                             "widgets": [
                                 *(
-                                    [{"image": {"imageUrl": bundle.image_1_url, "altText": "Image 1 — vibrant"}}]
+                                    [
+                                        {
+                                            "image": {
+                                                "imageUrl": bundle.image_1_url,
+                                                "altText": "Image 1 — vibrant",
+                                            }
+                                        }
+                                    ]
                                     if bundle.image_1_url
                                     else [{"textParagraph": {"text": "⚠️ Image 1 not generated"}}]
                                 ),
                                 *(
-                                    [{"image": {"imageUrl": bundle.image_2_url, "altText": "Image 2 — minimal"}}]
+                                    [
+                                        {
+                                            "image": {
+                                                "imageUrl": bundle.image_2_url,
+                                                "altText": "Image 2 — minimal",
+                                            }
+                                        }
+                                    ]
                                     if bundle.image_2_url
                                     else [{"textParagraph": {"text": "⚠️ Image 2 not generated"}}]
                                 ),
                             ],
                         },
                         # Approval buttons
-                        {
-                            "widgets": [
-                                {
-                                    "buttonList": {
-                                        "buttons": approval_buttons
-                                    }
-                                }
-                            ]
-                        },
+                        {"widgets": [{"buttonList": {"buttons": approval_buttons}}]},
                     ],
                 },
             }
@@ -218,7 +212,7 @@ def send_approval_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
 
 
 def send_confirmation_card(
-    bundle: "ContentBundle",
+    bundle: ContentBundle,
     choice: str,
     post_result: dict,
     webhook_url: str = "",
@@ -252,7 +246,18 @@ def send_confirmation_card(
                         }
                     ]
                     + (
-                        [{"widgets": [{"image": {"imageUrl": image_url, "altText": f"Posted image ({choice})"}}]}]
+                        [
+                            {
+                                "widgets": [
+                                    {
+                                        "image": {
+                                            "imageUrl": image_url,
+                                            "altText": f"Posted image ({choice})",
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                         if image_url
                         else []
                     )
@@ -274,7 +279,7 @@ def send_confirmation_card(
         return False
 
 
-def send_auto_post_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
+def send_auto_post_card(bundle: ContentBundle, webhook_url: str = "") -> bool:
     """Send a notification card when a slot is auto-posted after the 2-hour TTL."""
     url = webhook_url or SLASHERBOT_WEBHOOK
     if not url:
@@ -300,7 +305,18 @@ def send_auto_post_card(bundle: "ContentBundle", webhook_url: str = "") -> bool:
                         }
                     ]
                     + (
-                        [{"widgets": [{"image": {"imageUrl": bundle.image_1_url, "altText": "Auto-posted image"}}]}]
+                        [
+                            {
+                                "widgets": [
+                                    {
+                                        "image": {
+                                            "imageUrl": bundle.image_1_url,
+                                            "altText": "Auto-posted image",
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                         if bundle.image_1_url
                         else []
                     ),
@@ -323,9 +339,7 @@ def send_error_card(platform: str, error: str, webhook_url: str = "") -> bool:
     if not url:
         return False
 
-    payload = {
-        "text": f"⚠️ *SLASHERBOT error* — {platform.upper()}: `{error[:200]}`"
-    }
+    payload = {"text": f"⚠️ *SLASHERBOT error* — {platform.upper()}: `{error[:200]}`"}
     try:
         resp = requests.post(url, json=payload, timeout=10)
         return resp.status_code == 200

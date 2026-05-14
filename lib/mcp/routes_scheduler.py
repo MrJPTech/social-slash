@@ -9,8 +9,8 @@ import os
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse
 
-from ._shared import mcp, _get_scheduler
 from ._client_helpers import suppress_stdout
+from ._shared import _get_scheduler, mcp
 
 logger = logging.getLogger(__name__)
 
@@ -55,12 +55,16 @@ async def approval_handler(request: Request) -> HTMLResponse:
 
     # Verify HMAC token
     from lib.scheduler.gchat_cards import verify_token
+
     if not verify_token(slot_id, choice, token):
-        return _html("❌ Invalid Token", "<p>This link has expired or been tampered with.</p>", "#da3633")
+        return _html(
+            "❌ Invalid Token", "<p>This link has expired or been tampered with.</p>", "#da3633"
+        )
 
     # Handle SKIP
     if choice == "SKIP":
         from lib.scheduler.approval_store import ApprovalStore
+
         store = ApprovalStore()
         store.mark_posted(slot_id, "SKIP")
         return _html("⏭ Skipped", "<p>This post has been skipped.</p>", "#8b949e")
@@ -75,10 +79,15 @@ async def approval_handler(request: Request) -> HTMLResponse:
 
     # Load bundle
     from lib.scheduler.approval_store import ApprovalStore
+
     store = ApprovalStore()
     bundle = store.get(slot_id)
     if not bundle:
-        return _html("❌ Not Found", f"<p>Slot <code>{slot_id[:8]}</code> not found. It may have expired.</p>", "#da3633")
+        return _html(
+            "❌ Not Found",
+            f"<p>Slot <code>{slot_id[:8]}</code> not found. It may have expired.</p>",
+            "#da3633",
+        )
 
     if bundle.posted:
         return _html(
@@ -92,7 +101,9 @@ async def approval_handler(request: Request) -> HTMLResponse:
     elif choice.startswith("B"):
         option = bundle.option_b
     else:
-        return _html("❌ Unknown Choice", f"<p>Unknown choice <code>{choice}</code>.</p>", "#da3633")
+        return _html(
+            "❌ Unknown Choice", f"<p>Unknown choice <code>{choice}</code>.</p>", "#da3633"
+        )
 
     image_url = bundle.image_1_url if choice.endswith("1") else bundle.image_2_url
     content = option.get("content", "")
@@ -102,6 +113,7 @@ async def approval_handler(request: Request) -> HTMLResponse:
     try:
         with suppress_stdout():
             from lib.posting.poster import Poster
+
             poster = Poster()
             result = poster.post(
                 content=content,
@@ -119,7 +131,8 @@ async def approval_handler(request: Request) -> HTMLResponse:
 
     # Send confirmation card to SLASHERBOT
     try:
-        from lib.scheduler.gchat_cards import send_confirmation_card, SLASHERBOT_WEBHOOK
+        from lib.scheduler.gchat_cards import SLASHERBOT_WEBHOOK, send_confirmation_card
+
         send_confirmation_card(bundle, choice, result, SLASHERBOT_WEBHOOK)
     except Exception as exc:
         logger.warning(f"[approval] Confirmation card failed: {exc}")
@@ -161,6 +174,7 @@ async def gchat_events_handler(request: Request) -> JSONResponse:
 
     try:
         from lib.scheduler.gchat_bot import SlasherbotChatHandler
+
         handler = SlasherbotChatHandler(scheduler=_get_scheduler())
         response = handler.handle_event(body)
     except Exception as exc:

@@ -9,7 +9,8 @@ Documentation: https://docs.getlate.dev
 """
 
 import os
-from typing import Dict, List, Optional, Any
+from typing import Any
+
 from late import Late
 
 
@@ -33,19 +34,29 @@ class LateDistributionClient:
 
     # Supported platforms
     SUPPORTED_PLATFORMS = [
-        'linkedin', 'tiktok', 'instagram', 'youtube', 'twitter',
-        'facebook', 'pinterest', 'threads', 'bluesky', 'reddit',
-        'snapchat', 'telegram', 'google_business'
+        "linkedin",
+        "tiktok",
+        "instagram",
+        "youtube",
+        "twitter",
+        "facebook",
+        "pinterest",
+        "threads",
+        "bluesky",
+        "reddit",
+        "snapchat",
+        "telegram",
+        "google_business",
     ]
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """
         Initialize the Late distribution client.
 
         Args:
             api_key: Late API key. Defaults to LATE_API_KEY env var.
         """
-        self.api_key = api_key or os.getenv('LATE_API_KEY')
+        self.api_key = api_key or os.getenv("LATE_API_KEY")
 
         if not self.api_key:
             raise ValueError(
@@ -54,9 +65,9 @@ class LateDistributionClient:
             )
 
         self.client = Late(api_key=self.api_key)
-        self._account_cache: Dict[str, str] = {}
+        self._account_cache: dict[str, str] = {}
 
-    def get_accounts(self) -> List[Any]:
+    def get_accounts(self) -> list[Any]:
         """
         Get all connected social media accounts.
 
@@ -65,14 +76,14 @@ class LateDistributionClient:
         """
         try:
             response = self.client.accounts.list()
-            accounts = response.accounts if hasattr(response, 'accounts') else []
+            accounts = response.accounts if hasattr(response, "accounts") else []
             print(f"[INFO] Found {len(accounts)} connected accounts")
             return accounts
         except Exception as e:
             print(f"[ERROR] Failed to fetch accounts: {e}")
             raise
 
-    def get_account_id(self, platform: str) -> Optional[str]:
+    def get_account_id(self, platform: str) -> str | None:
         """
         Get account ID for a specific platform.
         Uses caching to avoid repeated API calls.
@@ -87,8 +98,8 @@ class LateDistributionClient:
 
         # Normalize platform names
         platform_map = {
-            'google_business': 'googlebusiness',
-            'x': 'twitter',
+            "google_business": "googlebusiness",
+            "x": "twitter",
         }
         platform = platform_map.get(platform, platform)
 
@@ -101,8 +112,8 @@ class LateDistributionClient:
 
         for account in accounts:
             # Handle SocialAccount objects from Late SDK
-            account_platform = getattr(account, 'platform', '').lower()
-            account_id = getattr(account, 'field_id', None)
+            account_platform = getattr(account, "platform", "").lower()
+            account_id = getattr(account, "field_id", None)
 
             # Cache all accounts while we're at it
             if account_platform and account_id:
@@ -114,13 +125,13 @@ class LateDistributionClient:
         self,
         content: str,
         platform: str,
-        media_urls: Optional[List[str]] = None,
-        scheduled_for: Optional[str] = None,
+        media_urls: list[str] | None = None,
+        scheduled_for: str | None = None,
         publish_now: bool = True,
-        title: Optional[str] = None,
-        platform_specific_data: Optional[Dict[str, Any]] = None,
-        **kwargs
-    ) -> Dict[str, Any]:
+        title: str | None = None,
+        platform_specific_data: dict[str, Any] | None = None,
+        **kwargs,
+    ) -> dict[str, Any]:
         """
         Post content to a single platform.
 
@@ -142,8 +153,8 @@ class LateDistributionClient:
 
         # Normalize platform names for Late SDK
         platform_map = {
-            'google_business': 'googlebusiness',
-            'x': 'twitter',
+            "google_business": "googlebusiness",
+            "x": "twitter",
         }
         late_platform = platform_map.get(platform, platform)
 
@@ -157,18 +168,14 @@ class LateDistributionClient:
         account_id = self.get_account_id(platform)
         if not account_id:
             raise ValueError(
-                f"No {platform} account connected. "
-                f"Connect an account at https://app.getlate.dev"
+                f"No {platform} account connected. Connect an account at https://app.getlate.dev"
             )
 
         try:
             print(f"[INFO] Posting to {platform}...")
 
             # Late SDK requires platforms as list of dicts with platform and accountId
-            platforms_payload = [{
-                "platform": late_platform,
-                "accountId": account_id
-            }]
+            platforms_payload = [{"platform": late_platform, "accountId": account_id}]
 
             # Add platform-specific data if provided
             if platform_specific_data:
@@ -182,8 +189,10 @@ class LateDistributionClient:
                 for item in media_urls:
                     if isinstance(item, str):
                         # Determine type from URL extension
-                        url_lower = item.lower().split('?')[0]
-                        if any(url_lower.endswith(ext) for ext in ('.mp4', '.mov', '.avi', '.webm')):
+                        url_lower = item.lower().split("?")[0]
+                        if any(
+                            url_lower.endswith(ext) for ext in (".mp4", ".mov", ".avi", ".webm")
+                        ):
                             media_type = "video"
                         else:
                             media_type = "image"
@@ -209,24 +218,24 @@ class LateDistributionClient:
             result = self.client.posts.create(**create_params, **kwargs)
 
             # Handle response object
-            post_id = getattr(result, 'field_id', None) or getattr(result, 'id', 'unknown')
-            status = getattr(result, 'status', 'unknown')
+            post_id = getattr(result, "field_id", None) or getattr(result, "id", "unknown")
+            status = getattr(result, "status", "unknown")
 
             print(f"[SUCCESS] Posted to {platform}")
             print(f"  Post ID: {post_id}")
             print(f"  Status: {status}")
 
-            post_url = getattr(result, 'url', None)
+            post_url = getattr(result, "url", None)
             if post_url:
                 print(f"  URL: {post_url}")
 
             # Convert response to dict for consistency
-            if hasattr(result, 'model_dump'):
+            if hasattr(result, "model_dump"):
                 return result.model_dump()
-            elif hasattr(result, 'dict'):
+            elif hasattr(result, "dict"):
                 return result.dict()
             else:
-                return {'id': post_id, 'status': status, 'url': post_url}
+                return {"id": post_id, "status": status, "url": post_url}
 
         except Exception as e:
             print(f"[ERROR] Failed to post to {platform}: {e}")
@@ -235,11 +244,11 @@ class LateDistributionClient:
     def distribute_multi_platform(
         self,
         content: str,
-        platforms: List[str],
-        media_urls: Optional[List[str]] = None,
-        scheduled_for: Optional[str] = None,
-        stop_on_error: bool = False
-    ) -> Dict[str, Any]:
+        platforms: list[str],
+        media_urls: list[str] | None = None,
+        scheduled_for: str | None = None,
+        stop_on_error: bool = False,
+    ) -> dict[str, Any]:
         """
         Distribute content to multiple platforms.
 
@@ -265,41 +274,28 @@ class LateDistributionClient:
                     content=content,
                     platform=platform,
                     media_urls=media_urls,
-                    scheduled_for=scheduled_for
+                    scheduled_for=scheduled_for,
                 )
-                results[platform] = {
-                    'success': True,
-                    'data': result
-                }
+                results[platform] = {"success": True, "data": result}
                 successful += 1
 
             except Exception as e:
-                results[platform] = {
-                    'success': False,
-                    'error': str(e)
-                }
+                results[platform] = {"success": False, "error": str(e)}
                 failed += 1
 
                 if stop_on_error:
                     print(f"[ERROR] Stopping due to error on {platform}")
                     break
 
-        summary = {
-            'total': len(platforms),
-            'successful': successful,
-            'failed': failed
-        }
+        summary = {"total": len(platforms), "successful": successful, "failed": failed}
 
-        print(f"\n[SUMMARY] Distribution complete")
+        print("\n[SUMMARY] Distribution complete")
         print(f"  Successful: {successful}/{len(platforms)}")
         print(f"  Failed: {failed}/{len(platforms)}")
 
-        return {
-            'results': results,
-            'summary': summary
-        }
+        return {"results": results, "summary": summary}
 
-    def get_post_status(self, post_id: str) -> Dict[str, Any]:
+    def get_post_status(self, post_id: str) -> dict[str, Any]:
         """
         Get the current status of a post.
 
@@ -315,7 +311,7 @@ class LateDistributionClient:
             print(f"[ERROR] Failed to get post status: {e}")
             raise
 
-    def get_analytics(self, post_id: str) -> Dict[str, Any]:
+    def get_analytics(self, post_id: str) -> dict[str, Any]:
         """
         Get analytics for a post.
 
@@ -338,7 +334,7 @@ class LateDistributionClient:
 
 
 # Convenience function for backward compatibility
-def post_to_linkedin(content: str, api_key: Optional[str] = None) -> Dict[str, Any]:
+def post_to_linkedin(content: str, api_key: str | None = None) -> dict[str, Any]:
     """
     Quick function to post to LinkedIn.
 
@@ -350,7 +346,7 @@ def post_to_linkedin(content: str, api_key: Optional[str] = None) -> Dict[str, A
         Post result dictionary
     """
     client = LateDistributionClient(api_key=api_key)
-    return client.post_to_platform(content=content, platform='linkedin')
+    return client.post_to_platform(content=content, platform="linkedin")
 
 
 # Example usage

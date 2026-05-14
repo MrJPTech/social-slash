@@ -24,7 +24,7 @@ Usage:
             "social-slash": {
                 "command": "python",
                 "args": ["-m", "lib.mcp"],
-                "cwd": "J:\\\\PRSMTECH\\\\PRSM-PROPRIETARY\\\\INTERNAL-PROJECTS\\\\social-slash",
+                "cwd": "/path/to/social-slash",
                 "env": {"PYTHONPATH": "."}
             }
         }
@@ -39,25 +39,26 @@ from __future__ import annotations
 
 import os
 
+# Import every tool / route module so that their @mcp.tool() and
+# @mcp.custom_route() decorators register on the shared `mcp` instance.
+from . import (
+    routes_infra,  # noqa: F401  — /health, /
+    routes_oauth,  # noqa: F401  — OAuth 2.0 endpoints
+    routes_scheduler,  # noqa: F401  — /approval, /gchat/events, /scheduler/*
+    tools_content,  # noqa: F401  — 3 tools
+    tools_image,  # noqa: F401  — 5 tools
+    tools_media,  # noqa: F401  — 5 tools
+    tools_media_library,  # noqa: F401  — 6 tools
+    tools_posting,  # noqa: F401  — 2 tools
+    tools_research,  # noqa: F401  — 4 tools
+    tools_utility,  # noqa: F401  — 5 tools
+    tools_writing,  # noqa: F401  — 3 tools
+)
+
 # Re-export the shared mcp instance for backward compatibility:
 #   from lib.mcp.server import mcp
 #   from lib.mcp.server import main
-from ._shared import mcp, _set_scheduler  # noqa: F401
-
-# Import every tool / route module so that their @mcp.tool() and
-# @mcp.custom_route() decorators register on the shared `mcp` instance.
-from . import tools_utility  # noqa: F401  — 5 tools
-from . import tools_writing  # noqa: F401  — 3 tools
-from . import tools_research  # noqa: F401  — 4 tools
-from . import tools_media  # noqa: F401  — 5 tools
-from . import tools_image  # noqa: F401  — 5 tools
-from . import tools_posting  # noqa: F401  — 2 tools
-from . import tools_content  # noqa: F401  — 3 tools
-from . import tools_media_library  # noqa: F401  — 6 tools
-from . import routes_infra  # noqa: F401  — /health, /
-from . import routes_scheduler  # noqa: F401  — /approval, /gchat/events, /scheduler/*
-from . import routes_oauth  # noqa: F401  — OAuth 2.0 endpoints
-
+from ._shared import _set_scheduler, mcp  # noqa: F401
 from .middleware import BearerAuthMiddleware
 from .routes_oauth import OAUTH_CLIENT_ID
 
@@ -71,6 +72,7 @@ def main() -> None:
     if scheduler_enabled:
         try:
             from lib.scheduler.daily_scheduler import DailyScheduler
+
             scheduler = DailyScheduler()
             scheduler.start()
             _set_scheduler(scheduler)

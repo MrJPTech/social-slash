@@ -2,10 +2,9 @@
 """Tests for ImageAgent - AI image generation agent."""
 
 import os
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-
 
 # ─────────────────────────────────────────────────────────────────────
 # INIT TESTS
@@ -54,8 +53,8 @@ class TestImageAgentInit:
     @patch("lib.agents.image_agent.SwizzPersona")
     def test_inherits_base_agent(self, mock_persona, mock_db):
         """ImageAgent inherits from BaseAgent."""
-        from lib.agents.image_agent import ImageAgent
         from lib.agents.base_agent import BaseAgent
+        from lib.agents.image_agent import ImageAgent
 
         config = {"persona_mode": "professional"}
         agent = ImageAgent(config)
@@ -85,9 +84,7 @@ class TestPromptEnhancement:
         mock_gen._generate.return_value = "Enhanced professional image prompt"
         agent._response_generator = mock_gen
 
-        result = agent.enhance_prompt(
-            "A tech startup office", "linkedin", "modern", "professional"
-        )
+        result = agent.enhance_prompt("A tech startup office", "linkedin", "modern", "professional")
 
         assert result == "Enhanced professional image prompt"
         mock_gen._generate.assert_called_once()
@@ -176,10 +173,12 @@ class TestGeneratePostGraphic:
         agent._response_generator = mock_gen
 
         mock_imagen = MagicMock()
-        mock_imagen.generate_for_platform.return_value = [{
-            "local_path": "/tmp/test.png",
-            "aspect_ratio": "1:1",
-        }]
+        mock_imagen.generate_for_platform.return_value = [
+            {
+                "local_path": "/tmp/test.png",
+                "aspect_ratio": "1:1",
+            }
+        ]
         mock_imagen.get_preset.return_value = "1:1"
         agent._imagen_client = mock_imagen
 
@@ -212,10 +211,12 @@ class TestGenerateThumbnail:
         agent._response_generator = mock_gen
 
         mock_imagen = MagicMock()
-        mock_imagen.generate_for_platform.return_value = [{
-            "local_path": "/tmp/thumb.png",
-            "aspect_ratio": "16:9",
-        }]
+        mock_imagen.generate_for_platform.return_value = [
+            {
+                "local_path": "/tmp/thumb.png",
+                "aspect_ratio": "16:9",
+            }
+        ]
         agent._imagen_client = mock_imagen
 
         result = agent.generate_thumbnail(title="My Video Title")
@@ -239,10 +240,12 @@ class TestGenerateCarouselImages:
         agent._response_generator = mock_gen
 
         mock_imagen = MagicMock()
-        mock_imagen.generate_for_platform.return_value = [{
-            "local_path": "/tmp/slide.png",
-            "aspect_ratio": "1:1",
-        }]
+        mock_imagen.generate_for_platform.return_value = [
+            {
+                "local_path": "/tmp/slide.png",
+                "aspect_ratio": "1:1",
+            }
+        ]
         agent._imagen_client = mock_imagen
 
         result = agent.generate_carousel_images(
@@ -273,10 +276,12 @@ class TestGenerateStoryImage:
         agent._response_generator = mock_gen
 
         mock_imagen = MagicMock()
-        mock_imagen.generate_for_platform.return_value = [{
-            "local_path": "/tmp/story.png",
-            "aspect_ratio": "9:16",
-        }]
+        mock_imagen.generate_for_platform.return_value = [
+            {
+                "local_path": "/tmp/story.png",
+                "aspect_ratio": "9:16",
+            }
+        ]
         agent._imagen_client = mock_imagen
 
         result = agent.generate_story_image(context="Behind the scenes")
@@ -300,10 +305,12 @@ class TestGenerateTextOverlay:
         agent._response_generator = mock_gen
 
         mock_imagen = MagicMock()
-        mock_imagen.generate_for_platform.return_value = [{
-            "local_path": "/tmp/overlay.png",
-            "aspect_ratio": "1:1",
-        }]
+        mock_imagen.generate_for_platform.return_value = [
+            {
+                "local_path": "/tmp/overlay.png",
+                "aspect_ratio": "1:1",
+            }
+        ]
         agent._imagen_client = mock_imagen
 
         result = agent.generate_text_overlay(
@@ -330,10 +337,12 @@ class TestGenerateAiArt:
         agent._response_generator = mock_gen
 
         mock_imagen = MagicMock()
-        mock_imagen.generate_image.return_value = [{
-            "local_path": "/tmp/art.png",
-            "image_bytes": b"bytes",
-        }]
+        mock_imagen.generate_image.return_value = [
+            {
+                "local_path": "/tmp/art.png",
+                "image_bytes": b"bytes",
+            }
+        ]
         agent._imagen_client = mock_imagen
 
         result = agent.generate_ai_art(
@@ -377,6 +386,7 @@ class TestCLI:
     def test_main_function_exists(self):
         """main() function is importable."""
         from lib.agents.image_agent import main
+
         assert callable(main)
 
     @patch("lib.agents.image_agent.EngagementDatabase")
@@ -384,9 +394,10 @@ class TestCLI:
     def test_status_action(self, mock_persona, mock_db, capsys):
         """CLI status action prints stats."""
         import sys
+
         from lib.agents.image_agent import main
 
-        with patch.object(sys, 'argv', ['image_agent', '--action', 'status']):
+        with patch.object(sys, "argv", ["image_agent", "--action", "status"]):
             main()
 
         captured = capsys.readouterr()
@@ -397,9 +408,10 @@ class TestCLI:
     def test_presets_action(self, mock_persona, mock_db, capsys):
         """CLI presets action prints platform presets."""
         import sys
+
         from lib.agents.image_agent import main
 
-        with patch.object(sys, 'argv', ['image_agent', '--action', 'presets']):
+        with patch.object(sys, "argv", ["image_agent", "--action", "presets"]):
             main()
 
         captured = capsys.readouterr()
@@ -411,9 +423,10 @@ class TestCLI:
     def test_graphic_requires_prompt(self, mock_persona, mock_db, capsys):
         """CLI graphic action requires --prompt."""
         import sys
+
         from lib.agents.image_agent import main
 
-        with patch.object(sys, 'argv', ['image_agent', '--action', 'graphic']):
+        with patch.object(sys, "argv", ["image_agent", "--action", "graphic"]):
             main()
 
         captured = capsys.readouterr()

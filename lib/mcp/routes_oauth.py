@@ -34,26 +34,30 @@ def _get_server_url(request: Request) -> str:
 async def oauth_metadata(request: Request) -> JSONResponse:
     """RFC 8414 - OAuth 2.0 Authorization Server Metadata."""
     base = _get_server_url(request)
-    return JSONResponse({
-        "issuer": base,
-        "authorization_endpoint": f"{base}/authorize",
-        "token_endpoint": f"{base}/token",
-        "response_types_supported": ["code"],
-        "grant_types_supported": ["authorization_code"],
-        "token_endpoint_auth_methods_supported": ["client_secret_post"],
-        "code_challenge_methods_supported": ["S256"],
-    })
+    return JSONResponse(
+        {
+            "issuer": base,
+            "authorization_endpoint": f"{base}/authorize",
+            "token_endpoint": f"{base}/token",
+            "response_types_supported": ["code"],
+            "grant_types_supported": ["authorization_code"],
+            "token_endpoint_auth_methods_supported": ["client_secret_post"],
+            "code_challenge_methods_supported": ["S256"],
+        }
+    )
 
 
 @mcp.custom_route("/.well-known/oauth-protected-resource", methods=["GET"])
 async def resource_metadata(request: Request) -> JSONResponse:
     """RFC 9728 - OAuth 2.0 Protected Resource Metadata."""
     base = _get_server_url(request)
-    return JSONResponse({
-        "resource": f"{base}/mcp",
-        "authorization_servers": [base],
-        "bearer_methods_supported": ["header"],
-    })
+    return JSONResponse(
+        {
+            "resource": f"{base}/mcp",
+            "authorization_servers": [base],
+            "bearer_methods_supported": ["header"],
+        }
+    )
 
 
 @mcp.custom_route("/register", methods=["POST"])
@@ -111,6 +115,7 @@ async def token_exchange(request: Request) -> JSONResponse:
             params = json.loads(body)
         else:
             from urllib.parse import parse_qs
+
             raw = parse_qs(body.decode())
             params = {k: v[0] for k, v in raw.items()}
     except Exception:
@@ -127,35 +132,54 @@ async def token_exchange(request: Request) -> JSONResponse:
 
     # Validate client credentials against pre-shared values
     if OAUTH_CLIENT_ID and client_id != OAUTH_CLIENT_ID:
-        return JSONResponse({"error": "invalid_client", "error_description": "Unknown client_id"}, status_code=401)
+        return JSONResponse(
+            {"error": "invalid_client", "error_description": "Unknown client_id"}, status_code=401
+        )
     if OAUTH_CLIENT_SECRET and client_secret != OAUTH_CLIENT_SECRET:
-        return JSONResponse({"error": "invalid_client", "error_description": "Bad client_secret"}, status_code=401)
+        return JSONResponse(
+            {"error": "invalid_client", "error_description": "Bad client_secret"}, status_code=401
+        )
 
     # Look up and consume the auth code
     code_data = _auth_codes.pop(code, None)
     if not code_data:
-        return JSONResponse({"error": "invalid_grant", "error_description": "Code not found or already used"}, status_code=400)
+        return JSONResponse(
+            {"error": "invalid_grant", "error_description": "Code not found or already used"},
+            status_code=400,
+        )
 
     if code_data["expires"] < time.time():
-        return JSONResponse({"error": "invalid_grant", "error_description": "Code expired"}, status_code=400)
+        return JSONResponse(
+            {"error": "invalid_grant", "error_description": "Code expired"}, status_code=400
+        )
 
     # Verify client_id matches the one that requested the auth code
     if client_id and code_data.get("client_id") and client_id != code_data["client_id"]:
-        return JSONResponse({"error": "invalid_grant", "error_description": "client_id mismatch"}, status_code=400)
+        return JSONResponse(
+            {"error": "invalid_grant", "error_description": "client_id mismatch"}, status_code=400
+        )
 
     # PKCE verification (S256)
     if code_data["code_challenge"] and code_verifier:
         digest = hashlib.sha256(code_verifier.encode()).digest()
         computed = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
         if computed != code_data["code_challenge"]:
-            return JSONResponse({"error": "invalid_grant", "error_description": "PKCE verification failed"}, status_code=400)
+            return JSONResponse(
+                {"error": "invalid_grant", "error_description": "PKCE verification failed"},
+                status_code=400,
+            )
 
     # Return the MCP_AUTH_TOKEN as the access token
     auth_token = os.environ.get("MCP_AUTH_TOKEN", "")
     if not auth_token:
-        return JSONResponse({"error": "server_error", "error_description": "MCP_AUTH_TOKEN not configured"}, status_code=500)
+        return JSONResponse(
+            {"error": "server_error", "error_description": "MCP_AUTH_TOKEN not configured"},
+            status_code=500,
+        )
 
-    return JSONResponse({
-        "access_token": auth_token,
-        "token_type": "Bearer",
-    })
+    return JSONResponse(
+        {
+            "access_token": auth_token,
+            "token_type": "Bearer",
+        }
+    )

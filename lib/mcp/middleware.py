@@ -30,7 +30,14 @@ class BearerAuthMiddleware:
                         break
                     elif k == b"host":
                         host = v.decode()
-                scheme = "https" if any(k == b"x-forwarded-proto" and v == b"https" for k, v in scope.get("headers", [])) else "https"
+                scheme = (
+                    "https"
+                    if any(
+                        k == b"x-forwarded-proto" and v == b"https"
+                        for k, v in scope.get("headers", [])
+                    )
+                    else "https"
+                )
                 base = f"{scheme}://{host}" if host else ""
                 res_uri = f"{base}/.well-known/oauth-protected-resource" if base else ""
                 www_auth = f'Bearer resource_metadata="{res_uri}"' if res_uri else "Bearer"

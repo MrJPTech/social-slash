@@ -8,12 +8,13 @@ Uses Google's Gemini 2.0 Flash model for:
 - Engagement improvement suggestions
 """
 
-import os
 import json
-from typing import Dict, List, Optional, Any
+import os
+from typing import Any
 
 try:
     from google import genai
+
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
@@ -28,7 +29,7 @@ class GeminiClient:
 
     MODEL = "gemini-2.0-flash"
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """
         Initialize the Gemini client.
 
@@ -36,12 +37,9 @@ class GeminiClient:
             api_key: Google API key. Defaults to GOOGLE_API_KEY env var.
         """
         if not GEMINI_AVAILABLE:
-            raise ImportError(
-                "google-genai package not installed. "
-                "Run: pip install google-genai"
-            )
+            raise ImportError("google-genai package not installed. Run: pip install google-genai")
 
-        self.api_key = api_key or os.getenv('GOOGLE_API_KEY')
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
 
         if not self.api_key:
             raise ValueError(
@@ -52,12 +50,8 @@ class GeminiClient:
         self.client = genai.Client(api_key=self.api_key)
 
     def enhance_content(
-        self,
-        content: str,
-        platform: str,
-        style: Optional[str] = None,
-        max_length: Optional[int] = None
-    ) -> Dict[str, Any]:
+        self, content: str, platform: str, style: str | None = None, max_length: int | None = None
+    ) -> dict[str, Any]:
         """
         Enhance content for a specific platform.
 
@@ -107,8 +101,8 @@ Respond in JSON format:
                 result_text = result_text.split("```")[1].split("```")[0]
 
             result = json.loads(result_text.strip())
-            result['provider'] = 'gemini'
-            result['model'] = self.MODEL
+            result["provider"] = "gemini"
+            result["model"] = self.MODEL
 
             print("[SUCCESS] Content enhanced with Gemini")
             return result
@@ -116,24 +110,19 @@ Respond in JSON format:
         except json.JSONDecodeError:
             # Fallback if JSON parsing fails
             return {
-                'enhanced_content': content,
-                'changes_made': [],
-                'engagement_tips': [],
-                'suggested_hashtags': [],
-                'provider': 'gemini',
-                'model': self.MODEL,
-                'error': 'Failed to parse AI response'
+                "enhanced_content": content,
+                "changes_made": [],
+                "engagement_tips": [],
+                "suggested_hashtags": [],
+                "provider": "gemini",
+                "model": self.MODEL,
+                "error": "Failed to parse AI response",
             }
         except Exception as e:
             print(f"[ERROR] Gemini enhancement failed: {e}")
             raise
 
-    def generate_hashtags(
-        self,
-        content: str,
-        platform: str,
-        count: int = 5
-    ) -> List[str]:
+    def generate_hashtags(self, content: str, platform: str, count: int = 5) -> list[str]:
         """
         Generate relevant hashtags for content.
 
@@ -168,7 +157,7 @@ Example response: ["developer", "coding", "tech"]
             hashtags = json.loads(result_text.strip())
 
             # Remove # if present
-            hashtags = [h.lstrip('#') for h in hashtags]
+            hashtags = [h.lstrip("#") for h in hashtags]
 
             print(f"[SUCCESS] Generated {len(hashtags)} hashtags")
             return hashtags[:count]
@@ -177,11 +166,7 @@ Example response: ["developer", "coding", "tech"]
             print(f"[ERROR] Hashtag generation failed: {e}")
             return []
 
-    def analyze_content(
-        self,
-        content: str,
-        platform: str
-    ) -> Dict[str, Any]:
+    def analyze_content(self, content: str, platform: str) -> dict[str, Any]:
         """
         Analyze content for potential issues and improvements.
 
@@ -220,7 +205,7 @@ Respond in JSON format:
                 result_text = result_text.split("```")[1].split("```")[0]
 
             result = json.loads(result_text.strip())
-            result['provider'] = 'gemini'
+            result["provider"] = "gemini"
 
             print(f"[SUCCESS] Content analyzed (score: {result.get('score', 'N/A')})")
             return result
@@ -236,10 +221,8 @@ if __name__ == "__main__":
 
     # Test enhancement
     result = client.enhance_content(
-        content="Check out our new product launch!",
-        platform="linkedin",
-        style="professional"
+        content="Check out our new product launch!", platform="linkedin", style="professional"
     )
 
     print("\nEnhanced content:")
-    print(result.get('enhanced_content', 'N/A'))
+    print(result.get("enhanced_content", "N/A"))

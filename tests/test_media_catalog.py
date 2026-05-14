@@ -19,12 +19,14 @@ class TestMediaCatalog(unittest.TestCase):
         self._tmpfile.close()
         # Patch DB_PATH at the module level
         import lib.media_library.catalog as mod
+
         self._orig_path = mod.DB_PATH
         mod.DB_PATH = self._tmpfile.name
         self.catalog = MediaCatalog()
 
     def tearDown(self):
         import lib.media_library.catalog as mod
+
         mod.DB_PATH = self._orig_path
         os.unlink(self._tmpfile.name)
 

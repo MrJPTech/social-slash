@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import json
-from typing import Optional
 
-from ._shared import mcp, MEDIA_REQUIRED_PLATFORMS
 from ._client_helpers import suppress_stdout
-
+from ._shared import MEDIA_REQUIRED_PLATFORMS, mcp
 
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
 
 
-def _auto_generate_image(content: str, platform: str) -> Optional[str]:
+def _auto_generate_image(content: str, platform: str) -> str | None:
     """Generate an AI image for a media-required platform and upload to Late.
 
     Derives a visual prompt from the post content, generates a platform-
@@ -32,7 +30,7 @@ def _auto_generate_image(content: str, platform: str) -> Optional[str]:
         from lib.ai.imagen_client import ImagenClient
 
         # Derive a visual prompt from the post content
-        topic = content[:150].replace('\n', ' ').strip()
+        topic = content[:150].replace("\n", " ").strip()
         if not topic:
             topic = f"Professional social media content for {platform}"
 
@@ -96,10 +94,15 @@ def post_to_platform(
     try:
         url_list = [u.strip() for u in media_urls.split(",") if u.strip()] if media_urls else None
         platform_lower = platform.lower()
-        auto_generated_url: Optional[str] = None
+        auto_generated_url: str | None = None
 
         # Auto-generate image for platforms that require media
-        if auto_image and not url_list and platform_lower in MEDIA_REQUIRED_PLATFORMS and not dry_run:
+        if (
+            auto_image
+            and not url_list
+            and platform_lower in MEDIA_REQUIRED_PLATFORMS
+            and not dry_run
+        ):
             with suppress_stdout():
                 auto_generated_url = _auto_generate_image(content, platform_lower)
             if auto_generated_url:
@@ -107,6 +110,7 @@ def post_to_platform(
 
         with suppress_stdout():
             from lib.posting.poster import Poster
+
             poster = Poster(skip_late_init=dry_run)
 
             if enhance:
@@ -154,7 +158,7 @@ def post_to_multiple(
     try:
         platform_list = [p.strip().lower() for p in platforms.split(",") if p.strip()]
         url_list = [u.strip() for u in media_urls.split(",") if u.strip()] if media_urls else None
-        auto_generated_url: Optional[str] = None
+        auto_generated_url: str | None = None
 
         # Auto-generate image if any media-required platform is in the list
         needs_image = any(p in MEDIA_REQUIRED_PLATFORMS for p in platform_list)
@@ -170,6 +174,7 @@ def post_to_multiple(
 
         with suppress_stdout():
             from lib.posting.poster import Poster
+
             poster = Poster()
 
             if enhance:

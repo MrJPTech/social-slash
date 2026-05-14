@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import json
 
+from ._client_helpers import build_agent_config, suppress_stdout
 from ._shared import mcp
-from ._client_helpers import suppress_stdout, build_agent_config
 
 
 def _get_image_agent(persona_mode: str = "professional", platform: str = "instagram"):
     """Create an ImageAgent with stdout suppression."""
     with suppress_stdout():
         from lib.agents.image_agent import ImageAgent
+
         config = build_agent_config(persona_mode, platform)
         return ImageAgent(config)
 

@@ -16,12 +16,11 @@ Features:
 """
 
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Any
 
-from lib.agents.base_agent import BaseAgent, AgentState
+from lib.agents.base_agent import AgentState, BaseAgent
 from lib.persona.swizz_persona import SwizzPersona
 from lib.storage.database import EngagementDatabase
-
 
 # Persona mode -> visual style hints for prompt enhancement
 PERSONA_STYLE_MAP = {
@@ -44,9 +43,9 @@ class ImageAgent(BaseAgent):
 
     def __init__(
         self,
-        config: Dict[str, Any],
-        persona: Optional[SwizzPersona] = None,
-        db: Optional[EngagementDatabase] = None,
+        config: dict[str, Any],
+        persona: SwizzPersona | None = None,
+        db: EngagementDatabase | None = None,
         ai_provider: str = "gemini",
     ):
         """
@@ -60,19 +59,16 @@ class ImageAgent(BaseAgent):
         """
         super().__init__(config, ai_provider, name="ImageAgent")
 
-        self.persona = persona or SwizzPersona(
-            mode=config.get('persona_mode', 'professional')
-        )
+        self.persona = persona or SwizzPersona(mode=config.get("persona_mode", "professional"))
         self.db = db or EngagementDatabase()
 
-        self.default_platform = config.get('default_platform', 'instagram')
+        self.default_platform = config.get("default_platform", "instagram")
 
         # Lazy-init imagen client
         self._imagen_client = None
 
         self.logger.info(
-            f"Configured: persona={self.persona._mode}, "
-            f"platform={self.default_platform}"
+            f"Configured: persona={self.persona._mode}, platform={self.default_platform}"
         )
 
     @property
@@ -80,6 +76,7 @@ class ImageAgent(BaseAgent):
         """Lazy-load ImagenClient."""
         if self._imagen_client is None:
             from lib.ai.imagen_client import ImagenClient
+
             self._imagen_client = ImagenClient()
         return self._imagen_client
 
@@ -125,13 +122,13 @@ class ImageAgent(BaseAgent):
                     style=item.get("style", "bold"),
                 )
 
-            self.stats['items_processed'] += 1
+            self.stats["items_processed"] += 1
             self.transition(AgentState.MONITORING)
             return True
 
         except Exception as e:
             self.logger.error(f"Image generation failed: {e}")
-            self.stats['errors'] += 1
+            self.stats["errors"] += 1
             return False
 
     # ─────────────────────────────────────────────────────────────
@@ -181,9 +178,7 @@ class ImageAgent(BaseAgent):
         )
 
         try:
-            enhanced = self.response_generator._generate(
-                enhancement_prompt, max_length=1000
-            )
+            enhanced = self.response_generator._generate(enhancement_prompt, max_length=1000)
             return enhanced.strip()
         except Exception as e:
             self.logger.warning(f"Prompt enhancement failed, using raw prompt: {e}")
@@ -201,7 +196,7 @@ class ImageAgent(BaseAgent):
         persona_mode: str = "professional",
         num_images: int = 1,
         upload: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate a social post graphic.
 
@@ -254,7 +249,7 @@ class ImageAgent(BaseAgent):
         style: str = "bold",
         num_images: int = 1,
         upload: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate a video/blog thumbnail (16:9).
 
@@ -306,12 +301,12 @@ class ImageAgent(BaseAgent):
 
     def generate_carousel_images(
         self,
-        slides: List[str],
+        slides: list[str],
         platform: str = "instagram",
         style: str = "modern",
         persona_mode: str = "professional",
         upload: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate images for each carousel slide.
 
@@ -329,7 +324,7 @@ class ImageAgent(BaseAgent):
 
         for i, slide_desc in enumerate(slides):
             enhanced = self.enhance_prompt(
-                f"Carousel slide {i+1}/{len(slides)}: {slide_desc}. "
+                f"Carousel slide {i + 1}/{len(slides)}: {slide_desc}. "
                 f"Maintain consistent visual style across all slides.",
                 platform=platform,
                 style=style,
@@ -343,12 +338,14 @@ class ImageAgent(BaseAgent):
                     image_type="post",
                     num_images=1,
                 )
-                slide_results.append({
-                    "slide": i + 1,
-                    "description": slide_desc,
-                    "image_url": urls[0] if urls else None,
-                    "prompt_used": enhanced,
-                })
+                slide_results.append(
+                    {
+                        "slide": i + 1,
+                        "description": slide_desc,
+                        "image_url": urls[0] if urls else None,
+                        "prompt_used": enhanced,
+                    }
+                )
             else:
                 results = self.imagen_client.generate_for_platform(
                     prompt=enhanced,
@@ -356,12 +353,14 @@ class ImageAgent(BaseAgent):
                     image_type="post",
                     num_images=1,
                 )
-                slide_results.append({
-                    "slide": i + 1,
-                    "description": slide_desc,
-                    "local_path": results[0]["local_path"] if results else None,
-                    "prompt_used": enhanced,
-                })
+                slide_results.append(
+                    {
+                        "slide": i + 1,
+                        "description": slide_desc,
+                        "local_path": results[0]["local_path"] if results else None,
+                        "prompt_used": enhanced,
+                    }
+                )
 
         return {
             "slide_images": slide_results,
@@ -377,7 +376,7 @@ class ImageAgent(BaseAgent):
         platform: str = "instagram",
         persona_mode: str = "professional",
         upload: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate a story/reel cover image (9:16).
 
@@ -432,7 +431,7 @@ class ImageAgent(BaseAgent):
         background_style: str = "gradient",
         platform: str = "instagram",
         upload: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate a background image for text overlay (quote cards, announcements).
 
@@ -493,7 +492,7 @@ class ImageAgent(BaseAgent):
         aspect_ratio: str = "1:1",
         num_images: int = 1,
         upload: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate freeform AI art (user provides the prompt directly).
 
@@ -510,9 +509,7 @@ class ImageAgent(BaseAgent):
         Returns:
             Dict with image data
         """
-        enhanced_prompt = self.enhance_prompt(
-            description, style=style, persona_mode="professional"
-        )
+        enhanced_prompt = self.enhance_prompt(description, style=style, persona_mode="professional")
 
         if upload:
             # Generate locally first, then upload
@@ -522,6 +519,7 @@ class ImageAgent(BaseAgent):
                 num_images=num_images,
             )
             import os
+
             urls = []
             for r in results:
                 try:
@@ -552,9 +550,10 @@ class ImageAgent(BaseAgent):
                 "uploaded": False,
             }
 
-    def list_presets(self) -> Dict[str, str]:
+    def list_presets(self) -> dict[str, str]:
         """Return available platform presets."""
         from lib.ai.imagen_client import ImagenClient
+
         return dict(ImagenClient.PLATFORM_PRESETS)
 
 
@@ -564,47 +563,70 @@ def main():
 
     parser = argparse.ArgumentParser(description="AI Image Generation Agent")
     parser.add_argument(
-        '--action',
-        choices=['graphic', 'thumbnail', 'carousel', 'story', 'overlay', 'art', 'presets', 'status'],
-        default='status',
-        help='Action to perform',
+        "--action",
+        choices=[
+            "graphic",
+            "thumbnail",
+            "carousel",
+            "story",
+            "overlay",
+            "art",
+            "presets",
+            "status",
+        ],
+        default="status",
+        help="Action to perform",
     )
-    parser.add_argument('--prompt', type=str, help='Image description / prompt')
-    parser.add_argument('--platform', type=str, default='instagram', help='Target platform')
-    parser.add_argument('--style', type=str, default='modern',
-                        help='Visual style (modern, minimal, bold, artistic, photorealistic, flat, gradient, neon)')
-    parser.add_argument('--persona', type=str, default='professional',
-                        choices=['professional', 'personal', 'ceo'],
-                        help='Persona mode')
-    parser.add_argument('--aspect-ratio', type=str, default='1:1',
-                        help='Aspect ratio for art mode (1:1, 16:9, 9:16, 4:3, 3:4)')
-    parser.add_argument('--num-images', type=int, default=1, help='Number of images (1-4)')
-    parser.add_argument('--slides', type=str, nargs='+', help='Slide descriptions for carousel')
-    parser.add_argument('--upload', action='store_true', help='Upload to Late SDK')
-    parser.add_argument('--dry-run', action='store_true', help='Show enhanced prompt without generating')
+    parser.add_argument("--prompt", type=str, help="Image description / prompt")
+    parser.add_argument("--platform", type=str, default="instagram", help="Target platform")
+    parser.add_argument(
+        "--style",
+        type=str,
+        default="modern",
+        help="Visual style (modern, minimal, bold, artistic, photorealistic, flat, gradient, neon)",
+    )
+    parser.add_argument(
+        "--persona",
+        type=str,
+        default="professional",
+        choices=["professional", "personal", "ceo"],
+        help="Persona mode",
+    )
+    parser.add_argument(
+        "--aspect-ratio",
+        type=str,
+        default="1:1",
+        help="Aspect ratio for art mode (1:1, 16:9, 9:16, 4:3, 3:4)",
+    )
+    parser.add_argument("--num-images", type=int, default=1, help="Number of images (1-4)")
+    parser.add_argument("--slides", type=str, nargs="+", help="Slide descriptions for carousel")
+    parser.add_argument("--upload", action="store_true", help="Upload to Late SDK")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show enhanced prompt without generating"
+    )
 
     args = parser.parse_args()
 
     config = {
-        'persona_mode': args.persona,
-        'default_platform': args.platform,
+        "persona_mode": args.persona,
+        "default_platform": args.platform,
     }
 
     agent = ImageAgent(config)
 
-    if args.action == 'status':
+    if args.action == "status":
         stats = agent.get_stats()
         print("\nImage Agent Status:")
         for key, value in stats.items():
             print(f"  {key}: {value}")
 
-    elif args.action == 'presets':
+    elif args.action == "presets":
         presets = agent.list_presets()
         print("\nAvailable platform presets:")
         for key, ratio in sorted(presets.items()):
             print(f"  {key}: {ratio}")
 
-    elif args.action == 'graphic':
+    elif args.action == "graphic":
         if not args.prompt:
             print("[ERROR] --prompt required")
             return
@@ -625,13 +647,15 @@ def main():
         )
         _print_result(result)
 
-    elif args.action == 'thumbnail':
+    elif args.action == "thumbnail":
         if not args.prompt:
             print("[ERROR] --prompt required (video/blog title)")
             return
 
         if args.dry_run:
-            enhanced = agent.enhance_prompt(f"Thumbnail for: {args.prompt}", args.platform, args.style, "professional")
+            enhanced = agent.enhance_prompt(
+                f"Thumbnail for: {args.prompt}", args.platform, args.style, "professional"
+            )
             print(f"\n[DRY RUN] Enhanced prompt:\n{enhanced}")
             return
 
@@ -645,15 +669,17 @@ def main():
         )
         _print_result(result)
 
-    elif args.action == 'carousel':
+    elif args.action == "carousel":
         slides = args.slides or [args.prompt or "Slide content"]
         if args.dry_run:
             for i, slide in enumerate(slides):
                 enhanced = agent.enhance_prompt(
-                    f"Carousel slide {i+1}/{len(slides)}: {slide}",
-                    args.platform, args.style, args.persona
+                    f"Carousel slide {i + 1}/{len(slides)}: {slide}",
+                    args.platform,
+                    args.style,
+                    args.persona,
                 )
-                print(f"\n[DRY RUN] Slide {i+1} prompt:\n{enhanced}")
+                print(f"\n[DRY RUN] Slide {i + 1} prompt:\n{enhanced}")
             return
 
         print(f"\n[INFO] Generating {len(slides)}-slide carousel...\n")
@@ -666,17 +692,19 @@ def main():
         )
         _print_result(result)
 
-    elif args.action == 'story':
+    elif args.action == "story":
         if not args.prompt:
             print("[ERROR] --prompt required")
             return
 
         if args.dry_run:
-            enhanced = agent.enhance_prompt(f"Story cover image: {args.prompt}", args.platform, "bold", args.persona)
+            enhanced = agent.enhance_prompt(
+                f"Story cover image: {args.prompt}", args.platform, "bold", args.persona
+            )
             print(f"\n[DRY RUN] Enhanced prompt:\n{enhanced}")
             return
 
-        print(f"\n[INFO] Generating story image...\n")
+        print("\n[INFO] Generating story image...\n")
         result = agent.generate_story_image(
             context=args.prompt,
             platform=args.platform,
@@ -685,7 +713,7 @@ def main():
         )
         _print_result(result)
 
-    elif args.action == 'overlay':
+    elif args.action == "overlay":
         if not args.prompt:
             print("[ERROR] --prompt required (text to overlay)")
             return
@@ -693,12 +721,14 @@ def main():
         if args.dry_run:
             enhanced = agent.enhance_prompt(
                 f"Background for text overlay: '{args.prompt}'",
-                args.platform, args.style, "professional"
+                args.platform,
+                args.style,
+                "professional",
             )
             print(f"\n[DRY RUN] Enhanced prompt:\n{enhanced}")
             return
 
-        print(f"\n[INFO] Generating text overlay background...\n")
+        print("\n[INFO] Generating text overlay background...\n")
         result = agent.generate_text_overlay(
             text=args.prompt,
             background_style=args.style,
@@ -707,17 +737,19 @@ def main():
         )
         _print_result(result)
 
-    elif args.action == 'art':
+    elif args.action == "art":
         if not args.prompt:
             print("[ERROR] --prompt required")
             return
 
         if args.dry_run:
-            enhanced = agent.enhance_prompt(args.prompt, style=args.style, persona_mode="professional")
+            enhanced = agent.enhance_prompt(
+                args.prompt, style=args.style, persona_mode="professional"
+            )
             print(f"\n[DRY RUN] Enhanced prompt:\n{enhanced}")
             return
 
-        print(f"\n[INFO] Generating AI art...\n")
+        print("\n[INFO] Generating AI art...\n")
         result = agent.generate_ai_art(
             description=args.prompt,
             style=args.style,
@@ -728,13 +760,17 @@ def main():
         _print_result(result)
 
 
-def _print_result(result: Dict[str, Any]):
+def _print_result(result: dict[str, Any]):
     """Print generation result."""
     import json
-    print(json.dumps(
-        {k: v for k, v in result.items() if k != "image_bytes"},
-        indent=2, default=str,
-    ))
+
+    print(
+        json.dumps(
+            {k: v for k, v in result.items() if k != "image_bytes"},
+            indent=2,
+            default=str,
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from ._shared import mcp
 from ._client_helpers import get_late_client, suppress_stdout
+from ._shared import mcp
 
 
 @mcp.tool()
@@ -18,9 +18,7 @@ def accounts_list(platform: str = "") -> str:
     accounts = response.accounts or []
 
     if platform:
-        accounts = [
-            a for a in accounts if a.platform and a.platform.lower() == platform.lower()
-        ]
+        accounts = [a for a in accounts if a.platform and a.platform.lower() == platform.lower()]
 
     if not accounts:
         return f"No accounts found{f' for {platform}' if platform else ''}. Connect at https://getlate.dev"
@@ -53,10 +51,10 @@ def posts_recent(platform: str = "", limit: int = 10) -> str:
 
     if platform:
         posts = [
-            p for p in posts
+            p
+            for p in posts
             if any(
-                t.platform and t.platform.lower() == platform.lower()
-                for t in (p.platforms or [])
+                t.platform and t.platform.lower() == platform.lower() for t in (p.platforms or [])
             )
         ]
 
@@ -126,6 +124,7 @@ def status_overview() -> str:
     # Bot database (graceful if not available)
     try:
         from lib.storage.database import EngagementDatabase
+
         EngagementDatabase()
         results.append("Engagement DB: Available")
     except Exception:

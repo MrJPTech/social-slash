@@ -5,17 +5,17 @@ Data models for platform-specific posting options.
 """
 
 from .platform_options import (
-    PlatformOptions,
     InstagramOptions,
     LinkedInOptions,
-    ThreadsOptions,
+    PlatformOptions,
     RedditOptions,
+    ThreadsOptions,
 )
 
 __all__ = [
-    'PlatformOptions',
-    'InstagramOptions',
-    'LinkedInOptions',
-    'ThreadsOptions',
-    'RedditOptions',
+    "PlatformOptions",
+    "InstagramOptions",
+    "LinkedInOptions",
+    "ThreadsOptions",
+    "RedditOptions",
 ]

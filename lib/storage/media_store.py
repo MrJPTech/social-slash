@@ -72,9 +72,7 @@ def _upload_to_supabase(
     try:
         from supabase import create_client
     except ImportError:
-        raise ImportError(
-            "supabase package not installed. Run: pip install 'supabase>=2.0.0'"
-        )
+        raise ImportError("supabase package not installed. Run: pip install 'supabase>=2.0.0'")
 
     ext = os.path.splitext(local_path)[1] or ".png"
     with open(local_path, "rb") as f:

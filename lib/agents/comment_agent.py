@@ -14,9 +14,9 @@ Features:
 """
 
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Any
 
-from lib.agents.base_agent import BaseAgent, AgentState
+from lib.agents.base_agent import AgentState, BaseAgent
 from lib.engagement.late_engagement_client import LateEngagementClient
 from lib.storage.database import EngagementDatabase
 
@@ -32,10 +32,10 @@ class CommentAgent(BaseAgent):
 
     def __init__(
         self,
-        config: Dict[str, Any],
-        late_client: Optional[LateEngagementClient] = None,
-        db: Optional[EngagementDatabase] = None,
-        ai_provider: str = "gemini"
+        config: dict[str, Any],
+        late_client: LateEngagementClient | None = None,
+        db: EngagementDatabase | None = None,
+        ai_provider: str = "gemini",
     ):
         """
         Initialize the comment agent.
@@ -53,15 +53,15 @@ class CommentAgent(BaseAgent):
         self.db = db or EngagementDatabase()
 
         # Configuration
-        self.poll_interval = config.get('poll_interval_seconds', 60)
-        self.auto_approve = config.get('auto_approve', False)
-        self.platforms = config.get('platforms', ['instagram', 'reddit'])
-        self.max_replies_per_post = config.get('max_replies_per_post', 10)
-        self.min_comment_length = config.get('min_comment_length', 3)
-        self.like_before_reply = config.get('like_before_reply', True)
+        self.poll_interval = config.get("poll_interval_seconds", 60)
+        self.auto_approve = config.get("auto_approve", False)
+        self.platforms = config.get("platforms", ["instagram", "reddit"])
+        self.max_replies_per_post = config.get("max_replies_per_post", 10)
+        self.min_comment_length = config.get("min_comment_length", 3)
+        self.like_before_reply = config.get("like_before_reply", True)
 
         # Brand voice
-        brand_voice = config.get('brand_voice', 'professional')
+        brand_voice = config.get("brand_voice", "professional")
         self.response_generator.brand_voice = brand_voice
 
         self.logger.info(
@@ -88,7 +88,7 @@ class CommentAgent(BaseAgent):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self.stats['errors'] += 1
+                self.stats["errors"] += 1
                 self.transition(AgentState.ERROR)
                 self.logger.error(f"Poll error: {e}")
                 await asyncio.sleep(self.poll_interval * 2)  # Back off on error
@@ -103,7 +103,7 @@ class CommentAgent(BaseAgent):
         if self._stop_event:
             self._stop_event.set()
 
-    async def process_item(self, comment_data: Dict[str, Any]) -> bool:
+    async def process_item(self, comment_data: dict[str, Any]) -> bool:
         """
         Process a single comment.
 
@@ -114,14 +114,14 @@ class CommentAgent(BaseAgent):
             True if processed successfully
         """
         try:
-            comment_id = comment_data.get('id', 'unknown')
-            author = comment_data.get('username', 'unknown')
-            content = comment_data.get('text', '')
-            platform = comment_data.get('platform', 'unknown')
-            post_id = comment_data.get('postId', '')
-            account_id = comment_data.get('accountId', '')
+            comment_id = comment_data.get("id", "unknown")
+            author = comment_data.get("username", "unknown")
+            content = comment_data.get("text", "")
+            platform = comment_data.get("platform", "unknown")
+            post_id = comment_data.get("postId", "")
+            account_id = comment_data.get("accountId", "")
 
-            self.log_item('comment', platform, author, content)
+            self.log_item("comment", platform, author, content)
 
             # Skip if already processed
             if self.db.comment_exists(comment_id):
@@ -141,18 +141,18 @@ class CommentAgent(BaseAgent):
                 post_id=post.id if post else 0,
                 late_comment_id=comment_id,
                 author=author,
-                author_id=comment_data.get('userId', ''),
+                author_id=comment_data.get("userId", ""),
                 content=content,
-                platform=platform
+                platform=platform,
             )
 
-            self.stats['items_processed'] += 1
+            self.stats["items_processed"] += 1
 
             # Check if requires escalation
             if self.requires_escalation(content):
                 self.db.queue_comment_for_review(saved_comment.id, "[ESCALATION REQUIRED]")
-                self.stats['items_queued'] += 1
-                self.format_console_output('warning', f"Escalated comment from @{author}")
+                self.stats["items_queued"] += 1
+                self.format_console_output("warning", f"Escalated comment from @{author}")
                 return True
 
             # Generate reply
@@ -162,19 +162,19 @@ class CommentAgent(BaseAgent):
                 author=author,
                 platform=platform,
                 original_post=post_content,
-                custom_instructions=self.config.get('custom_instructions')
+                custom_instructions=self.config.get("custom_instructions"),
             )
 
             # Check rate limits
             rate_limit_key = f"comment:{platform}:{author}"
             if not self.check_rate_limit(
                 rate_limit_key,
-                max_per_hour=self.config.get('max_replies_per_hour', 60),
-                cooldown_seconds=self.config.get('cooldown_per_user_seconds', 300)
+                max_per_hour=self.config.get("max_replies_per_hour", 60),
+                cooldown_seconds=self.config.get("cooldown_per_user_seconds", 300),
             ):
                 self.db.queue_comment_for_review(saved_comment.id, reply)
-                self.stats['items_queued'] += 1
-                self.format_console_output('queued', f"Rate limited - queued reply for @{author}")
+                self.stats["items_queued"] += 1
+                self.format_console_output("queued", f"Rate limited - queued reply for @{author}")
                 return True
 
             if self.auto_approve:
@@ -190,30 +190,27 @@ class CommentAgent(BaseAgent):
 
                 # Post reply
                 self.late_client.reply_to_comment(
-                    post_id=post_id,
-                    account_id=account_id,
-                    message=reply,
-                    comment_id=comment_id
+                    post_id=post_id, account_id=account_id, message=reply, comment_id=comment_id
                 )
 
                 self.db.mark_comment_replied(saved_comment.id, reply)
                 self.record_action(rate_limit_key)
-                self.stats['items_responded'] += 1
+                self.stats["items_responded"] += 1
 
-                self.format_console_output('success', f"Replied to @{author} on {platform}")
+                self.format_console_output("success", f"Replied to @{author} on {platform}")
             else:
                 # Queue for human review
                 self.transition(AgentState.REVIEWING)
                 self.db.queue_comment_for_review(saved_comment.id, reply)
-                self.stats['items_queued'] += 1
+                self.stats["items_queued"] += 1
 
-                self.format_console_output('queued', f"Review needed: @{author} on {platform}")
+                self.format_console_output("queued", f"Review needed: @{author} on {platform}")
 
             return True
 
         except Exception as e:
             self.logger.error(f"Failed to process comment: {e}")
-            self.stats['errors'] += 1
+            self.stats["errors"] += 1
             return False
 
     async def _poll_all_platforms(self):
@@ -233,21 +230,19 @@ class CommentAgent(BaseAgent):
         # Get posts with comments
         try:
             result = self.late_client.list_posts_with_comments(
-                platform=platform,
-                min_comments=1,
-                limit=20
+                platform=platform, min_comments=1, limit=20
             )
         except Exception as e:
             self.logger.error(f"Failed to list posts for {platform}: {e}")
             return
 
-        posts = result.get('data', [])
+        posts = result.get("data", [])
         self.logger.debug(f"Found {len(posts)} posts with comments on {platform}")
 
         for post_data in posts:
-            post_id = post_data.get('id', '')
-            account_id = post_data.get('accountId', '')
-            content = post_data.get('content', '')
+            post_id = post_data.get("id", "")
+            account_id = post_data.get("accountId", "")
+            content = post_data.get("content", "")
 
             # Track post if not already tracked
             if not self.db.get_post_by_late_id(post_id):
@@ -256,7 +251,7 @@ class CommentAgent(BaseAgent):
                     late_post_id=post_id,
                     account_id=account_id,
                     content=content,
-                    title=post_data.get('title')
+                    title=post_data.get("title"),
                 )
 
             # Get comments for this post
@@ -266,7 +261,7 @@ class CommentAgent(BaseAgent):
                 self.logger.error(f"Failed to get comments for post {post_id}: {e}")
                 continue
 
-            comments = comments_result.get('data', [])
+            comments = comments_result.get("data", [])
             replies_this_post = 0
 
             for comment in comments:
@@ -276,9 +271,9 @@ class CommentAgent(BaseAgent):
                     break
 
                 # Add post context to comment data
-                comment['postId'] = post_id
-                comment['accountId'] = account_id
-                comment['platform'] = platform
+                comment["postId"] = post_id
+                comment["accountId"] = account_id
+                comment["platform"] = platform
 
                 # Process comment
                 if await self.process_item(comment):
@@ -293,7 +288,7 @@ class CommentAgent(BaseAgent):
     # REVIEW QUEUE MANAGEMENT
     # ─────────────────────────────────────────────────────────────
 
-    def get_pending_reviews(self, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_pending_reviews(self, limit: int = 20) -> list[dict[str, Any]]:
         """
         Get pending comment reviews.
 
@@ -303,14 +298,11 @@ class CommentAgent(BaseAgent):
         Returns:
             List of pending review items
         """
-        reviews = self.db.get_pending_reviews(item_type='comment', limit=limit)
+        reviews = self.db.get_pending_reviews(item_type="comment", limit=limit)
         return [r.to_dict() for r in reviews]
 
     def approve_review(
-        self,
-        review_id: int,
-        reviewed_by: str = "user",
-        modified_reply: Optional[str] = None
+        self, review_id: int, reviewed_by: str = "user", modified_reply: str | None = None
     ) -> bool:
         """
         Approve a pending review and send the reply.
@@ -325,9 +317,7 @@ class CommentAgent(BaseAgent):
         """
         try:
             final_reply = self.db.approve_review(
-                review_id,
-                reviewed_by=reviewed_by,
-                final_reply=modified_reply
+                review_id, reviewed_by=reviewed_by, final_reply=modified_reply
             )
 
             # Get the original comment
@@ -344,11 +334,13 @@ class CommentAgent(BaseAgent):
                             post_id=post.late_post_id,
                             account_id=post.account_id,
                             message=final_reply,
-                            comment_id=comment.late_comment_id
+                            comment_id=comment.late_comment_id,
                         )
 
                         self.db.mark_comment_replied(comment.id, final_reply)
-                        self.format_console_output('success', f"Approved reply sent to @{comment.author}")
+                        self.format_console_output(
+                            "success", f"Approved reply sent to @{comment.author}"
+                        )
                         return True
 
             return False
@@ -358,10 +350,7 @@ class CommentAgent(BaseAgent):
             return False
 
     def reject_review(
-        self,
-        review_id: int,
-        reviewed_by: str = "user",
-        reason: Optional[str] = None
+        self, review_id: int, reviewed_by: str = "user", reason: str | None = None
     ) -> bool:
         """
         Reject a pending review.
@@ -376,7 +365,7 @@ class CommentAgent(BaseAgent):
         """
         try:
             self.db.reject_review(review_id, reviewed_by, notes=reason)
-            self.format_console_output('info', f"Review {review_id} rejected")
+            self.format_console_output("info", f"Review {review_id} rejected")
             return True
         except Exception as e:
             self.logger.error(f"Failed to reject review: {e}")
@@ -388,30 +377,32 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Comment Reply Agent")
-    parser.add_argument('--action', choices=['start', 'status', 'review', 'approve', 'reject'],
-                       default='status', help='Action to perform')
-    parser.add_argument('--platforms', type=str, default='instagram,reddit',
-                       help='Comma-separated platforms')
-    parser.add_argument('--auto-approve', action='store_true',
-                       help='Auto-approve replies')
-    parser.add_argument('--poll-interval', type=int, default=60,
-                       help='Poll interval in seconds')
-    parser.add_argument('--dry-run', action='store_true',
-                       help='Dry run mode')
-    parser.add_argument('--review-id', type=int, help='Review ID for approve/reject')
+    parser.add_argument(
+        "--action",
+        choices=["start", "status", "review", "approve", "reject"],
+        default="status",
+        help="Action to perform",
+    )
+    parser.add_argument(
+        "--platforms", type=str, default="instagram,reddit", help="Comma-separated platforms"
+    )
+    parser.add_argument("--auto-approve", action="store_true", help="Auto-approve replies")
+    parser.add_argument("--poll-interval", type=int, default=60, help="Poll interval in seconds")
+    parser.add_argument("--dry-run", action="store_true", help="Dry run mode")
+    parser.add_argument("--review-id", type=int, help="Review ID for approve/reject")
 
     args = parser.parse_args()
 
     config = {
-        'platforms': args.platforms.split(','),
-        'auto_approve': args.auto_approve and not args.dry_run,
-        'poll_interval_seconds': args.poll_interval,
-        'brand_voice': 'professional'
+        "platforms": args.platforms.split(","),
+        "auto_approve": args.auto_approve and not args.dry_run,
+        "poll_interval_seconds": args.poll_interval,
+        "brand_voice": "professional",
     }
 
     agent = CommentAgent(config)
 
-    if args.action == 'status':
+    if args.action == "status":
         stats = agent.get_stats()
         print("\nComment Agent Status:")
         for key, value in stats.items():
@@ -422,7 +413,7 @@ if __name__ == "__main__":
         for key, value in db_stats.items():
             print(f"  {key}: {value}")
 
-    elif args.action == 'review':
+    elif args.action == "review":
         reviews = agent.get_pending_reviews()
         print(f"\nPending Reviews: {len(reviews)}")
         for r in reviews[:10]:
@@ -432,20 +423,20 @@ if __name__ == "__main__":
             print(f"  Comment: {r['original_content'][:100]}...")
             print(f"  Generated Reply: {r['generated_reply'][:100]}...")
 
-    elif args.action == 'approve' and args.review_id:
+    elif args.action == "approve" and args.review_id:
         if agent.approve_review(args.review_id):
             print(f"[SUCCESS] Review {args.review_id} approved and sent")
         else:
             print(f"[ERROR] Failed to approve review {args.review_id}")
 
-    elif args.action == 'reject' and args.review_id:
+    elif args.action == "reject" and args.review_id:
         if agent.reject_review(args.review_id):
             print(f"[SUCCESS] Review {args.review_id} rejected")
         else:
             print(f"[ERROR] Failed to reject review {args.review_id}")
 
-    elif args.action == 'start':
-        print(f"\n[INFO] Starting Comment Agent...")
+    elif args.action == "start":
+        print("\n[INFO] Starting Comment Agent...")
         print(f"[INFO] Platforms: {', '.join(config['platforms'])}")
         print(f"[INFO] Auto-approve: {config['auto_approve']}")
         print(f"[INFO] Poll interval: {config['poll_interval_seconds']}s")

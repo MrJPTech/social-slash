@@ -227,9 +227,7 @@ class TestIngestNew(unittest.TestCase):
     @patch("lib.media_library.catalog.MediaCatalog.add")
     @patch("lib.media_library.catalog.MediaCatalog.exists_by_url", return_value=False)
     @patch("lib.media_library.local_scanner.LocalFolderScanner._build_expected_url")
-    def test_ingest_video_skips_vision(
-        self, mock_url, mock_exists, mock_add, mock_upload
-    ):
+    def test_ingest_video_skips_vision(self, mock_url, mock_exists, mock_add, mock_upload):
         mock_url.return_value = "https://example.com/clip.mp4"
         mock_upload.return_value = "https://supabase.co/storage/v1/object/public/social-media/library/screenshot/abc_clip.mp4"
 
@@ -244,7 +242,11 @@ class TestIngestNew(unittest.TestCase):
 
         # Verify catalog.add was called with video platform_fit
         call_kwargs = mock_add.call_args
-        vision_data = call_kwargs[1]["vision_data"] if "vision_data" in (call_kwargs[1] or {}) else call_kwargs[0][3]
+        vision_data = (
+            call_kwargs[1]["vision_data"]
+            if "vision_data" in (call_kwargs[1] or {})
+            else call_kwargs[0][3]
+        )
         self.assertIn("tiktok", vision_data.get("platform_fit", {}))
 
     @patch("lib.media_library.local_scanner.LocalFolderScanner._upload_file")
@@ -252,9 +254,7 @@ class TestIngestNew(unittest.TestCase):
     @patch("lib.media_library.catalog.MediaCatalog.add")
     @patch("lib.media_library.catalog.MediaCatalog.exists_by_url", return_value=False)
     @patch("lib.media_library.local_scanner.LocalFolderScanner._build_expected_url")
-    def test_ingest_error_counted(
-        self, mock_url, mock_exists, mock_add, mock_vision, mock_upload
-    ):
+    def test_ingest_error_counted(self, mock_url, mock_exists, mock_add, mock_vision, mock_upload):
         mock_url.return_value = "https://example.com/bad.png"
         mock_upload.side_effect = RuntimeError("Upload failed")
 
@@ -272,11 +272,11 @@ class TestIngestNew(unittest.TestCase):
     @patch("lib.media_library.catalog.MediaCatalog.add")
     @patch("lib.media_library.catalog.MediaCatalog.exists_by_url", return_value=False)
     @patch("lib.media_library.local_scanner.LocalFolderScanner._build_expected_url")
-    def test_ingest_multiple_files(
-        self, mock_url, mock_exists, mock_add, mock_vision, mock_upload
-    ):
+    def test_ingest_multiple_files(self, mock_url, mock_exists, mock_add, mock_vision, mock_upload):
         mock_url.return_value = "https://example.com/file"
-        mock_upload.return_value = "https://supabase.co/storage/v1/object/public/social-media/library/test.png"
+        mock_upload.return_value = (
+            "https://supabase.co/storage/v1/object/public/social-media/library/test.png"
+        )
         mock_vision.return_value = {
             "description": "Test",
             "tags": ["test"],
@@ -307,9 +307,7 @@ class TestFolderStats(unittest.TestCase):
             (Path(tmpdir) / "b.jpg").write_bytes(b"img")
             (Path(tmpdir) / "notes.txt").write_bytes(b"txt")
 
-            scanner = LocalFolderScanner(
-                folders=[{"path": tmpdir, "category": "photo"}]
-            )
+            scanner = LocalFolderScanner(folders=[{"path": tmpdir, "category": "photo"}])
             stats = scanner.get_folder_stats()
 
             self.assertEqual(stats["total_folders"], 1)
@@ -318,9 +316,7 @@ class TestFolderStats(unittest.TestCase):
             self.assertEqual(stats["folders"][0]["file_count"], 2)
 
     def test_stats_missing_folder(self):
-        scanner = LocalFolderScanner(
-            folders=[{"path": "/nonexistent/12345", "category": "photo"}]
-        )
+        scanner = LocalFolderScanner(folders=[{"path": "/nonexistent/12345", "category": "photo"}])
         stats = scanner.get_folder_stats()
 
         self.assertEqual(stats["total_files"], 0)

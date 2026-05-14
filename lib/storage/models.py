@@ -11,12 +11,13 @@ Dataclasses representing:
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Dict, Any
 from enum import Enum
+from typing import Any
 
 
 class ReviewStatus(Enum):
     """Status for items pending human review."""
+
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -26,6 +27,7 @@ class ReviewStatus(Enum):
 
 class ConversationStatus(Enum):
     """Status for DM conversations."""
+
     ACTIVE = "active"
     ARCHIVED = "archived"
     MUTED = "muted"
@@ -48,29 +50,30 @@ class TrackedPost:
         comment_count: Number of comments found
         is_active: Whether to continue monitoring
     """
+
     id: int
     platform: str
     late_post_id: str
     account_id: str
     content: str
     created_at: datetime
-    title: Optional[str] = None
-    last_checked: Optional[datetime] = None
+    title: str | None = None
+    last_checked: datetime | None = None
     comment_count: int = 0
     is_active: bool = True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
-            'id': self.id,
-            'platform': self.platform,
-            'late_post_id': self.late_post_id,
-            'account_id': self.account_id,
-            'content': self.content,
-            'title': self.title,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'last_checked': self.last_checked.isoformat() if self.last_checked else None,
-            'comment_count': self.comment_count,
-            'is_active': self.is_active
+            "id": self.id,
+            "platform": self.platform,
+            "late_post_id": self.late_post_id,
+            "account_id": self.account_id,
+            "content": self.content,
+            "title": self.title,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_checked": self.last_checked.isoformat() if self.last_checked else None,
+            "comment_count": self.comment_count,
+            "is_active": self.is_active,
         }
 
 
@@ -95,6 +98,7 @@ class Comment:
         review_status: Current review status
         sentiment: Detected sentiment (positive/neutral/negative)
     """
+
     id: int
     post_id: int
     late_comment_id: str
@@ -104,28 +108,28 @@ class Comment:
     platform: str
     created_at: datetime
     replied: bool = False
-    reply_content: Optional[str] = None
-    replied_at: Optional[datetime] = None
+    reply_content: str | None = None
+    replied_at: datetime | None = None
     pending_review: bool = False
     review_status: ReviewStatus = ReviewStatus.PENDING
-    sentiment: Optional[str] = None
+    sentiment: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
-            'id': self.id,
-            'post_id': self.post_id,
-            'late_comment_id': self.late_comment_id,
-            'author': self.author,
-            'author_id': self.author_id,
-            'content': self.content,
-            'platform': self.platform,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'replied': self.replied,
-            'reply_content': self.reply_content,
-            'replied_at': self.replied_at.isoformat() if self.replied_at else None,
-            'pending_review': self.pending_review,
-            'review_status': self.review_status.value,
-            'sentiment': self.sentiment
+            "id": self.id,
+            "post_id": self.post_id,
+            "late_comment_id": self.late_comment_id,
+            "author": self.author,
+            "author_id": self.author_id,
+            "content": self.content,
+            "platform": self.platform,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "replied": self.replied,
+            "reply_content": self.reply_content,
+            "replied_at": self.replied_at.isoformat() if self.replied_at else None,
+            "pending_review": self.pending_review,
+            "review_status": self.review_status.value,
+            "sentiment": self.sentiment,
         }
 
 
@@ -147,6 +151,7 @@ class Conversation:
         unread_count: Number of unread messages
         auto_reply_enabled: Whether auto-reply is on
     """
+
     id: int
     late_conversation_id: str
     platform: str
@@ -159,19 +164,19 @@ class Conversation:
     unread_count: int = 0
     auto_reply_enabled: bool = True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
-            'id': self.id,
-            'late_conversation_id': self.late_conversation_id,
-            'platform': self.platform,
-            'account_id': self.account_id,
-            'participant_id': self.participant_id,
-            'participant_name': self.participant_name,
-            'last_message': self.last_message,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'status': self.status.value,
-            'unread_count': self.unread_count,
-            'auto_reply_enabled': self.auto_reply_enabled
+            "id": self.id,
+            "late_conversation_id": self.late_conversation_id,
+            "platform": self.platform,
+            "account_id": self.account_id,
+            "participant_id": self.participant_id,
+            "participant_name": self.participant_name,
+            "last_message": self.last_message,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "status": self.status.value,
+            "unread_count": self.unread_count,
+            "auto_reply_enabled": self.auto_reply_enabled,
         }
 
 
@@ -194,6 +199,7 @@ class DirectMessage:
         replied_at: When we replied
         pending_review: Whether awaiting human approval
     """
+
     id: int
     conversation_id: int
     late_message_id: str
@@ -203,24 +209,24 @@ class DirectMessage:
     direction: str  # 'incoming' or 'outgoing'
     received_at: datetime
     replied: bool = False
-    reply_content: Optional[str] = None
-    replied_at: Optional[datetime] = None
+    reply_content: str | None = None
+    replied_at: datetime | None = None
     pending_review: bool = False
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
-            'id': self.id,
-            'conversation_id': self.conversation_id,
-            'late_message_id': self.late_message_id,
-            'sender_id': self.sender_id,
-            'sender_name': self.sender_name,
-            'content': self.content,
-            'direction': self.direction,
-            'received_at': self.received_at.isoformat() if self.received_at else None,
-            'replied': self.replied,
-            'reply_content': self.reply_content,
-            'replied_at': self.replied_at.isoformat() if self.replied_at else None,
-            'pending_review': self.pending_review
+            "id": self.id,
+            "conversation_id": self.conversation_id,
+            "late_message_id": self.late_message_id,
+            "sender_id": self.sender_id,
+            "sender_name": self.sender_name,
+            "content": self.content,
+            "direction": self.direction,
+            "received_at": self.received_at.isoformat() if self.received_at else None,
+            "replied": self.replied,
+            "reply_content": self.reply_content,
+            "replied_at": self.replied_at.isoformat() if self.replied_at else None,
+            "pending_review": self.pending_review,
         }
 
 
@@ -241,6 +247,7 @@ class BotAccount:
         cooldown_seconds: Cooldown between replies to same user
         created_at: When bot was added
     """
+
     id: int
     name: str
     platform: str
@@ -250,20 +257,20 @@ class BotAccount:
     response_style: str = "professional"
     max_replies_per_hour: int = 60
     cooldown_seconds: int = 300
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
-            'id': self.id,
-            'name': self.name,
-            'platform': self.platform,
-            'late_account_id': self.late_account_id,
-            'is_primary': self.is_primary,
-            'is_active': self.is_active,
-            'response_style': self.response_style,
-            'max_replies_per_hour': self.max_replies_per_hour,
-            'cooldown_seconds': self.cooldown_seconds,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            "id": self.id,
+            "name": self.name,
+            "platform": self.platform,
+            "late_account_id": self.late_account_id,
+            "is_primary": self.is_primary,
+            "is_active": self.is_active,
+            "response_style": self.response_style,
+            "max_replies_per_hour": self.max_replies_per_hour,
+            "cooldown_seconds": self.cooldown_seconds,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
@@ -286,6 +293,7 @@ class PendingReview:
         final_reply: Approved/modified reply
         notes: Reviewer notes
     """
+
     id: int
     item_type: str  # 'comment' or 'dm'
     item_id: int
@@ -294,25 +302,25 @@ class PendingReview:
     author: str
     generated_reply: str
     review_status: ReviewStatus = ReviewStatus.PENDING
-    reviewed_by: Optional[str] = None
-    reviewed_at: Optional[datetime] = None
-    final_reply: Optional[str] = None
-    notes: Optional[str] = None
-    created_at: Optional[datetime] = None
+    reviewed_by: str | None = None
+    reviewed_at: datetime | None = None
+    final_reply: str | None = None
+    notes: str | None = None
+    created_at: datetime | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
-            'id': self.id,
-            'item_type': self.item_type,
-            'item_id': self.item_id,
-            'platform': self.platform,
-            'original_content': self.original_content,
-            'author': self.author,
-            'generated_reply': self.generated_reply,
-            'review_status': self.review_status.value,
-            'reviewed_by': self.reviewed_by,
-            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
-            'final_reply': self.final_reply,
-            'notes': self.notes,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            "id": self.id,
+            "item_type": self.item_type,
+            "item_id": self.item_id,
+            "platform": self.platform,
+            "original_content": self.original_content,
+            "author": self.author,
+            "generated_reply": self.generated_reply,
+            "review_status": self.review_status.value,
+            "reviewed_by": self.reviewed_by,
+            "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
+            "final_reply": self.final_reply,
+            "notes": self.notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }

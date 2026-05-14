@@ -10,11 +10,12 @@ Uses Google's Imagen 4 model via the google-genai SDK for:
 
 import os
 import tempfile
-from typing import Dict, List, Optional, Any
+from typing import Any
 
 try:
     from google import genai
     from google.genai import types
+
     GENAI_AVAILABLE = True
 except ImportError:
     GENAI_AVAILABLE = False
@@ -30,7 +31,7 @@ class ImagenClient:
     MODEL = "imagen-4.0-generate-001"
 
     # Platform + image type -> aspect ratio presets
-    PLATFORM_PRESETS: Dict[str, str] = {
+    PLATFORM_PRESETS: dict[str, str] = {
         # Instagram
         "instagram_post": "1:1",
         "instagram_story": "9:16",
@@ -61,7 +62,7 @@ class ImagenClient:
         "googlebusiness_post": "4:3",
     }
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """
         Initialize the Imagen client.
 
@@ -69,12 +70,9 @@ class ImagenClient:
             api_key: Google API key. Defaults to GOOGLE_API_KEY env var.
         """
         if not GENAI_AVAILABLE:
-            raise ImportError(
-                "google-genai package not installed. "
-                "Run: pip install google-genai"
-            )
+            raise ImportError("google-genai package not installed. Run: pip install google-genai")
 
-        self.api_key = api_key or os.getenv('GOOGLE_API_KEY')
+        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
 
         if not self.api_key:
             raise ValueError(
@@ -85,7 +83,7 @@ class ImagenClient:
         self.client = genai.Client(api_key=self.api_key)
 
     @classmethod
-    def get_preset(cls, platform: str, image_type: str = "post") -> Optional[str]:
+    def get_preset(cls, platform: str, image_type: str = "post") -> str | None:
         """
         Look up an aspect ratio preset for a platform and image type.
 
@@ -105,7 +103,7 @@ class ImagenClient:
         aspect_ratio: str = "1:1",
         num_images: int = 1,
         safety_filter: str = "BLOCK_LOW_AND_ABOVE",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Generate images from a text prompt.
 
@@ -141,10 +139,12 @@ class ImagenClient:
         for img in response.generated_images:
             image_bytes = img.image.image_bytes
             local_path = self._save_to_temp(image_bytes)
-            results.append({
-                "image_bytes": image_bytes,
-                "local_path": local_path,
-            })
+            results.append(
+                {
+                    "image_bytes": image_bytes,
+                    "local_path": local_path,
+                }
+            )
 
         print(f"[SUCCESS] Generated {len(results)} image(s)")
         return results
@@ -155,7 +155,7 @@ class ImagenClient:
         platform: str,
         image_type: str = "post",
         num_images: int = 1,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Generate images optimized for a specific platform.
 
@@ -192,7 +192,7 @@ class ImagenClient:
         platform: str,
         image_type: str = "post",
         num_images: int = 1,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Generate images and upload to media storage.
 
@@ -240,7 +240,7 @@ class ImagenClient:
         Returns:
             Path to the temp file
         """
-        tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         tmp.write(image_bytes)
         tmp.close()
         return tmp.name
@@ -259,6 +259,7 @@ class ImagenClient:
             Public URL for the uploaded media
         """
         from lib.storage.media_store import upload_image
+
         return upload_image(local_path, prefix="generated")
 
     def _upload_to_late(self, local_path: str) -> str:

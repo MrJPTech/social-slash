@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from lib.media_library.catalog import MediaCatalog
-from lib.media_library.matcher import MediaMatcher, PERSONA_MOODS
+from lib.media_library.matcher import PERSONA_MOODS, MediaMatcher
 
 
 class TestMediaMatcher(unittest.TestCase):
@@ -17,6 +17,7 @@ class TestMediaMatcher(unittest.TestCase):
         self._tmpfile = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         self._tmpfile.close()
         import lib.media_library.catalog as mod
+
         self._orig_path = mod.DB_PATH
         mod.DB_PATH = self._tmpfile.name
         self.catalog = MediaCatalog()
@@ -24,6 +25,7 @@ class TestMediaMatcher(unittest.TestCase):
 
     def tearDown(self):
         import lib.media_library.catalog as mod
+
         mod.DB_PATH = self._orig_path
         os.unlink(self._tmpfile.name)
 
@@ -39,16 +41,16 @@ class TestMediaMatcher(unittest.TestCase):
             "platform_fit": {"twitter": 0.7, "linkedin": 0.6, "instagram": 0.5},
         }
         vision.update(vision_overrides)
-        self.catalog.add(
-            item_id, f"{item_id}.png", f"https://example.com/{item_id}.png", vision
-        )
+        self.catalog.add(item_id, f"{item_id}.png", f"https://example.com/{item_id}.png", vision)
 
     # ---- BASIC MATCHING ----
 
     def test_find_best_returns_items(self):
         self._add_item("a")
         self._add_item("b")
-        results = self.matcher.find_best("python coding", "developer life and vibe coding", "twitter")
+        results = self.matcher.find_best(
+            "python coding", "developer life and vibe coding", "twitter"
+        )
         self.assertGreater(len(results), 0)
         self.assertIn("score", results[0])
         self.assertIn("storage_url", results[0])
@@ -169,8 +171,11 @@ class TestMediaMatcher(unittest.TestCase):
             mood="professional",
         )
         results = self.matcher.find_best(
-            "AI automation tools", "AI tools and automation", "twitter",
-            count=1, persona="professional"
+            "AI automation tools",
+            "AI tools and automation",
+            "twitter",
+            count=1,
+            persona="professional",
         )
         self.assertGreater(len(results), 0)
         reasons = results[0]["match_reasons"]

@@ -10,8 +10,8 @@ import json
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 DB_PATH = os.getenv("MEDIA_LIBRARY_DB_PATH", "data/media_library.db")
 
@@ -63,7 +63,7 @@ class MediaCatalog:
         item_id: str,
         filename: str,
         storage_url: str,
-        vision_data: Dict[str, Any],
+        vision_data: dict[str, Any],
         *,
         category: str = "screenshot",
         width: int = 0,
@@ -72,7 +72,7 @@ class MediaCatalog:
         mime_type: str = "",
     ) -> None:
         """Insert a new media item with vision analysis data."""
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
         with _conn() as con:
             con.execute(
                 """
@@ -103,23 +103,19 @@ class MediaCatalog:
                 ),
             )
 
-    def get_item(self, item_id: str) -> Optional[Dict[str, Any]]:
+    def get_item(self, item_id: str) -> dict[str, Any] | None:
         """Return a single media item by ID, or None."""
         with _conn() as con:
-            row = con.execute(
-                "SELECT * FROM media_items WHERE id = ?", (item_id,)
-            ).fetchone()
+            row = con.execute("SELECT * FROM media_items WHERE id = ?", (item_id,)).fetchone()
         return self._row_to_dict(row) if row else None
 
     def exists_by_url(self, url: str) -> bool:
         """Check if an image with this storage URL is already indexed."""
         with _conn() as con:
-            row = con.execute(
-                "SELECT 1 FROM media_items WHERE storage_url = ?", (url,)
-            ).fetchone()
+            row = con.execute("SELECT 1 FROM media_items WHERE storage_url = ?", (url,)).fetchone()
         return row is not None
 
-    def get_available(self, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_available(self, limit: int = 20) -> list[dict[str, Any]]:
         """Return available items sorted by least-used first."""
         with _conn() as con:
             rows = con.execute(
@@ -131,7 +127,7 @@ class MediaCatalog:
 
     def find_by_pillar(
         self, pillar: str, platform: str = "", limit: int = 5
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Find items whose pillar_affinity matches the given pillar.
 
         Uses a LIKE search on the JSON-encoded pillar_affinity field.
@@ -145,7 +141,7 @@ class MediaCatalog:
             ).fetchall()
         return [self._row_to_dict(r) for r in rows]
 
-    def find_by_query(self, keywords: str, limit: int = 5) -> List[Dict[str, Any]]:
+    def find_by_query(self, keywords: str, limit: int = 5) -> list[dict[str, Any]]:
         """Search items by keywords matching tags or description."""
         pattern = f"%{keywords}%"
         with _conn() as con:
@@ -159,11 +155,10 @@ class MediaCatalog:
 
     def mark_used(self, item_id: str, platform: str = "") -> None:
         """Increment usage counter and update last_used_at."""
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
         with _conn() as con:
             con.execute(
-                "UPDATE media_items SET times_used = times_used + 1, "
-                "last_used_at = ? WHERE id = ?",
+                "UPDATE media_items SET times_used = times_used + 1, last_used_at = ? WHERE id = ?",
                 (now_iso, item_id),
             )
 
@@ -175,16 +170,16 @@ class MediaCatalog:
                 (status, item_id),
             )
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Return aggregate stats about the media library."""
         with _conn() as con:
             total = con.execute("SELECT COUNT(*) FROM media_items").fetchone()[0]
             available = con.execute(
                 "SELECT COUNT(*) FROM media_items WHERE status = 'available'"
             ).fetchone()[0]
-            used = con.execute(
-                "SELECT COUNT(*) FROM media_items WHERE times_used > 0"
-            ).fetchone()[0]
+            used = con.execute("SELECT COUNT(*) FROM media_items WHERE times_used > 0").fetchone()[
+                0
+            ]
             categories = con.execute(
                 "SELECT category, COUNT(*) as cnt FROM media_items GROUP BY category"
             ).fetchall()
@@ -200,7 +195,7 @@ class MediaCatalog:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _row_to_dict(row: sqlite3.Row) -> Dict[str, Any]:
+    def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
         return {
             "id": row["id"],
             "filename": row["filename"],

@@ -10,21 +10,22 @@ Provides abstract base class with:
 """
 
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Any, Optional
-import logging
+from typing import Any
 
 
 class AgentState(Enum):
     """Agent operational states."""
+
     IDLE = "idle"
     STARTING = "starting"
     MONITORING = "monitoring"
     PROCESSING = "processing"
     GENERATING = "generating"
-    REVIEWING = "reviewing"     # Human-in-the-loop
+    REVIEWING = "reviewing"  # Human-in-the-loop
     RESPONDING = "responding"
     STOPPING = "stopping"
     ERROR = "error"
@@ -47,10 +48,7 @@ class BaseAgent(ABC):
     """
 
     def __init__(
-        self,
-        config: Dict[str, Any],
-        ai_provider: str = "gemini",
-        name: Optional[str] = None
+        self, config: dict[str, Any], ai_provider: str = "gemini", name: str | None = None
     ):
         """
         Initialize the base agent.
@@ -67,16 +65,16 @@ class BaseAgent(ABC):
 
         # Stats tracking
         self.stats = {
-            'started_at': None,
-            'items_processed': 0,
-            'items_responded': 0,
-            'items_queued': 0,
-            'errors': 0
+            "started_at": None,
+            "items_processed": 0,
+            "items_responded": 0,
+            "items_queued": 0,
+            "errors": 0,
         }
 
         # Rate limiting
-        self._last_action_time: Dict[str, datetime] = {}
-        self._action_counts: Dict[str, int] = {}
+        self._last_action_time: dict[str, datetime] = {}
+        self._action_counts: dict[str, int] = {}
 
         # Response generator (lazy init)
         self._response_generator = None
@@ -85,22 +83,24 @@ class BaseAgent(ABC):
         self.logger = logging.getLogger(f"social-slash.{self.name}")
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            handler.setFormatter(logging.Formatter(
-                '[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
-                datefmt='%H:%M:%S'
-            ))
+            handler.setFormatter(
+                logging.Formatter(
+                    "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s", datefmt="%H:%M:%S"
+                )
+            )
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
         # Event loop control
         self._running = False
-        self._stop_event: Optional[asyncio.Event] = None
+        self._stop_event: asyncio.Event | None = None
 
     @property
     def response_generator(self):
         """Lazy-load response generator."""
         if self._response_generator is None:
             from lib.engagement.response_generator import ResponseGenerator
+
             self._response_generator = ResponseGenerator(provider=self.ai_provider)
         return self._response_generator
 
@@ -133,7 +133,7 @@ class BaseAgent(ABC):
             AgentState.MONITORING,
             AgentState.PROCESSING,
             AgentState.GENERATING,
-            AgentState.RESPONDING
+            AgentState.RESPONDING,
         ]
 
     # ─────────────────────────────────────────────────────────────
@@ -141,10 +141,7 @@ class BaseAgent(ABC):
     # ─────────────────────────────────────────────────────────────
 
     def check_rate_limit(
-        self,
-        key: str,
-        max_per_hour: int = 60,
-        cooldown_seconds: int = 60
+        self, key: str, max_per_hour: int = 60, cooldown_seconds: int = 60
     ) -> bool:
         """
         Check if an action is allowed under rate limits.
@@ -163,7 +160,9 @@ class BaseAgent(ABC):
         if key in self._last_action_time:
             elapsed = (now - self._last_action_time[key]).total_seconds()
             if elapsed < cooldown_seconds:
-                self.logger.debug(f"Rate limited: {key} (cooldown {cooldown_seconds - elapsed:.0f}s remaining)")
+                self.logger.debug(
+                    f"Rate limited: {key} (cooldown {cooldown_seconds - elapsed:.0f}s remaining)"
+                )
                 return False
 
         # Check hourly limit
@@ -189,7 +188,11 @@ class BaseAgent(ABC):
         self._action_counts[hour_key] = self._action_counts.get(hour_key, 0) + 1
 
         # Clean old hour counts (keep last 2 hours)
-        old_keys = [k for k in self._action_counts if not k.endswith(f":{now.hour}") and not k.endswith(f":{(now.hour - 1) % 24}")]
+        old_keys = [
+            k
+            for k in self._action_counts
+            if not k.endswith(f":{now.hour}") and not k.endswith(f":{(now.hour - 1) % 24}")
+        ]
         for k in old_keys:
             del self._action_counts[k]
 
@@ -209,12 +212,12 @@ class BaseAgent(ABC):
             True if should skip, False if should process
         """
         # Skip own content
-        skip_authors = self.config.get('skip_authors', [])
+        skip_authors = self.config.get("skip_authors", [])
         if author.lower() in [a.lower() for a in skip_authors]:
             return True
 
         # Skip blocked keywords
-        blocked_keywords = self.config.get('blocked_keywords', [])
+        blocked_keywords = self.config.get("blocked_keywords", [])
         content_lower = content.lower()
         for keyword in blocked_keywords:
             if keyword.lower() in content_lower:
@@ -222,7 +225,7 @@ class BaseAgent(ABC):
                 return True
 
         # Skip if too short
-        min_length = self.config.get('min_content_length', 3)
+        min_length = self.config.get("min_content_length", 3)
         if len(content.strip()) < min_length:
             return True
 
@@ -238,10 +241,20 @@ class BaseAgent(ABC):
         Returns:
             True if should escalate to human
         """
-        escalation_keywords = self.config.get('escalation_keywords', [
-            'urgent', 'help', 'emergency', 'problem', 'issue',
-            'refund', 'cancel', 'lawsuit', 'legal'
-        ])
+        escalation_keywords = self.config.get(
+            "escalation_keywords",
+            [
+                "urgent",
+                "help",
+                "emergency",
+                "problem",
+                "issue",
+                "refund",
+                "cancel",
+                "lawsuit",
+                "legal",
+            ],
+        )
 
         content_lower = content.lower()
         for keyword in escalation_keywords:
@@ -299,7 +312,7 @@ class BaseAgent(ABC):
 
         try:
             self.transition(AgentState.STARTING)
-            self.stats['started_at'] = datetime.now()
+            self.stats["started_at"] = datetime.now()
             self.logger.info(f"Starting {self.name}")
 
             await self.start()
@@ -307,7 +320,7 @@ class BaseAgent(ABC):
         except asyncio.CancelledError:
             self.logger.info("Agent cancelled")
         except Exception as e:
-            self.stats['errors'] += 1
+            self.stats["errors"] += 1
             self.transition(AgentState.ERROR)
             self.logger.error(f"Agent error: {e}")
             raise
@@ -321,15 +334,15 @@ class BaseAgent(ABC):
         if self._stop_event:
             self._stop_event.set()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get agent statistics."""
         stats = self.stats.copy()
-        stats['state'] = self.state.value
-        stats['is_running'] = self._running
+        stats["state"] = self.state.value
+        stats["is_running"] = self._running
 
-        if stats['started_at']:
-            runtime = datetime.now() - stats['started_at']
-            stats['runtime_seconds'] = int(runtime.total_seconds())
+        if stats["started_at"]:
+            runtime = datetime.now() - stats["started_at"]
+            stats["runtime_seconds"] = int(runtime.total_seconds())
 
         return stats
 
@@ -345,13 +358,13 @@ class BaseAgent(ABC):
     def format_console_output(self, status: str, message: str):
         """Format console output with status prefix."""
         status_map = {
-            'success': '[SUCCESS]',
-            'info': '[INFO]',
-            'warning': '[WARNING]',
-            'error': '[ERROR]',
-            'queued': '[QUEUED]'
+            "success": "[SUCCESS]",
+            "info": "[INFO]",
+            "warning": "[WARNING]",
+            "error": "[ERROR]",
+            "queued": "[QUEUED]",
         }
-        prefix = status_map.get(status.lower(), f'[{status.upper()}]')
+        prefix = status_map.get(status.lower(), f"[{status.upper()}]")
         print(f"{prefix} {message}")
 
 

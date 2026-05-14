@@ -8,12 +8,13 @@ Uses Claude 3.5 Haiku for:
 - Engagement analysis
 """
 
-import os
 import json
-from typing import Dict, List, Optional, Any
+import os
+from typing import Any
 
 try:
     import anthropic
+
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
@@ -28,7 +29,7 @@ class AnthropicClient:
 
     MODEL = "claude-3-5-haiku-20241022"
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """
         Initialize the Anthropic client.
 
@@ -36,12 +37,9 @@ class AnthropicClient:
             api_key: Anthropic API key. Defaults to ANTHROPIC_API_KEY env var.
         """
         if not ANTHROPIC_AVAILABLE:
-            raise ImportError(
-                "anthropic package not installed. "
-                "Run: pip install anthropic"
-            )
+            raise ImportError("anthropic package not installed. Run: pip install anthropic")
 
-        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
 
         if not self.api_key:
             raise ValueError(
@@ -52,12 +50,8 @@ class AnthropicClient:
         self.client = anthropic.Anthropic(api_key=self.api_key)
 
     def enhance_content(
-        self,
-        content: str,
-        platform: str,
-        style: Optional[str] = None,
-        max_length: Optional[int] = None
-    ) -> Dict[str, Any]:
+        self, content: str, platform: str, style: str | None = None, max_length: int | None = None
+    ) -> dict[str, Any]:
         """
         Enhance content for a specific platform.
 
@@ -96,11 +90,7 @@ Respond in JSON format only, no other text:
 
         try:
             response = self.client.messages.create(
-                model=self.MODEL,
-                max_tokens=1024,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                model=self.MODEL, max_tokens=1024, messages=[{"role": "user", "content": prompt}]
             )
 
             result_text = response.content[0].text
@@ -112,33 +102,28 @@ Respond in JSON format only, no other text:
                 result_text = result_text.split("```")[1].split("```")[0]
 
             result = json.loads(result_text.strip())
-            result['provider'] = 'anthropic'
-            result['model'] = self.MODEL
+            result["provider"] = "anthropic"
+            result["model"] = self.MODEL
 
-            print(f"[SUCCESS] Content enhanced with Claude")
+            print("[SUCCESS] Content enhanced with Claude")
             return result
 
         except json.JSONDecodeError:
             # Fallback if JSON parsing fails
             return {
-                'enhanced_content': content,
-                'changes_made': [],
-                'engagement_tips': [],
-                'suggested_hashtags': [],
-                'provider': 'anthropic',
-                'model': self.MODEL,
-                'error': 'Failed to parse AI response'
+                "enhanced_content": content,
+                "changes_made": [],
+                "engagement_tips": [],
+                "suggested_hashtags": [],
+                "provider": "anthropic",
+                "model": self.MODEL,
+                "error": "Failed to parse AI response",
             }
         except Exception as e:
             print(f"[ERROR] Claude enhancement failed: {e}")
             raise
 
-    def generate_hashtags(
-        self,
-        content: str,
-        platform: str,
-        count: int = 5
-    ) -> List[str]:
+    def generate_hashtags(self, content: str, platform: str, count: int = 5) -> list[str]:
         """
         Generate relevant hashtags for content.
 
@@ -160,11 +145,7 @@ Example response: ["developer", "coding", "tech"]"""
 
         try:
             response = self.client.messages.create(
-                model=self.MODEL,
-                max_tokens=256,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                model=self.MODEL, max_tokens=256, messages=[{"role": "user", "content": prompt}]
             )
 
             result_text = response.content[0].text
@@ -179,7 +160,7 @@ Example response: ["developer", "coding", "tech"]"""
             hashtags = json.loads(result_text.strip())
 
             # Remove # if present
-            hashtags = [h.lstrip('#') for h in hashtags]
+            hashtags = [h.lstrip("#") for h in hashtags]
 
             print(f"[SUCCESS] Generated {len(hashtags)} hashtags")
             return hashtags[:count]
@@ -188,11 +169,7 @@ Example response: ["developer", "coding", "tech"]"""
             print(f"[ERROR] Hashtag generation failed: {e}")
             return []
 
-    def analyze_content(
-        self,
-        content: str,
-        platform: str
-    ) -> Dict[str, Any]:
+    def analyze_content(self, content: str, platform: str) -> dict[str, Any]:
         """
         Analyze content for potential issues and improvements.
 
@@ -221,11 +198,7 @@ Respond in JSON format only, no other text:
 
         try:
             response = self.client.messages.create(
-                model=self.MODEL,
-                max_tokens=512,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                model=self.MODEL, max_tokens=512, messages=[{"role": "user", "content": prompt}]
             )
 
             result_text = response.content[0].text
@@ -237,7 +210,7 @@ Respond in JSON format only, no other text:
                 result_text = result_text.split("```")[1].split("```")[0]
 
             result = json.loads(result_text.strip())
-            result['provider'] = 'anthropic'
+            result["provider"] = "anthropic"
 
             print(f"[SUCCESS] Content analyzed (score: {result.get('score', 'N/A')})")
             return result
@@ -247,11 +220,8 @@ Respond in JSON format only, no other text:
             raise
 
     def generate_insights(
-        self,
-        content: str,
-        platform: str,
-        audience: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, content: str, platform: str, audience: str | None = None
+    ) -> dict[str, Any]:
         """
         Generate strategic insights for content improvement.
 
@@ -285,11 +255,7 @@ Respond in JSON format only:
 
         try:
             response = self.client.messages.create(
-                model=self.MODEL,
-                max_tokens=512,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                model=self.MODEL, max_tokens=512, messages=[{"role": "user", "content": prompt}]
             )
 
             result_text = response.content[0].text
@@ -301,9 +267,9 @@ Respond in JSON format only:
                 result_text = result_text.split("```")[1].split("```")[0]
 
             result = json.loads(result_text.strip())
-            result['provider'] = 'anthropic'
+            result["provider"] = "anthropic"
 
-            print(f"[SUCCESS] Generated insights")
+            print("[SUCCESS] Generated insights")
             return result
 
         except Exception as e:
@@ -317,10 +283,8 @@ if __name__ == "__main__":
 
     # Test enhancement
     result = client.enhance_content(
-        content="Check out our new product launch!",
-        platform="linkedin",
-        style="professional"
+        content="Check out our new product launch!", platform="linkedin", style="professional"
     )
 
     print("\nEnhanced content:")
-    print(result.get('enhanced_content', 'N/A'))
+    print(result.get("enhanced_content", "N/A"))

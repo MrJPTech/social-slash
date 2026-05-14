@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
-from typing import Any, Dict, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +24,14 @@ class BucketScanner:
         self._supabase_url = os.getenv("SUPABASE_URL", "")
         self._supabase_key = os.getenv("SUPABASE_SERVICE_KEY", "")
         if not self._supabase_url or not self._supabase_key:
-            raise ValueError(
-                "SUPABASE_URL and SUPABASE_SERVICE_KEY required for bucket scanning"
-            )
+            raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY required for bucket scanning")
 
     def _get_client(self):
         from supabase import create_client
+
         return create_client(self._supabase_url, self._supabase_key)
 
-    def scan(self) -> List[Dict[str, Any]]:
+    def scan(self) -> list[dict[str, Any]]:
         """List files in the library/ prefix that aren't yet indexed.
 
         Returns:
@@ -67,17 +66,19 @@ class BucketScanner:
             if catalog.exists_by_url(public_url):
                 continue
 
-            unindexed.append({
-                "filename": name,
-                "storage_path": storage_path,
-                "public_url": public_url,
-                "metadata": file_info.get("metadata", {}),
-            })
+            unindexed.append(
+                {
+                    "filename": name,
+                    "storage_path": storage_path,
+                    "public_url": public_url,
+                    "metadata": file_info.get("metadata", {}),
+                }
+            )
 
         logger.info(f"[scanner] Found {len(unindexed)} unindexed file(s) in {LIBRARY_PREFIX}/")
         return unindexed
 
-    def ingest_new(self) -> Dict[str, Any]:
+    def ingest_new(self) -> dict[str, Any]:
         """Full pipeline: scan -> download bytes -> vision analyze -> add to catalog.
 
         Returns:
@@ -101,7 +102,7 @@ class BucketScanner:
 
         ingested = 0
         skipped = 0
-        errors: List[str] = []
+        errors: list[str] = []
 
         for file_info in unindexed:
             filename = file_info["filename"]

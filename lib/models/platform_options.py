@@ -13,7 +13,7 @@ Usage:
 """
 
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
+from typing import Any
 
 
 @dataclass
@@ -29,26 +29,27 @@ class InstagramOptions:
 
     Note: 'reel' is deprecated - Instagram auto-detects from video media.
     """
-    content_type: Optional[str] = None  # 'story' | 'post' | 'reel'
-    first_comment: Optional[str] = None
-    share_to_feed: bool = True  # For reels
-    collaborators: Optional[List[str]] = None  # Max 3 usernames
 
-    def to_platform_data(self) -> Optional[Dict[str, Any]]:
+    content_type: str | None = None  # 'story' | 'post' | 'reel'
+    first_comment: str | None = None
+    share_to_feed: bool = True  # For reels
+    collaborators: list[str] | None = None  # Max 3 usernames
+
+    def to_platform_data(self) -> dict[str, Any] | None:
         """Convert to Late SDK platformSpecificData format."""
         data = {}
 
         if self.content_type:
-            data['contentType'] = self.content_type
+            data["contentType"] = self.content_type
 
         if self.first_comment:
-            data['firstComment'] = self.first_comment
+            data["firstComment"] = self.first_comment
 
         if not self.share_to_feed:
-            data['shareToFeed'] = False
+            data["shareToFeed"] = False
 
         if self.collaborators:
-            data['collaborators'] = self.collaborators[:3]  # Max 3
+            data["collaborators"] = self.collaborators[:3]  # Max 3
 
         return data if data else None
 
@@ -67,22 +68,23 @@ class LinkedInOptions:
     - Personal: w_member_social
     - Company: w_organization_social + organization URN
     """
-    first_comment: Optional[str] = None
-    disable_link_preview: bool = False
-    organization_urn: Optional[str] = None  # For company pages
 
-    def to_platform_data(self) -> Optional[Dict[str, Any]]:
+    first_comment: str | None = None
+    disable_link_preview: bool = False
+    organization_urn: str | None = None  # For company pages
+
+    def to_platform_data(self) -> dict[str, Any] | None:
         """Convert to Late SDK platformSpecificData format."""
         data = {}
 
         if self.first_comment:
-            data['firstComment'] = self.first_comment
+            data["firstComment"] = self.first_comment
 
         if self.disable_link_preview:
-            data['disableLinkPreview'] = True
+            data["disableLinkPreview"] = True
 
         if self.organization_urn:
-            data['organizationUrn'] = self.organization_urn
+            data["organizationUrn"] = self.organization_urn
 
         return data if data else None
 
@@ -100,18 +102,19 @@ class ThreadsOptions:
     1. Create container
     2. Publish container
     """
+
     auto_thread: bool = False  # Auto-break long content into thread
     thread_number: bool = False  # Add numbering to thread posts
 
-    def to_platform_data(self) -> Optional[Dict[str, Any]]:
+    def to_platform_data(self) -> dict[str, Any] | None:
         """Convert to Late SDK platformSpecificData format."""
         data = {}
 
         if self.auto_thread:
-            data['thread'] = True
+            data["thread"] = True
 
         if self.thread_number:
-            data['threadNumber'] = True
+            data["threadNumber"] = True
 
         return data if data else None
 
@@ -127,9 +130,10 @@ class TwitterOptions:
     Note: Twitter threads require content to be split into individual tweets,
     each respecting the 280 character limit.
     """
+
     auto_thread: bool = False  # Auto-break long content into thread
 
-    def to_platform_data(self) -> Optional[Dict[str, Any]]:
+    def to_platform_data(self) -> dict[str, Any] | None:
         """Convert to Late SDK platformSpecificData format."""
         # Thread items are generated separately by splitting content
         # This method returns None as threading is handled at a higher level
@@ -150,9 +154,10 @@ class RedditOptions:
 
     Post type (text, link, image) is auto-detected based on content and media.
     """
-    title: Optional[str] = None  # Auto-generated from first line if not provided
 
-    def to_platform_data(self) -> Optional[Dict[str, Any]]:
+    title: str | None = None  # Auto-generated from first line if not provided
+
+    def to_platform_data(self) -> dict[str, Any] | None:
         """Convert to Late SDK platformSpecificData format.
 
         Note: Reddit doesn't have a platformSpecificData model in Late SDK.
@@ -184,16 +189,17 @@ class PlatformOptions:
             linkedin=LinkedInOptions(first_comment='DM for details')
         )
     """
-    instagram: Optional[InstagramOptions] = None
-    linkedin: Optional[LinkedInOptions] = None
-    threads: Optional[ThreadsOptions] = None
-    twitter: Optional[TwitterOptions] = None
-    reddit: Optional[RedditOptions] = None
+
+    instagram: InstagramOptions | None = None
+    linkedin: LinkedInOptions | None = None
+    threads: ThreadsOptions | None = None
+    twitter: TwitterOptions | None = None
+    reddit: RedditOptions | None = None
 
     # Raw JSON override for advanced users
-    raw_platform_data: Optional[Dict[str, Dict[str, Any]]] = None
+    raw_platform_data: dict[str, dict[str, Any]] | None = None
 
-    def get_platform_data(self, platform: str) -> Optional[Dict[str, Any]]:
+    def get_platform_data(self, platform: str) -> dict[str, Any] | None:
         """
         Get platform-specific data for a given platform.
 
@@ -210,23 +216,23 @@ class PlatformOptions:
 
         return self._get_typed_platform_data(platform)
 
-    def _get_typed_platform_data(self, platform: str) -> Optional[Dict[str, Any]]:
+    def _get_typed_platform_data(self, platform: str) -> dict[str, Any] | None:
         """Get platform data from typed option classes."""
         platform = platform.lower()
 
-        if platform == 'instagram' and self.instagram:
+        if platform == "instagram" and self.instagram:
             return self.instagram.to_platform_data()
-        elif platform == 'linkedin' and self.linkedin:
+        elif platform == "linkedin" and self.linkedin:
             return self.linkedin.to_platform_data()
-        elif platform == 'threads' and self.threads:
+        elif platform == "threads" and self.threads:
             return self.threads.to_platform_data()
-        elif platform == 'twitter' and self.twitter:
+        elif platform == "twitter" and self.twitter:
             return self.twitter.to_platform_data()
         # Reddit doesn't use platformSpecificData
 
         return None
 
-    def get_reddit_title(self, content: str) -> Optional[str]:
+    def get_reddit_title(self, content: str) -> str | None:
         """
         Get Reddit title, auto-generating from content if not explicitly set.
 
@@ -255,19 +261,19 @@ class PlatformOptions:
         Returns:
             Extracted title string
         """
-        first_line = content.split('\n')[0].strip()
+        first_line = content.split("\n")[0].strip()
 
         # Remove hashtags from title
         words = first_line.split()
-        title = ' '.join(w for w in words if not w.startswith('#'))
+        title = " ".join(w for w in words if not w.startswith("#"))
 
         # Truncate to Reddit title limit (300 chars)
         if len(title) > 300:
-            title = title[:297] + '...'
+            title = title[:297] + "..."
 
         return title or "New Post"
 
-    def validate_for_platforms(self, platforms: List[str]) -> List[str]:
+    def validate_for_platforms(self, platforms: list[str]) -> list[str]:
         """
         Validate that platform options match target platforms.
 
@@ -282,19 +288,19 @@ class PlatformOptions:
         warnings = []
         platforms_lower = [p.lower() for p in platforms]
 
-        if self.instagram and 'instagram' not in platforms_lower:
+        if self.instagram and "instagram" not in platforms_lower:
             warnings.append("Instagram options provided but Instagram not in target platforms")
 
-        if self.linkedin and 'linkedin' not in platforms_lower:
+        if self.linkedin and "linkedin" not in platforms_lower:
             warnings.append("LinkedIn options provided but LinkedIn not in target platforms")
 
-        if self.threads and 'threads' not in platforms_lower:
+        if self.threads and "threads" not in platforms_lower:
             warnings.append("Threads options provided but Threads not in target platforms")
 
-        if self.twitter and 'twitter' not in platforms_lower:
+        if self.twitter and "twitter" not in platforms_lower:
             warnings.append("Twitter options provided but Twitter not in target platforms")
 
-        if self.reddit and 'reddit' not in platforms_lower:
+        if self.reddit and "reddit" not in platforms_lower:
             warnings.append("Reddit options provided but Reddit not in target platforms")
 
         return warnings

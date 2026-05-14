@@ -14,9 +14,9 @@ Features:
 """
 
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Any
 
-from lib.agents.base_agent import BaseAgent, AgentState
+from lib.agents.base_agent import AgentState, BaseAgent
 from lib.persona.swizz_persona import SwizzPersona
 from lib.storage.database import EngagementDatabase
 
@@ -31,10 +31,10 @@ class MediaAgent(BaseAgent):
 
     def __init__(
         self,
-        config: Dict[str, Any],
-        persona: Optional[SwizzPersona] = None,
-        db: Optional[EngagementDatabase] = None,
-        ai_provider: str = "gemini"
+        config: dict[str, Any],
+        persona: SwizzPersona | None = None,
+        db: EngagementDatabase | None = None,
+        ai_provider: str = "gemini",
     ):
         """
         Initialize the media agent.
@@ -47,20 +47,17 @@ class MediaAgent(BaseAgent):
         """
         super().__init__(config, ai_provider, name="MediaAgent")
 
-        self.persona = persona or SwizzPersona(
-            mode=config.get('persona_mode', 'professional')
-        )
+        self.persona = persona or SwizzPersona(mode=config.get("persona_mode", "professional"))
         self.db = db or EngagementDatabase()
 
-        self.default_platform = config.get('default_platform', 'instagram')
-        self.poll_interval = config.get('poll_interval_seconds', 30)
+        self.default_platform = config.get("default_platform", "instagram")
+        self.poll_interval = config.get("poll_interval_seconds", 30)
 
         # Media processing queue
         self._media_queue: asyncio.Queue = asyncio.Queue()
 
         self.logger.info(
-            f"Configured: persona={self.persona._mode}, "
-            f"platform={self.default_platform}"
+            f"Configured: persona={self.persona._mode}, platform={self.default_platform}"
         )
 
     async def start(self):
@@ -84,7 +81,7 @@ class MediaAgent(BaseAgent):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self.stats['errors'] += 1
+                self.stats["errors"] += 1
                 self.transition(AgentState.ERROR)
                 self.logger.error(f"Media processing error: {e}")
                 await asyncio.sleep(self.poll_interval * 2)
@@ -99,7 +96,7 @@ class MediaAgent(BaseAgent):
         if self._stop_event:
             self._stop_event.set()
 
-    async def process_item(self, media_data: Dict[str, Any]) -> bool:
+    async def process_item(self, media_data: dict[str, Any]) -> bool:
         """
         Process a media captioning request.
 
@@ -110,34 +107,36 @@ class MediaAgent(BaseAgent):
             True if processed successfully
         """
         try:
-            description = media_data.get('description', '')
-            media_type = media_data.get('media_type', 'post')
-            platform = media_data.get('platform', self.default_platform)
-            persona_mode = media_data.get('persona_mode', self.persona._mode)
+            description = media_data.get("description", "")
+            media_type = media_data.get("media_type", "post")
+            platform = media_data.get("platform", self.default_platform)
+            persona_mode = media_data.get("persona_mode", self.persona._mode)
 
-            self.log_item('media', platform, 'self', description[:50])
+            self.log_item("media", platform, "self", description[:50])
             self.transition(AgentState.GENERATING)
 
-            if media_type == 'carousel':
-                slides = media_data.get('slides', [description])
-                result = self.generate_carousel_captions(slides, platform, persona_mode)
-            elif media_type == 'story':
-                context = media_data.get('context', '')
-                result = {'text': self.generate_story_text(context, media_type, persona_mode)}
-            elif media_type == 'reel':
-                context = media_data.get('context', '')
-                result = {'caption': self.generate_reel_caption(description, context, persona_mode)}
+            if media_type == "carousel":
+                slides = media_data.get("slides", [description])
+                _result = self.generate_carousel_captions(slides, platform, persona_mode)
+            elif media_type == "story":
+                context = media_data.get("context", "")
+                _result = {"text": self.generate_story_text(context, media_type, persona_mode)}
+            elif media_type == "reel":
+                context = media_data.get("context", "")
+                _result = {
+                    "caption": self.generate_reel_caption(description, context, persona_mode)
+                }
             else:
-                result = {'caption': self.generate_reel_caption(description, '', persona_mode)}
+                _result = {"caption": self.generate_reel_caption(description, "", persona_mode)}
 
-            self.stats['items_processed'] += 1
-            self.format_console_output('success', f"Generated {media_type} caption for {platform}")
+            self.stats["items_processed"] += 1
+            self.format_console_output("success", f"Generated {media_type} caption for {platform}")
             self.transition(AgentState.MONITORING)
             return True
 
         except Exception as e:
             self.logger.error(f"Media processing failed: {e}")
-            self.stats['errors'] += 1
+            self.stats["errors"] += 1
             return False
 
     def generate_reel_caption(
@@ -161,8 +160,8 @@ class MediaAgent(BaseAgent):
             self.persona.set_mode(persona_mode)
 
         active = self.persona.get_active_persona()
-        platform_config = self.persona.get_platform_config('reels')
-        max_chars = platform_config.get('max_chars', 2200)
+        platform_config = self.persona.get_platform_config("reels")
+        max_chars = platform_config.get("max_chars", 2200)
 
         system_prompt = active.get_system_prompt("casual")
         length_guide = active.get_response_length_guide("casual")
@@ -182,7 +181,7 @@ class MediaAgent(BaseAgent):
         caption = active.apply_vocab_transform(raw)
 
         if len(caption) > max_chars:
-            caption = caption[:max_chars - 3].rsplit(' ', 1)[0] + "..."
+            caption = caption[: max_chars - 3].rsplit(" ", 1)[0] + "..."
 
         return caption
 
@@ -223,10 +222,10 @@ class MediaAgent(BaseAgent):
 
     def generate_carousel_captions(
         self,
-        slides_descriptions: List[str],
+        slides_descriptions: list[str],
         platform: str = "instagram",
         persona_mode: str = "professional",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate captions for a multi-slide carousel.
 
@@ -243,11 +242,11 @@ class MediaAgent(BaseAgent):
 
         active = self.persona.get_active_persona()
         platform_config = self.persona.get_platform_config(platform)
-        max_chars = platform_config.get('max_chars', 2200)
+        max_chars = platform_config.get("max_chars", 2200)
 
         system_prompt = active.get_system_prompt("business")
         slides_text = "\n".join(
-            f"Slide {i+1}: {desc}" for i, desc in enumerate(slides_descriptions)
+            f"Slide {i + 1}: {desc}" for i, desc in enumerate(slides_descriptions)
         )
 
         prompt = (
@@ -264,9 +263,9 @@ class MediaAgent(BaseAgent):
         content = active.apply_vocab_transform(raw)
 
         return {
-            'main_caption': content,
-            'slide_count': len(slides_descriptions),
-            'platform': platform,
+            "main_caption": content,
+            "slide_count": len(slides_descriptions),
+            "platform": platform,
         }
 
     def generate_alt_text(self, media_description: str) -> str:
@@ -295,7 +294,7 @@ class MediaAgent(BaseAgent):
         self,
         content_idea: str,
         platform: str = "instagram",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Recommend the best media format for a content idea.
 
@@ -321,12 +320,12 @@ class MediaAgent(BaseAgent):
         content = active.apply_vocab_transform(raw)
 
         return {
-            'content_idea': content_idea,
-            'platform': platform,
-            'recommendation': content,
+            "content_idea": content_idea,
+            "platform": platform,
+            "recommendation": content,
         }
 
-    def queue_media(self, media_data: Dict[str, Any]):
+    def queue_media(self, media_data: dict[str, Any]):
         """Add a media captioning request to the queue."""
         self._media_queue.put_nowait(media_data)
 
@@ -336,62 +335,64 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="SWIZZ Voice Media Agent")
-    parser.add_argument('--action', choices=['caption', 'story', 'carousel', 'alt', 'suggest', 'status'],
-                       default='status', help='Action to perform')
-    parser.add_argument('--description', type=str, help='Media description')
-    parser.add_argument('--context', type=str, default='', help='Additional context')
-    parser.add_argument('--platform', type=str, default='instagram',
-                       help='Target platform')
-    parser.add_argument('--persona', type=str, default='professional',
-                       choices=['professional', 'personal'],
-                       help='Persona mode')
-    parser.add_argument('--slides', type=str, nargs='+',
-                       help='Slide descriptions for carousel')
+    parser.add_argument(
+        "--action",
+        choices=["caption", "story", "carousel", "alt", "suggest", "status"],
+        default="status",
+        help="Action to perform",
+    )
+    parser.add_argument("--description", type=str, help="Media description")
+    parser.add_argument("--context", type=str, default="", help="Additional context")
+    parser.add_argument("--platform", type=str, default="instagram", help="Target platform")
+    parser.add_argument(
+        "--persona",
+        type=str,
+        default="professional",
+        choices=["professional", "personal"],
+        help="Persona mode",
+    )
+    parser.add_argument("--slides", type=str, nargs="+", help="Slide descriptions for carousel")
 
     args = parser.parse_args()
 
     config = {
-        'persona_mode': args.persona,
-        'default_platform': args.platform,
+        "persona_mode": args.persona,
+        "default_platform": args.platform,
     }
 
     agent = MediaAgent(config)
 
-    if args.action == 'status':
+    if args.action == "status":
         stats = agent.get_stats()
         print("\nMedia Agent Status:")
         for key, value in stats.items():
             print(f"  {key}: {value}")
 
-    elif args.action == 'caption':
+    elif args.action == "caption":
         if not args.description:
             print("[ERROR] --description required")
             return
 
         print(f"\n[INFO] Generating caption for {args.platform}...\n")
-        caption = agent.generate_reel_caption(
-            args.description, args.context, args.persona
-        )
+        caption = agent.generate_reel_caption(args.description, args.context, args.persona)
         print(f"Caption:\n{caption}")
 
-    elif args.action == 'story':
+    elif args.action == "story":
         if not args.description:
             print("[ERROR] --description required (as context)")
             return
 
-        print(f"\n[INFO] Generating story text...\n")
+        print("\n[INFO] Generating story text...\n")
         text = agent.generate_story_text(args.description, persona_mode=args.persona)
         print(f"Story text: {text}")
 
-    elif args.action == 'carousel':
+    elif args.action == "carousel":
         slides = args.slides or [args.description or "Slide content"]
         print(f"\n[INFO] Generating {len(slides)}-slide carousel captions...\n")
-        result = agent.generate_carousel_captions(
-            slides, args.platform, args.persona
-        )
-        print(result['main_caption'])
+        result = agent.generate_carousel_captions(slides, args.platform, args.persona)
+        print(result["main_caption"])
 
-    elif args.action == 'alt':
+    elif args.action == "alt":
         if not args.description:
             print("[ERROR] --description required")
             return
@@ -399,7 +400,7 @@ def main():
         alt = agent.generate_alt_text(args.description)
         print(f"\nAlt text: {alt}")
 
-    elif args.action == 'suggest':
+    elif args.action == "suggest":
         if not args.description:
             print("[ERROR] --description required (as content idea)")
             return

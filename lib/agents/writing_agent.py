@@ -15,9 +15,9 @@ Features:
 """
 
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Any
 
-from lib.agents.base_agent import BaseAgent, AgentState
+from lib.agents.base_agent import AgentState, BaseAgent
 from lib.persona.swizz_persona import SwizzPersona
 from lib.storage.database import EngagementDatabase
 
@@ -32,10 +32,10 @@ class WritingAgent(BaseAgent):
 
     def __init__(
         self,
-        config: Dict[str, Any],
-        persona: Optional[SwizzPersona] = None,
-        db: Optional[EngagementDatabase] = None,
-        ai_provider: str = "gemini"
+        config: dict[str, Any],
+        persona: SwizzPersona | None = None,
+        db: EngagementDatabase | None = None,
+        ai_provider: str = "gemini",
     ):
         """
         Initialize the writing agent.
@@ -48,22 +48,19 @@ class WritingAgent(BaseAgent):
         """
         super().__init__(config, ai_provider, name="WritingAgent")
 
-        self.persona = persona or SwizzPersona(
-            mode=config.get('persona_mode', 'professional')
-        )
+        self.persona = persona or SwizzPersona(mode=config.get("persona_mode", "professional"))
         self.db = db or EngagementDatabase()
 
         # Configuration
-        self.default_platform = config.get('default_platform', 'instagram')
-        self.auto_approve = config.get('auto_approve', False)
-        self.poll_interval = config.get('poll_interval_seconds', 30)
+        self.default_platform = config.get("default_platform", "instagram")
+        self.auto_approve = config.get("auto_approve", False)
+        self.poll_interval = config.get("poll_interval_seconds", 30)
 
         # Queue for content generation requests
         self._content_queue: asyncio.Queue = asyncio.Queue()
 
         self.logger.info(
-            f"Configured: persona={self.persona._mode}, "
-            f"platform={self.default_platform}"
+            f"Configured: persona={self.persona._mode}, platform={self.default_platform}"
         )
 
     async def start(self):
@@ -88,7 +85,7 @@ class WritingAgent(BaseAgent):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self.stats['errors'] += 1
+                self.stats["errors"] += 1
                 self.transition(AgentState.ERROR)
                 self.logger.error(f"Generation error: {e}")
                 await asyncio.sleep(self.poll_interval * 2)
@@ -103,7 +100,7 @@ class WritingAgent(BaseAgent):
         if self._stop_event:
             self._stop_event.set()
 
-    async def process_item(self, topic_data: Dict[str, Any]) -> bool:
+    async def process_item(self, topic_data: dict[str, Any]) -> bool:
         """
         Process a content generation request.
 
@@ -114,12 +111,12 @@ class WritingAgent(BaseAgent):
             True if generated successfully
         """
         try:
-            topic = topic_data.get('topic', '')
-            platform = topic_data.get('platform', self.default_platform)
-            post_type = topic_data.get('post_type', 'casual')
-            persona_mode = topic_data.get('persona_mode', self.persona._mode)
+            topic = topic_data.get("topic", "")
+            platform = topic_data.get("platform", self.default_platform)
+            post_type = topic_data.get("post_type", "casual")
+            persona_mode = topic_data.get("persona_mode", self.persona._mode)
 
-            self.log_item('content', platform, 'self', topic)
+            self.log_item("content", platform, "self", topic)
             self.transition(AgentState.GENERATING)
 
             self.generate_post(
@@ -129,21 +126,21 @@ class WritingAgent(BaseAgent):
                 persona_mode=persona_mode,
             )
 
-            self.stats['items_processed'] += 1
+            self.stats["items_processed"] += 1
 
             if self.auto_approve:
-                self.stats['items_responded'] += 1
-                self.format_console_output('success', f"Generated {post_type} for {platform}")
+                self.stats["items_responded"] += 1
+                self.format_console_output("success", f"Generated {post_type} for {platform}")
             else:
-                self.stats['items_queued'] += 1
-                self.format_console_output('queued', f"Review needed: {post_type} for {platform}")
+                self.stats["items_queued"] += 1
+                self.format_console_output("queued", f"Review needed: {post_type} for {platform}")
 
             self.transition(AgentState.MONITORING)
             return True
 
         except Exception as e:
             self.logger.error(f"Failed to generate content: {e}")
-            self.stats['errors'] += 1
+            self.stats["errors"] += 1
             return False
 
     # Tone descriptions for prompt injection
@@ -175,7 +172,7 @@ class WritingAgent(BaseAgent):
         persona_mode: str = "professional",
         tone: str = "authentic",
         energy: str = "medium",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate a social media post in SWIZZ voice.
 
@@ -202,8 +199,8 @@ class WritingAgent(BaseAgent):
 
         active = self.persona.get_active_persona()
         platform_config = self.persona.get_platform_config(platform)
-        max_chars = platform_config.get('max_chars', 2200)
-        hashtag_limit = platform_config.get('hashtag_limit', 5)
+        max_chars = platform_config.get("max_chars", 2200)
+        hashtag_limit = platform_config.get("hashtag_limit", 5)
         # Sensible hashtag count: cap at 10, 0 means no hashtags (Reddit, Snapchat, etc.)
         hashtag_count = min(hashtag_limit, 10)
 
@@ -219,7 +216,7 @@ class WritingAgent(BaseAgent):
         examples_text = ""
         if examples:
             examples_text = "\n\nExamples of this voice style:\n" + "\n".join(
-                f"- \"{ex}\"" for ex in examples
+                f'- "{ex}"' for ex in examples
             )
 
         # Hashtag instruction (append to end of post)
@@ -232,7 +229,7 @@ class WritingAgent(BaseAgent):
 
         # Check if active persona has a structured format prompt for this post_type
         format_prompt = None
-        if hasattr(active, 'get_content_format_prompt'):
+        if hasattr(active, "get_content_format_prompt"):
             format_prompt = active.get_content_format_prompt(post_type, topic)
 
         if format_prompt:
@@ -259,37 +256,35 @@ class WritingAgent(BaseAgent):
             )
 
         # Generate via AI (extra budget for hashtag line)
-        raw_content = self.response_generator._generate(
-            prompt, max_length=max_chars + 200
-        )
+        raw_content = self.response_generator._generate(prompt, max_length=max_chars + 200)
 
         # Apply vocabulary post-processing
         content = active.apply_vocab_transform(raw_content)
 
         # Extract hashtags from content (last line(s) of # tokens)
-        hashtags: List[str] = re.findall(r'#\w+', content)
+        hashtags: list[str] = re.findall(r"#\w+", content)
 
         # Enforce character limit (on full content including hashtags)
         if len(content) > max_chars:
-            content = content[:max_chars - 3].rsplit(' ', 1)[0] + "..."
+            content = content[: max_chars - 3].rsplit(" ", 1)[0] + "..."
             # Re-extract hashtags from trimmed content
-            hashtags = re.findall(r'#\w+', content)
+            hashtags = re.findall(r"#\w+", content)
 
         # Select contextual emojis
         emojis = active.select_emojis(post_type, count=3)
 
         return {
-            'content': content,
-            'hashtags': hashtags,
-            'emojis': emojis,
-            'platform': platform,
-            'persona_mode': persona_mode,
-            'post_type': post_type,
-            'tone': tone,
-            'energy': energy,
-            'char_count': len(content),
-            'char_limit': max_chars,
-            'review_status': 'approved' if self.auto_approve else 'pending',
+            "content": content,
+            "hashtags": hashtags,
+            "emojis": emojis,
+            "platform": platform,
+            "persona_mode": persona_mode,
+            "post_type": post_type,
+            "tone": tone,
+            "energy": energy,
+            "char_count": len(content),
+            "char_limit": max_chars,
+            "review_status": "approved" if self.auto_approve else "pending",
         }
 
     def generate_caption(
@@ -315,7 +310,7 @@ class WritingAgent(BaseAgent):
             post_type="casual",
             persona_mode=persona_mode,
         )
-        return result['content']
+        return result["content"]
 
     def generate_thread(
         self,
@@ -325,7 +320,7 @@ class WritingAgent(BaseAgent):
         persona_mode: str = "professional",
         tone: str = "authentic",
         energy: str = "medium",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Generate a multi-post thread.
 
@@ -347,7 +342,7 @@ class WritingAgent(BaseAgent):
 
         active = self.persona.get_active_persona()
         platform_config = self.persona.get_platform_config(platform)
-        max_chars = platform_config.get('max_chars', 280)
+        max_chars = platform_config.get("max_chars", 280)
 
         tone_desc = self.TONE_GUIDES.get(tone, self.TONE_GUIDES["authentic"])
         energy_desc = self.ENERGY_GUIDES.get(energy, self.ENERGY_GUIDES["medium"])
@@ -369,27 +364,29 @@ class WritingAgent(BaseAgent):
 
         # Parse numbered posts
         posts = []
-        for line in raw.strip().split('\n'):
+        for line in raw.strip().split("\n"):
             line = line.strip()
             if not line:
                 continue
-            cleaned = re.sub(r'^\d+[/.)]\s*', '', line)
+            cleaned = re.sub(r"^\d+[/.)]\s*", "", line)
             if cleaned and len(cleaned) > 5:
                 if len(cleaned) > max_chars:
-                    cleaned = cleaned[:max_chars - 3].rsplit(' ', 1)[0] + "..."
-                posts.append({
-                    'content': cleaned,
-                    'platform': platform,
-                    'persona_mode': persona_mode,
-                    'tone': tone,
-                    'energy': energy,
-                    'char_count': len(cleaned),
-                    'char_limit': max_chars,
-                })
+                    cleaned = cleaned[: max_chars - 3].rsplit(" ", 1)[0] + "..."
+                posts.append(
+                    {
+                        "content": cleaned,
+                        "platform": platform,
+                        "persona_mode": persona_mode,
+                        "tone": tone,
+                        "energy": energy,
+                        "char_count": len(cleaned),
+                        "char_limit": max_chars,
+                    }
+                )
 
         return posts[:num_posts]
 
-    def queue_content(self, topic_data: Dict[str, Any]):
+    def queue_content(self, topic_data: dict[str, Any]):
         """Add a content request to the generation queue."""
         self._content_queue.put_nowait(topic_data)
 
@@ -399,42 +396,81 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="SWIZZ Voice Writing Agent")
-    parser.add_argument('--action', choices=['generate', 'thread', 'caption', 'status'],
-                       default='status', help='Action to perform')
-    parser.add_argument('--topic', type=str, help='Content topic')
-    parser.add_argument('--platform', type=str, default='instagram',
-                       help='Target platform')
-    parser.add_argument('--post-type', type=str, default='casual',
-                       choices=['announcement', 'resource_share', 'casual', 'business', 'promo', 'hype',
-                                'problem_solution', 'myth_busting', 'quick_tips', 'day_in_life',
-                                'case_study', 'industry_commentary', 'quick_wins'],
-                       help='Post type')
-    parser.add_argument('--persona', type=str, default='professional',
-                       choices=['professional', 'personal', 'ceo'],
-                       help='Persona mode')
-    parser.add_argument('--num-posts', type=int, default=3,
-                       help='Number of posts for thread')
-    parser.add_argument('--tone', type=str, default='authentic',
-                       choices=['authentic', 'motivational', 'humorous', 'reflective',
-                                'educational', 'hype', 'emotional', 'direct', 'raw', 'inspiring'],
-                       help='Emotional tone of the post')
-    parser.add_argument('--energy', type=str, default='medium',
-                       choices=['low', 'medium', 'high'],
-                       help='Energy level (low=calm, medium=balanced, high=bold)')
-    parser.add_argument('--dry-run', action='store_true',
-                       help='Preview without posting')
+    parser.add_argument(
+        "--action",
+        choices=["generate", "thread", "caption", "status"],
+        default="status",
+        help="Action to perform",
+    )
+    parser.add_argument("--topic", type=str, help="Content topic")
+    parser.add_argument("--platform", type=str, default="instagram", help="Target platform")
+    parser.add_argument(
+        "--post-type",
+        type=str,
+        default="casual",
+        choices=[
+            "announcement",
+            "resource_share",
+            "casual",
+            "business",
+            "promo",
+            "hype",
+            "problem_solution",
+            "myth_busting",
+            "quick_tips",
+            "day_in_life",
+            "case_study",
+            "industry_commentary",
+            "quick_wins",
+        ],
+        help="Post type",
+    )
+    parser.add_argument(
+        "--persona",
+        type=str,
+        default="professional",
+        choices=["professional", "personal", "ceo"],
+        help="Persona mode",
+    )
+    parser.add_argument("--num-posts", type=int, default=3, help="Number of posts for thread")
+    parser.add_argument(
+        "--tone",
+        type=str,
+        default="authentic",
+        choices=[
+            "authentic",
+            "motivational",
+            "humorous",
+            "reflective",
+            "educational",
+            "hype",
+            "emotional",
+            "direct",
+            "raw",
+            "inspiring",
+        ],
+        help="Emotional tone of the post",
+    )
+    parser.add_argument(
+        "--energy",
+        type=str,
+        default="medium",
+        choices=["low", "medium", "high"],
+        help="Energy level (low=calm, medium=balanced, high=bold)",
+    )
+    parser.add_argument("--dry-run", action="store_true", help="Preview without posting")
 
     args = parser.parse_args()
 
     config = {
-        'persona_mode': args.persona,
-        'default_platform': args.platform,
-        'auto_approve': not args.dry_run,
+        "persona_mode": args.persona,
+        "default_platform": args.platform,
+        "auto_approve": not args.dry_run,
     }
 
     agent = WritingAgent(config)
 
-    if args.action == 'status':
+    if args.action == "status":
         stats = agent.get_stats()
         print("\nWriting Agent Status:")
         for key, value in stats.items():
@@ -442,7 +478,7 @@ def main():
         print(f"\n  Persona Mode: {agent.persona._mode}")
         print(f"  Platform: {agent.default_platform}")
 
-    elif args.action == 'generate':
+    elif args.action == "generate":
         if not args.topic:
             print("[ERROR] --topic required for generate action")
             return
@@ -470,7 +506,7 @@ def main():
         print(f"Emojis: {' '.join(result['emojis'])}")
         print("=" * 60)
 
-    elif args.action == 'thread':
+    elif args.action == "thread":
         if not args.topic:
             print("[ERROR] --topic required for thread action")
             return
@@ -488,10 +524,10 @@ def main():
         print("=" * 60)
         for i, post in enumerate(posts, 1):
             print(f"\n[{i}/{len(posts)}] ({post['char_count']} chars)")
-            print(post['content'])
+            print(post["content"])
         print("\n" + "=" * 60)
 
-    elif args.action == 'caption':
+    elif args.action == "caption":
         if not args.topic:
             print("[ERROR] --topic required (use as media description)")
             return

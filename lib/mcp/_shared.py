@@ -11,7 +11,7 @@ No module in this package imports from server.py, preventing circular deps.
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -67,7 +67,7 @@ Platform character limits:
 # Scheduler singleton — set by main(), read by route handlers
 # ---------------------------------------------------------------------------
 
-_scheduler: Optional[Any] = None
+_scheduler: Any | None = None
 
 
 def _get_scheduler():

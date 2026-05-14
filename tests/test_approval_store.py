@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -11,14 +11,18 @@ from lib.scheduler.content_pipeline import ContentBundle
 
 
 def _make_bundle(slot_id="test-slot-001", posted=False, hours_until_expire=2):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return ContentBundle(
         slot_id=slot_id,
         platform="twitter",
         subreddit=None,
         pillar="building in public",
         topic="AI automation tools for developers",
-        option_a={"content": "Option A content", "hashtags": ["#buildinpublic"], "persona_mode": "professional"},
+        option_a={
+            "content": "Option A content",
+            "hashtags": ["#buildinpublic"],
+            "persona_mode": "professional",
+        },
         option_b={"content": "Option B content", "hashtags": ["#startup"], "persona_mode": "ceo"},
         image_1_url="https://media.getlate.dev/temp/img1.jpg",
         image_2_url="https://media.getlate.dev/temp/img2.jpg",
@@ -34,6 +38,7 @@ def store(tmp_path):
     db_path = str(tmp_path / "approvals.db")
     with patch("lib.scheduler.approval_store.DB_PATH", db_path):
         from lib.scheduler.approval_store import ApprovalStore
+
         yield ApprovalStore()
 
 
@@ -119,7 +124,7 @@ class TestCleanup:
     def test_cleanup_old_deletes_old_records(self, store):
         # Create a bundle with scheduled_time 8 days ago
         bundle = _make_bundle(slot_id="old-slot")
-        bundle.scheduled_time = datetime.now(timezone.utc) - timedelta(days=8)
+        bundle.scheduled_time = datetime.now(UTC) - timedelta(days=8)
         store.save(bundle)
         deleted = store.cleanup_old(days=7)
         assert deleted >= 1

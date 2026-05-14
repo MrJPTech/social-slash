@@ -10,8 +10,8 @@ import json
 import os
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List, Optional
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from lib.scheduler.content_pipeline import ContentBundle
@@ -69,7 +69,7 @@ def _conn():
 class ApprovalStore:
     """Persist and query SLASHERBOT content bundles via SQLite."""
 
-    def save(self, bundle: "ContentBundle") -> None:
+    def save(self, bundle: ContentBundle) -> None:
         """Insert or replace a ContentBundle in the store."""
         with _conn() as con:
             con.execute(
@@ -100,14 +100,11 @@ class ApprovalStore:
                 ),
             )
 
-    def get(self, slot_id: str) -> Optional["ContentBundle"]:
+    def get(self, slot_id: str) -> ContentBundle | None:
         """Return a ContentBundle by slot_id, or None if not found."""
-        from lib.scheduler.content_pipeline import ContentBundle  # local import avoids circular
 
         with _conn() as con:
-            row = con.execute(
-                "SELECT * FROM approvals WHERE slot_id = ?", (slot_id,)
-            ).fetchone()
+            row = con.execute("SELECT * FROM approvals WHERE slot_id = ?", (slot_id,)).fetchone()
         if not row:
             return None
         return self._row_to_bundle(row)
@@ -128,9 +125,9 @@ class ApprovalStore:
             ).fetchone()
         return bool(row and row["posted"])
 
-    def get_pending_expired(self) -> List["ContentBundle"]:
+    def get_pending_expired(self) -> list[ContentBundle]:
         """Return all bundles whose TTL has passed but have not been posted."""
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
         with _conn() as con:
             rows = con.execute(
                 "SELECT * FROM approvals WHERE posted = 0 AND expires_at < ?",
@@ -138,7 +135,7 @@ class ApprovalStore:
             ).fetchall()
         return [self._row_to_bundle(r) for r in rows]
 
-    def get_pending_active(self) -> List["ContentBundle"]:
+    def get_pending_active(self) -> list[ContentBundle]:
         """Return all non-posted bundles ordered by expires_at ascending."""
         with _conn() as con:
             rows = con.execute(
@@ -146,7 +143,7 @@ class ApprovalStore:
             ).fetchall()
         return [self._row_to_bundle(r) for r in rows]
 
-    def get_by_prefix(self, slot_prefix: str) -> Optional["ContentBundle"]:
+    def get_by_prefix(self, slot_prefix: str) -> ContentBundle | None:
         """Look up a bundle by the first N characters of its slot_id."""
         with _conn() as con:
             row = con.execute(
@@ -159,17 +156,15 @@ class ApprovalStore:
         """Delete records older than `days` days. Returns count deleted."""
         from datetime import timedelta
 
-        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
         with _conn() as con:
-            cur = con.execute(
-                "DELETE FROM approvals WHERE scheduled_time < ?", (cutoff,)
-            )
+            cur = con.execute("DELETE FROM approvals WHERE scheduled_time < ?", (cutoff,))
             return cur.rowcount
 
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _row_to_bundle(row: sqlite3.Row) -> "ContentBundle":
+    def _row_to_bundle(row: sqlite3.Row) -> ContentBundle:
         from lib.scheduler.content_pipeline import ContentBundle  # local import
 
         # Safely read new columns (may be absent in old DBs before migration)

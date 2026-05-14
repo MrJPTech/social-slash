@@ -6,12 +6,10 @@ List and manage connected Late SDK social media accounts.
 """
 
 import json
-import os
 import sys
-from typing import Optional
 
 
-def list_accounts(platform_filter: Optional[str] = None, as_json: bool = False):
+def list_accounts(platform_filter: str | None = None, as_json: bool = False):
     """List all connected social media accounts."""
     from lib.api_clients.late_client import LateDistributionClient
 
@@ -28,18 +26,20 @@ def list_accounts(platform_filter: Optional[str] = None, as_json: bool = False):
     # Extract account data
     account_list = []
     for acc in accounts:
-        platform = getattr(acc, 'platform', 'unknown').lower()
-        account_id = getattr(acc, 'field_id', None) or getattr(acc, 'id', 'unknown')
-        name = getattr(acc, 'name', '') or getattr(acc, 'username', 'Unknown')
+        platform = getattr(acc, "platform", "unknown").lower()
+        account_id = getattr(acc, "field_id", None) or getattr(acc, "id", "unknown")
+        name = getattr(acc, "name", "") or getattr(acc, "username", "Unknown")
 
         if platform_filter and platform != platform_filter.lower():
             continue
 
-        account_list.append({
-            'platform': platform,
-            'name': name,
-            'account_id': account_id,
-        })
+        account_list.append(
+            {
+                "platform": platform,
+                "name": name,
+                "account_id": account_id,
+            }
+        )
 
     if as_json:
         print(json.dumps(account_list, indent=2))
@@ -58,9 +58,13 @@ def list_accounts(platform_filter: Optional[str] = None, as_json: bool = False):
     print(f"  {'Platform':<18} {'Name':<25} {'Account ID':<15}")
     print("  " + "-" * 56)
 
-    for acc in sorted(account_list, key=lambda x: x['platform']):
-        name_display = acc['name'][:23] + '..' if len(acc['name']) > 25 else acc['name']
-        id_display = acc['account_id'][:13] + '..' if len(str(acc['account_id'])) > 15 else str(acc['account_id'])
+    for acc in sorted(account_list, key=lambda x: x["platform"]):
+        name_display = acc["name"][:23] + ".." if len(acc["name"]) > 25 else acc["name"]
+        id_display = (
+            acc["account_id"][:13] + ".."
+            if len(str(acc["account_id"])) > 15
+            else str(acc["account_id"])
+        )
         print(f"  {acc['platform']:<18} {name_display:<25} {id_display:<15}")
 
     print("  " + "-" * 56)
@@ -89,18 +93,17 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Social Slash Account Manager")
-    parser.add_argument('--action', choices=['list', 'refresh'],
-                       default='list', help='Action to perform')
-    parser.add_argument('--platform', type=str, default=None,
-                       help='Filter by platform')
-    parser.add_argument('--json', action='store_true', dest='as_json',
-                       help='Output as JSON')
+    parser.add_argument(
+        "--action", choices=["list", "refresh"], default="list", help="Action to perform"
+    )
+    parser.add_argument("--platform", type=str, default=None, help="Filter by platform")
+    parser.add_argument("--json", action="store_true", dest="as_json", help="Output as JSON")
 
     args = parser.parse_args()
 
-    if args.action == 'list':
+    if args.action == "list":
         list_accounts(platform_filter=args.platform, as_json=args.as_json)
-    elif args.action == 'refresh':
+    elif args.action == "refresh":
         refresh_cache()
 
 

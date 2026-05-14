@@ -12,9 +12,9 @@ Features:
 - Context-aware threading
 """
 
-import os
 import json
-from typing import Dict, List, Optional, Any
+import os
+from typing import Any
 
 
 class ResponseGenerator:
@@ -27,79 +27,79 @@ class ResponseGenerator:
 
     # Platform-specific guidelines
     PLATFORM_GUIDELINES = {
-        'instagram': {
-            'max_length': 2200,
-            'tone': 'friendly, visual-focused',
-            'use_emojis': True,
-            'mention_style': '@username'
+        "instagram": {
+            "max_length": 2200,
+            "tone": "friendly, visual-focused",
+            "use_emojis": True,
+            "mention_style": "@username",
         },
-        'twitter': {
-            'max_length': 280,
-            'tone': 'concise, punchy',
-            'use_emojis': True,
-            'mention_style': '@username'
+        "twitter": {
+            "max_length": 280,
+            "tone": "concise, punchy",
+            "use_emojis": True,
+            "mention_style": "@username",
         },
-        'linkedin': {
-            'max_length': 3000,
-            'tone': 'professional, thoughtful',
-            'use_emojis': False,
-            'mention_style': 'formal name'
+        "linkedin": {
+            "max_length": 3000,
+            "tone": "professional, thoughtful",
+            "use_emojis": False,
+            "mention_style": "formal name",
         },
-        'reddit': {
-            'max_length': 10000,
-            'tone': 'conversational, community-focused',
-            'use_emojis': False,
-            'mention_style': 'u/username'
+        "reddit": {
+            "max_length": 10000,
+            "tone": "conversational, community-focused",
+            "use_emojis": False,
+            "mention_style": "u/username",
         },
-        'youtube': {
-            'max_length': 10000,
-            'tone': 'engaging, appreciative',
-            'use_emojis': True,
-            'mention_style': '@username'
+        "youtube": {
+            "max_length": 10000,
+            "tone": "engaging, appreciative",
+            "use_emojis": True,
+            "mention_style": "@username",
         },
-        'facebook': {
-            'max_length': 8000,
-            'tone': 'friendly, conversational',
-            'use_emojis': True,
-            'mention_style': 'first name'
+        "facebook": {
+            "max_length": 8000,
+            "tone": "friendly, conversational",
+            "use_emojis": True,
+            "mention_style": "first name",
         },
-        'tiktok': {
-            'max_length': 1000,
-            'tone': 'casual, fun, trendy',
-            'use_emojis': True,
-            'mention_style': '@username'
+        "tiktok": {
+            "max_length": 1000,
+            "tone": "casual, fun, trendy",
+            "use_emojis": True,
+            "mention_style": "@username",
         },
-        'bluesky': {
-            'max_length': 300,
-            'tone': 'conversational, thoughtful',
-            'use_emojis': True,
-            'mention_style': '@handle'
+        "bluesky": {
+            "max_length": 300,
+            "tone": "conversational, thoughtful",
+            "use_emojis": True,
+            "mention_style": "@handle",
         },
-        'telegram': {
-            'max_length': 4096,
-            'tone': 'direct, helpful',
-            'use_emojis': True,
-            'mention_style': '@username'
-        }
+        "telegram": {
+            "max_length": 4096,
+            "tone": "direct, helpful",
+            "use_emojis": True,
+            "mention_style": "@username",
+        },
     }
 
     # Default brand voice templates
     BRAND_VOICES = {
-        'professional': 'Respond in a professional, helpful tone. Be knowledgeable but approachable.',
-        'friendly': 'Respond in a warm, friendly tone. Be conversational and personable.',
-        'casual': 'Respond in a casual, relaxed tone. Keep it light and authentic.',
-        'enthusiastic': 'Respond with enthusiasm and energy. Show genuine excitement.',
-        'supportive': 'Respond with empathy and support. Focus on helping and reassuring.',
-        'swizz': 'You are SWIZZ. Speak casually and directly. Keep responses short (under 15 words for casual, under 30 for business). Use "ya" instead of "your", contractions like "gonna", "wanna", "gotta". Use emojis contextually but not excessively. Be a connector - share resources and make introductions. Be direct and honest. Never over-explain.',
-        'bigswizzi': 'You are Big Swizzi. Ultra-concise (1-7 words max). Maximum enthusiasm always. Use AAVE naturally: "dis", "fo", "imma", "finna", "fasho", "fr". Address people as "gang", "twin", "fam", "dawg". Agree with "bet", "say less", "fasho", "no cap". Use caps for emphasis 30% of the time. Emojis: fire, 100, prayer hands, skull, devil. Never formal. Never over-explain. Keep it real.',
-        'jordan_ward': 'You are Jordan Ward, CEO of PRSMTECH. Evidence-based thought leader. Speak with authority backed by data and real experience. Lead with hooks. Be contrarian when evidence supports it. Mentorship-oriented: teach from experience, not theory. Every post includes specifics (numbers, metrics, timeframes). Polished but direct — no slang, no hedging. End with a CTA.'
+        "professional": "Respond in a professional, helpful tone. Be knowledgeable but approachable.",
+        "friendly": "Respond in a warm, friendly tone. Be conversational and personable.",
+        "casual": "Respond in a casual, relaxed tone. Keep it light and authentic.",
+        "enthusiastic": "Respond with enthusiasm and energy. Show genuine excitement.",
+        "supportive": "Respond with empathy and support. Focus on helping and reassuring.",
+        "swizz": 'You are SWIZZ. Speak casually and directly. Keep responses short (under 15 words for casual, under 30 for business). Use "ya" instead of "your", contractions like "gonna", "wanna", "gotta". Use emojis contextually but not excessively. Be a connector - share resources and make introductions. Be direct and honest. Never over-explain.',
+        "bigswizzi": 'You are Big Swizzi. Ultra-concise (1-7 words max). Maximum enthusiasm always. Use AAVE naturally: "dis", "fo", "imma", "finna", "fasho", "fr". Address people as "gang", "twin", "fam", "dawg". Agree with "bet", "say less", "fasho", "no cap". Use caps for emphasis 30% of the time. Emojis: fire, 100, prayer hands, skull, devil. Never formal. Never over-explain. Keep it real.',
+        "jordan_ward": "You are Jordan Ward, CEO of PRSMTECH. Evidence-based thought leader. Speak with authority backed by data and real experience. Lead with hooks. Be contrarian when evidence supports it. Mentorship-oriented: teach from experience, not theory. Every post includes specifics (numbers, metrics, timeframes). Polished but direct — no slang, no hedging. End with a CTA.",
     }
 
     def __init__(
         self,
         provider: str = "gemini",
         brand_voice: str = "professional",
-        api_key: Optional[str] = None
+        api_key: str | None = None,
     ):
         """
         Initialize the response generator.
@@ -115,7 +115,7 @@ class ResponseGenerator:
         self._api_key = api_key
 
         # Validate provider
-        if self.provider not in ['gemini', 'anthropic']:
+        if self.provider not in ["gemini", "anthropic"]:
             raise ValueError(f"Unsupported provider: {provider}. Use 'gemini' or 'anthropic'.")
 
         # Lazy init AI client
@@ -123,10 +123,11 @@ class ResponseGenerator:
 
     def _init_client(self):
         """Initialize the AI client based on provider."""
-        if self.provider == 'gemini':
+        if self.provider == "gemini":
             try:
                 from google import genai
-                api_key = self._api_key or os.getenv('GOOGLE_API_KEY')
+
+                api_key = self._api_key or os.getenv("GOOGLE_API_KEY")
                 if not api_key:
                     raise ValueError("GOOGLE_API_KEY not found")
                 self._genai_client = genai.Client(api_key=api_key)
@@ -135,10 +136,11 @@ class ResponseGenerator:
             except ImportError:
                 raise ImportError("google-genai package required. Run: pip install google-genai")
 
-        elif self.provider == 'anthropic':
+        elif self.provider == "anthropic":
             try:
                 import anthropic
-                api_key = self._api_key or os.getenv('ANTHROPIC_API_KEY')
+
+                api_key = self._api_key or os.getenv("ANTHROPIC_API_KEY")
                 if not api_key:
                     raise ValueError("ANTHROPIC_API_KEY not found")
                 self._client = anthropic.Anthropic(api_key=api_key)
@@ -152,11 +154,11 @@ class ResponseGenerator:
             return self.BRAND_VOICES[self.brand_voice]
         return self.brand_voice  # Assume it's custom instructions
 
-    def _get_platform_guidelines(self, platform: str) -> Dict[str, Any]:
+    def _get_platform_guidelines(self, platform: str) -> dict[str, Any]:
         """Get platform-specific guidelines."""
         return self.PLATFORM_GUIDELINES.get(
             platform.lower(),
-            self.PLATFORM_GUIDELINES['twitter']  # Default fallback
+            self.PLATFORM_GUIDELINES["twitter"],  # Default fallback
         )
 
     # ─────────────────────────────────────────────────────────────
@@ -168,9 +170,9 @@ class ResponseGenerator:
         comment: str,
         author: str,
         platform: str,
-        original_post: Optional[str] = None,
-        context: Optional[List[Dict[str, str]]] = None,
-        custom_instructions: Optional[str] = None
+        original_post: str | None = None,
+        context: list[dict[str, str]] | None = None,
+        custom_instructions: str | None = None,
     ) -> str:
         """
         Generate a reply to a comment.
@@ -203,12 +205,12 @@ class ResponseGenerator:
 Brand Voice: {brand_voice}
 
 Platform Guidelines for {platform}:
-- Maximum length: {guidelines['max_length']} characters
-- Tone: {guidelines['tone']}
-- Use emojis: {'Yes' if guidelines['use_emojis'] else 'No'}
-- Address user as: {guidelines['mention_style']}
+- Maximum length: {guidelines["max_length"]} characters
+- Tone: {guidelines["tone"]}
+- Use emojis: {"Yes" if guidelines["use_emojis"] else "No"}
+- Address user as: {guidelines["mention_style"]}
 
-{custom_instructions or ''}
+{custom_instructions or ""}
 
 {context_text}
 
@@ -223,7 +225,7 @@ Match the energy of the commenter when appropriate.
 Reply only with the response text, nothing else."""
 
         try:
-            return self._generate(prompt, max_length=guidelines['max_length'])
+            return self._generate(prompt, max_length=guidelines["max_length"])
         except Exception as e:
             print(f"[ERROR] Failed to generate comment reply: {e}")
             raise
@@ -237,8 +239,8 @@ Reply only with the response text, nothing else."""
         message: str,
         sender_name: str,
         platform: str,
-        conversation_history: Optional[List[Dict[str, Any]]] = None,
-        custom_instructions: Optional[str] = None
+        conversation_history: list[dict[str, Any]] | None = None,
+        custom_instructions: str | None = None,
     ) -> str:
         """
         Generate a reply to a direct message.
@@ -261,7 +263,7 @@ Reply only with the response text, nothing else."""
         if conversation_history:
             history_text = "\n\nConversation history:"
             for msg in conversation_history[-10:]:  # Last 10 messages
-                role = "Me" if msg.get('is_me') else sender_name
+                role = "Me" if msg.get("is_me") else sender_name
                 history_text += f"\n{role}: {msg.get('content', '')[:200]}"
 
         prompt = f"""You are responding to a direct message on {platform}.
@@ -269,11 +271,11 @@ Reply only with the response text, nothing else."""
 Brand Voice: {brand_voice}
 
 Platform Guidelines for {platform}:
-- Maximum length: {guidelines['max_length']} characters
-- Tone: {guidelines['tone']}
-- Use emojis: {'Yes' if guidelines['use_emojis'] else 'No'}
+- Maximum length: {guidelines["max_length"]} characters
+- Tone: {guidelines["tone"]}
+- Use emojis: {"Yes" if guidelines["use_emojis"] else "No"}
 
-{custom_instructions or ''}
+{custom_instructions or ""}
 
 {history_text}
 
@@ -288,7 +290,7 @@ Keep it natural - this is a private conversation.
 Reply only with the response text, nothing else."""
 
         try:
-            return self._generate(prompt, max_length=guidelines['max_length'])
+            return self._generate(prompt, max_length=guidelines["max_length"])
         except Exception as e:
             print(f"[ERROR] Failed to generate DM reply: {e}")
             raise
@@ -297,7 +299,7 @@ Reply only with the response text, nothing else."""
     # SENTIMENT ANALYSIS
     # ─────────────────────────────────────────────────────────────
 
-    def analyze_sentiment(self, content: str) -> Dict[str, Any]:
+    def analyze_sentiment(self, content: str) -> dict[str, Any]:
         """
         Analyze the sentiment of content.
 
@@ -332,11 +334,11 @@ Respond in JSON format only:
         except Exception as e:
             print(f"[ERROR] Sentiment analysis failed: {e}")
             return {
-                'sentiment': 'neutral',
-                'score': 0.5,
-                'keywords': [],
-                'requires_attention': False,
-                'category': 'general'
+                "sentiment": "neutral",
+                "score": 0.5,
+                "keywords": [],
+                "requires_attention": False,
+                "category": "general",
             }
 
     # ─────────────────────────────────────────────────────────────
@@ -354,16 +356,16 @@ Respond in JSON format only:
         Returns:
             Generated text
         """
-        if self.provider == 'gemini':
+        if self.provider == "gemini":
             response = self._client.models.generate_content(
-                model='gemini-2.0-flash', contents=prompt
+                model="gemini-2.0-flash", contents=prompt
             )
             text = response.text.strip()
-        elif self.provider == 'anthropic':
+        elif self.provider == "anthropic":
             response = self._client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=max_length,
-                messages=[{"role": "user", "content": prompt}]
+                messages=[{"role": "user", "content": prompt}],
             )
             text = response.content[0].text.strip()
         else:
@@ -371,7 +373,7 @@ Respond in JSON format only:
 
         # Enforce max length
         if len(text) > max_length:
-            text = text[:max_length-3] + "..."
+            text = text[: max_length - 3] + "..."
 
         return text
 
@@ -380,10 +382,7 @@ Respond in JSON format only:
     # ─────────────────────────────────────────────────────────────
 
     def apply_template(
-        self,
-        template_name: str,
-        variables: Dict[str, str],
-        templates: Optional[Dict[str, str]] = None
+        self, template_name: str, variables: dict[str, str], templates: dict[str, str] | None = None
     ) -> str:
         """
         Apply a response template with variables.
@@ -397,11 +396,11 @@ Respond in JSON format only:
             Formatted response
         """
         default_templates = {
-            'thank_you': "Thanks for your {type}, {name}! {custom}",
-            'question_ack': "Great question, {name}! {answer}",
-            'feedback_ack': "We really appreciate your feedback, {name}. {response}",
-            'apology': "We're sorry to hear that, {name}. {resolution}",
-            'welcome': "Welcome to the community, {name}! {message}"
+            "thank_you": "Thanks for your {type}, {name}! {custom}",
+            "question_ack": "Great question, {name}! {answer}",
+            "feedback_ack": "We really appreciate your feedback, {name}. {response}",
+            "apology": "We're sorry to hear that, {name}. {resolution}",
+            "welcome": "Welcome to the community, {name}! {message}",
         }
 
         all_templates = {**default_templates, **(templates or {})}
@@ -417,14 +416,14 @@ Respond in JSON format only:
 if __name__ == "__main__":
     # Test with Gemini
     try:
-        generator = ResponseGenerator(provider='gemini', brand_voice='friendly')
+        generator = ResponseGenerator(provider="gemini", brand_voice="friendly")
 
         # Test comment reply
         reply = generator.generate_comment_reply(
             comment="Love this! Where can I get one?",
             author="user123",
             platform="instagram",
-            original_post="Check out our new product launch! 🚀"
+            original_post="Check out our new product launch! 🚀",
         )
         print(f"\nGenerated comment reply:\n{reply}")
 

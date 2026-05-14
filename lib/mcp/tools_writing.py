@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+from ._client_helpers import build_agent_config, suppress_stdout
 from ._shared import mcp
-from ._client_helpers import suppress_stdout, build_agent_config
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -15,6 +14,7 @@ def _get_writing_agent(persona_mode: str = "professional", platform: str = "inst
     """Create a WritingAgent with stdout suppression."""
     with suppress_stdout():
         from lib.agents.writing_agent import WritingAgent
+
         config = build_agent_config(persona_mode, platform)
         return WritingAgent(config)
 
@@ -91,6 +91,7 @@ def writing_generate_post(
         if post_type == "auto":
             with suppress_stdout():
                 from lib.persona.swizz_persona import SwizzPersona
+
                 router = SwizzPersona(mode=persona_mode)
                 resolved_post_type = router.determine_response_type(topic)
 

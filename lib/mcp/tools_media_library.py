@@ -19,6 +19,7 @@ def media_library_scan() -> str:
     """
     try:
         from lib.media_library.scanner import BucketScanner
+
         scanner = BucketScanner()
         result = scanner.ingest_new()
         return json.dumps(result, indent=2)
@@ -43,6 +44,7 @@ def media_library_search(
     """
     try:
         from lib.media_library.catalog import MediaCatalog
+
         catalog = MediaCatalog()
 
         if pillar:
@@ -65,6 +67,7 @@ def media_library_stats() -> str:
     """
     try:
         from lib.media_library.catalog import MediaCatalog
+
         catalog = MediaCatalog()
         stats = catalog.get_stats()
         return json.dumps(stats, indent=2)
@@ -81,6 +84,7 @@ def media_library_preview(item_id: str) -> str:
     """
     try:
         from lib.media_library.catalog import MediaCatalog
+
         catalog = MediaCatalog()
         item = catalog.get_item(item_id)
         if not item:
@@ -115,9 +119,7 @@ def media_library_sync_local() -> str:
         stats = scanner.get_folder_stats()
         accessible = sum(1 for f in stats["folders"] if f["exists"])
         if accessible == 0:
-            folder_lines = "\n".join(
-                f"  - {f['path']} ({f['category']})" for f in stats["folders"]
-            )
+            folder_lines = "\n".join(f"  - {f['path']} ({f['category']})" for f in stats["folders"])
             return (
                 f"No sync folders accessible.\n"
                 f"Configured folders:\n{folder_lines}\n\n"
@@ -135,9 +137,7 @@ def media_library_sync_local() -> str:
         if result["details"]:
             parts.append("\nNew items:")
             for d in result["details"]:
-                parts.append(
-                    f"  [{d['category']}] {d['filename']}: {d['description']}"
-                )
+                parts.append(f"  [{d['category']}] {d['filename']}: {d['description']}")
 
         if result["errors"]:
             parts.append(f"\nErrors: {', '.join(result['errors'])}")

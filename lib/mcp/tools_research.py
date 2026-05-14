@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import json
 
+from ._client_helpers import build_agent_config, suppress_stdout
 from ._shared import mcp
-from ._client_helpers import suppress_stdout, build_agent_config
 
 
 def _get_research_agent(persona_mode: str = "professional", platform: str = "instagram"):
     """Create a ResearchAgent with stdout suppression."""
     with suppress_stdout():
         from lib.agents.research_agent import ResearchAgent
+
         config = build_agent_config(persona_mode, platform)
         return ResearchAgent(config)
 
@@ -30,7 +31,9 @@ def research_hashtags(topic: str, platform: str = "instagram") -> str:
             result = agent.research_hashtags(topic, platform)
         return result.get("research", json.dumps(result, indent=2))
     except Exception as e:
-        return f"Error researching hashtags: {e}\nEnsure GOOGLE_API_KEY or ANTHROPIC_API_KEY is set."
+        return (
+            f"Error researching hashtags: {e}\nEnsure GOOGLE_API_KEY or ANTHROPIC_API_KEY is set."
+        )
 
 
 @mcp.tool()

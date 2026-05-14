@@ -14,22 +14,26 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 # (time_EST, persona_rotation)
-POSTING_SCHEDULE: Dict[str, List[Tuple[str, str]]] = {
-    "twitter":        [("09:00", "professional"), ("12:00", "personal"), ("17:00", "ceo"), ("21:00", "professional")],
-    "linkedin":       [("08:00", "professional"), ("12:00", "ceo"), ("17:00", "professional")],
-    "instagram":      [("11:00", "personal"), ("19:00", "professional")],
-    "tiktok":         [("10:00", "personal"), ("21:00", "ceo")],
-    "facebook":       [("09:00", "professional"), ("13:00", "ceo"), ("19:00", "personal")],
-    "threads":        [("11:00", "personal"), ("17:00", "ceo")],
-    "reddit":         [("10:00", "professional"), ("14:00", "ceo"), ("20:00", "personal")],
-    "bluesky":        [("12:00", "professional"), ("18:00", "personal")],
+POSTING_SCHEDULE: dict[str, list[tuple[str, str]]] = {
+    "twitter": [
+        ("09:00", "professional"),
+        ("12:00", "personal"),
+        ("17:00", "ceo"),
+        ("21:00", "professional"),
+    ],
+    "linkedin": [("08:00", "professional"), ("12:00", "ceo"), ("17:00", "professional")],
+    "instagram": [("11:00", "personal"), ("19:00", "professional")],
+    "tiktok": [("10:00", "personal"), ("21:00", "ceo")],
+    "facebook": [("09:00", "professional"), ("13:00", "ceo"), ("19:00", "personal")],
+    "threads": [("11:00", "personal"), ("17:00", "ceo")],
+    "reddit": [("10:00", "professional"), ("14:00", "ceo"), ("20:00", "personal")],
+    "bluesky": [("12:00", "professional"), ("18:00", "personal")],
     "google_business": [("09:00", "professional")],
 }
 
@@ -54,14 +58,14 @@ def _load_pillars() -> dict:
 
 def _get_today_pillar() -> str:
     data = _load_pillars()
-    day_name = datetime.now(timezone.utc).strftime("%A").lower()
+    day_name = datetime.now(UTC).strftime("%A").lower()
     return data.get("day_assignments", {}).get(day_name, "building in public")
 
 
 def _get_next_subreddit() -> str:
     """Return the next subreddit in rotation and increment the index atomically."""
     data = _load_pillars()
-    rotation: List[str] = data.get("subreddit_rotation", ["r/entrepreneur"])
+    rotation: list[str] = data.get("subreddit_rotation", ["r/entrepreneur"])
     idx: int = data.get("subreddit_index", 0) % len(rotation)
     subreddit = rotation[idx]
 
@@ -86,8 +90,8 @@ class DailyScheduler:
         self.scheduler = BackgroundScheduler(timezone=tz)
         self._tz = tz
 
-        from lib.scheduler.content_pipeline import ContentPipeline
         from lib.scheduler.approval_store import ApprovalStore
+        from lib.scheduler.content_pipeline import ContentPipeline
 
         self.pipeline = ContentPipeline()
         self.store = ApprovalStore()
@@ -138,7 +142,9 @@ class DailyScheduler:
 
         self.scheduler.start()
         total = sum(len(slots) for slots in POSTING_SCHEDULE.values())
-        logger.info(f"[scheduler] Started — {total} daily slots across {len(POSTING_SCHEDULE)} platforms")
+        logger.info(
+            f"[scheduler] Started — {total} daily slots across {len(POSTING_SCHEDULE)} platforms"
+        )
 
     def stop(self) -> None:
         """Gracefully shut down the scheduler."""
@@ -146,7 +152,9 @@ class DailyScheduler:
             self.scheduler.shutdown(wait=False)
             logger.info("[scheduler] Stopped")
 
-    def trigger_slot(self, platform: str, time_label: str = "manual", persona: str = "professional") -> Optional[str]:
+    def trigger_slot(
+        self, platform: str, time_label: str = "manual", persona: str = "professional"
+    ) -> str | None:
         """Manually trigger a single content slot. Returns slot_id or None."""
         try:
             return self._run_slot(platform, time_label, persona)
@@ -159,10 +167,12 @@ class DailyScheduler:
         jobs = []
         for job in self.scheduler.get_jobs():
             next_run = job.next_run_time
-            jobs.append({
-                "id": job.id,
-                "next_run": next_run.isoformat() if next_run else None,
-            })
+            jobs.append(
+                {
+                    "id": job.id,
+                    "next_run": next_run.isoformat() if next_run else None,
+                }
+            )
         return {"running": self.scheduler.running, "jobs": jobs}
 
     # ------------------------------------------------------------------
@@ -183,9 +193,11 @@ class DailyScheduler:
                     id=job_id,
                     replace_existing=True,
                 )
-        logger.info(f"[scheduler] Registered {sum(len(s) for s in POSTING_SCHEDULE.values())} cron jobs")
+        logger.info(
+            f"[scheduler] Registered {sum(len(s) for s in POSTING_SCHEDULE.values())} cron jobs"
+        )
 
-    def _run_slot(self, platform: str, time_label: str, base_persona: str) -> Optional[str]:
+    def _run_slot(self, platform: str, time_label: str, base_persona: str) -> str | None:
         """Generate a bundle, save it, and send a Google Chat approval card."""
         pillar = _get_today_pillar()
         subreddit = _get_next_subreddit() if platform == "reddit" else None
@@ -203,6 +215,7 @@ class DailyScheduler:
         except Exception as exc:
             logger.error(f"[scheduler] Pipeline failed for {platform}: {exc}")
             from lib.scheduler.gchat_cards import send_error_card
+
             send_error_card(platform, str(exc), SLASHERBOT_WEBHOOK)
             return None
 
@@ -214,11 +227,14 @@ class DailyScheduler:
         self.store.save(bundle)
 
         from lib.scheduler.gchat_cards import send_approval_card
+
         sent = send_approval_card(bundle, SLASHERBOT_WEBHOOK)
         if not sent:
             logger.warning(f"[scheduler] Approval card not delivered for slot {bundle.slot_id[:8]}")
 
-        logger.info(f"[scheduler] Slot {bundle.slot_id[:8]} saved — expires {bundle.expires_at.isoformat()}")
+        logger.info(
+            f"[scheduler] Slot {bundle.slot_id[:8]} saved — expires {bundle.expires_at.isoformat()}"
+        )
         return bundle.slot_id
 
     def _auto_post_check(self) -> None:
@@ -232,11 +248,15 @@ class DailyScheduler:
             try:
                 self._do_post(bundle, choice="A1")
                 from lib.scheduler.gchat_cards import send_auto_post_card
+
                 send_auto_post_card(bundle, SLASHERBOT_WEBHOOK)
-                logger.info(f"[scheduler] Auto-posted slot {bundle.slot_id[:8]} → {bundle.platform}")
+                logger.info(
+                    f"[scheduler] Auto-posted slot {bundle.slot_id[:8]} → {bundle.platform}"
+                )
             except Exception as exc:
                 logger.error(f"[scheduler] Auto-post failed for {bundle.slot_id[:8]}: {exc}")
                 from lib.scheduler.gchat_cards import send_error_card
+
                 send_error_card(bundle.platform, f"Auto-post failed: {exc}", SLASHERBOT_WEBHOOK)
 
     def _do_post(self, bundle, choice: str) -> dict:
@@ -265,6 +285,7 @@ class DailyScheduler:
         if library_ids:
             try:
                 from lib.media_library.catalog import MediaCatalog
+
                 catalog = MediaCatalog()
                 for item_id in library_ids:
                     catalog.mark_used(item_id, bundle.platform)
@@ -277,6 +298,7 @@ class DailyScheduler:
         """Scan Supabase bucket for new unindexed images and ingest them."""
         try:
             from lib.media_library.scanner import BucketScanner
+
             scanner = BucketScanner()
             result = scanner.ingest_new()
             if result["ingested"] > 0:
@@ -293,6 +315,7 @@ class DailyScheduler:
         """Sync local iCloud/Desktop folders into the media library."""
         try:
             from lib.media_library.local_scanner import LocalFolderScanner
+
             scanner = LocalFolderScanner()
             result = scanner.ingest_new()
             if result["ingested"] > 0:
@@ -303,8 +326,7 @@ class DailyScheduler:
                 if result["details"]:
                     for d in result["details"]:
                         logger.info(
-                            f"[scheduler]   [{d['category']}] {d['filename']}: "
-                            f"{d['description']}"
+                            f"[scheduler]   [{d['category']}] {d['filename']}: {d['description']}"
                         )
         except ValueError:
             pass  # Supabase not configured — skip silently
@@ -316,10 +338,9 @@ class DailyScheduler:
         """Check if any configured local sync folders exist on disk."""
         try:
             from lib.media_library.local_scanner import LocalFolderScanner
+
             scanner = LocalFolderScanner()
-            return any(
-                Path(f["path"]).exists() for f in scanner.folders
-            )
+            return any(Path(f["path"]).exists() for f in scanner.folders)
         except Exception:
             return False
 

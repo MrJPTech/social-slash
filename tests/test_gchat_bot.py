@@ -1,6 +1,6 @@
 """Tests for SlasherbotChatHandler — event routing, commands, helpers."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,14 +9,12 @@ import pytest
 # before other test files import lib.posting.* (which doesn't trigger lib.mcp
 # registration, causing patch("lib.mcp._client_helpers...") to fail).
 import lib.mcp._client_helpers  # noqa: F401
-
 from lib.scheduler.gchat_bot import (
-    SlasherbotChatHandler,
     _COMMAND_ID_MAP,
+    SlasherbotChatHandler,
     _extract_flag,
     _strip_flags,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -32,15 +30,24 @@ def _make_message_event(text: str) -> dict:
 
 def _make_bundle(slot_id: str = "aabbccdd-1234-5678-abcd-ef0123456789", posted: bool = False):
     from lib.scheduler.content_pipeline import ContentBundle
-    now = datetime.now(timezone.utc)
+
+    now = datetime.now(UTC)
     return ContentBundle(
         slot_id=slot_id,
         platform="twitter",
         subreddit=None,
         pillar="AI tools",
         topic="AI is changing everything",
-        option_a={"content": "Option A content here", "hashtags": ["#AI"], "persona_mode": "professional"},
-        option_b={"content": "Option B CEO content", "hashtags": ["#startup"], "persona_mode": "ceo"},
+        option_a={
+            "content": "Option A content here",
+            "hashtags": ["#AI"],
+            "persona_mode": "professional",
+        },
+        option_b={
+            "content": "Option B CEO content",
+            "hashtags": ["#startup"],
+            "persona_mode": "ceo",
+        },
         image_1_url="https://media.getlate.dev/temp/img1.jpg",
         image_2_url="https://media.getlate.dev/temp/img2.jpg",
         scheduled_time=now,
@@ -118,10 +125,12 @@ class TestHandleEvent:
 
     def test_card_clicked_unknown_action(self):
         handler = SlasherbotChatHandler()
-        resp = handler.handle_event({
-            "type": "CARD_CLICKED",
-            "action": {"actionMethodName": "noop", "parameters": []},
-        })
+        resp = handler.handle_event(
+            {
+                "type": "CARD_CLICKED",
+                "action": {"actionMethodName": "noop", "parameters": []},
+            }
+        )
         assert "text" in resp
 
     def test_empty_event_type_returns_empty(self):
@@ -138,11 +147,13 @@ class TestHandleEvent:
     def test_empty_event_type_with_slash_command_routes(self):
         """Slash commands arriving without a MESSAGE type should still route."""
         handler = SlasherbotChatHandler()
-        resp = handler.handle_event({
-            "type": "",
-            "slashCommand": {"commandId": 1},  # status
-            "message": {"argumentText": ""},
-        })
+        resp = handler.handle_event(
+            {
+                "type": "",
+                "slashCommand": {"commandId": 1},  # status
+                "message": {"argumentText": ""},
+            }
+        )
         assert "text" in resp
         assert "Status" in resp["text"] or "Disabled" in resp["text"] or "Scheduler" in resp["text"]
 
@@ -192,7 +203,9 @@ class TestSlashCommandByCommandId:
 
     def test_pending_by_command_id(self):
         handler = SlasherbotChatHandler()
-        with patch("lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[]):
+        with patch(
+            "lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[]
+        ):
             resp = handler.handle_event(self._slash_event(3))
         assert "text" in resp
 
@@ -246,8 +259,12 @@ class TestCmdStatus:
             "jobs": [{"platform": "twitter", "next_run": "09:00 AM EST"}]
         }
         handler = SlasherbotChatHandler(scheduler=mock_sched)
-        with patch("lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[]):
-            with patch("lib.scheduler.approval_store.ApprovalStore.get_pending_expired", return_value=[]):
+        with patch(
+            "lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[]
+        ):
+            with patch(
+                "lib.scheduler.approval_store.ApprovalStore.get_pending_expired", return_value=[]
+            ):
                 resp = handler._cmd_status("")
         assert "Running" in resp["text"] or "🟢" in resp["text"]
 
@@ -255,14 +272,18 @@ class TestCmdStatus:
 class TestCmdPending:
     def test_empty_store_says_no_pending(self):
         handler = SlasherbotChatHandler()
-        with patch("lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[]):
+        with patch(
+            "lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[]
+        ):
             resp = handler._cmd_pending("")
         assert "No pending" in resp["text"] or "✅" in resp["text"]
 
     def test_shows_bundle_details(self):
         bundle = _make_bundle()
         handler = SlasherbotChatHandler()
-        with patch("lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[bundle]):
+        with patch(
+            "lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[bundle]
+        ):
             resp = handler._cmd_pending("")
         text = resp["text"]
         assert "TWITTER" in text.upper()
@@ -271,7 +292,9 @@ class TestCmdPending:
     def test_shows_approve_hint(self):
         bundle = _make_bundle()
         handler = SlasherbotChatHandler()
-        with patch("lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[bundle]):
+        with patch(
+            "lib.scheduler.approval_store.ApprovalStore.get_pending_active", return_value=[bundle]
+        ):
             resp = handler._cmd_pending("")
         assert "approve" in resp["text"]
 

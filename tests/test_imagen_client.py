@@ -3,10 +3,9 @@
 
 import os
 import tempfile
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
-
 
 # ─────────────────────────────────────────────────────────────────────
 # INIT & CONFIG TESTS
@@ -21,6 +20,7 @@ class TestImagenClientInit:
     def test_init_with_env_key(self, mock_genai):
         """Init uses GOOGLE_API_KEY env var."""
         from lib.ai.imagen_client import ImagenClient
+
         client = ImagenClient()
         assert client.api_key == "test-key-123"
         mock_genai.Client.assert_called_once_with(api_key="test-key-123")
@@ -29,6 +29,7 @@ class TestImagenClientInit:
     def test_init_with_explicit_key(self, mock_genai):
         """Init accepts explicit api_key parameter."""
         from lib.ai.imagen_client import ImagenClient
+
         client = ImagenClient(api_key="explicit-key")
         assert client.api_key == "explicit-key"
         mock_genai.Client.assert_called_once_with(api_key="explicit-key")
@@ -39,12 +40,14 @@ class TestImagenClientInit:
         # Remove GOOGLE_API_KEY if set
         os.environ.pop("GOOGLE_API_KEY", None)
         from lib.ai.imagen_client import ImagenClient
+
         with pytest.raises(ValueError, match="Google API key not found"):
             ImagenClient()
 
     def test_model_constant(self):
         """MODEL constant is set correctly."""
         from lib.ai.imagen_client import ImagenClient
+
         assert ImagenClient.MODEL == "imagen-4.0-generate-001"
 
 
@@ -59,12 +62,20 @@ class TestPlatformPresets:
     def test_presets_has_all_major_platforms(self):
         """Presets cover all major social platforms."""
         from lib.ai.imagen_client import ImagenClient
+
         preset_keys = set(ImagenClient.PLATFORM_PRESETS.keys())
 
         expected_platforms = [
-            "instagram", "twitter", "linkedin", "youtube",
-            "tiktok", "facebook", "pinterest", "threads",
-            "reddit", "googlebusiness",
+            "instagram",
+            "twitter",
+            "linkedin",
+            "youtube",
+            "tiktok",
+            "facebook",
+            "pinterest",
+            "threads",
+            "reddit",
+            "googlebusiness",
         ]
         for platform in expected_platforms:
             matching = [k for k in preset_keys if k.startswith(platform)]
@@ -73,6 +84,7 @@ class TestPlatformPresets:
     def test_presets_values_are_valid_ratios(self):
         """All preset values are valid aspect ratio strings."""
         from lib.ai.imagen_client import ImagenClient
+
         valid_ratios = {"1:1", "16:9", "9:16", "4:3", "3:4"}
         for key, ratio in ImagenClient.PLATFORM_PRESETS.items():
             assert ratio in valid_ratios, f"{key} has invalid ratio {ratio}"
@@ -80,6 +92,7 @@ class TestPlatformPresets:
     def test_get_preset_returns_ratio(self):
         """get_preset() returns correct aspect ratio for known platform."""
         from lib.ai.imagen_client import ImagenClient
+
         assert ImagenClient.get_preset("instagram", "post") == "1:1"
         assert ImagenClient.get_preset("instagram", "story") == "9:16"
         assert ImagenClient.get_preset("twitter", "post") == "16:9"
@@ -90,12 +103,14 @@ class TestPlatformPresets:
     def test_get_preset_case_insensitive(self):
         """get_preset() is case-insensitive."""
         from lib.ai.imagen_client import ImagenClient
+
         assert ImagenClient.get_preset("Instagram", "Post") == "1:1"
         assert ImagenClient.get_preset("TWITTER", "POST") == "16:9"
 
     def test_get_preset_returns_none_for_unknown(self):
         """get_preset() returns None for unknown platform/type combo."""
         from lib.ai.imagen_client import ImagenClient
+
         assert ImagenClient.get_preset("myspace", "post") is None
         assert ImagenClient.get_preset("instagram", "banner") is None
 

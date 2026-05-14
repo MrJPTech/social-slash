@@ -7,7 +7,7 @@ pillar affinity, tag overlap, platform fit, freshness, and mood match.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ W_FRESHNESS = 0.15
 W_MOOD = 0.10
 
 # Persona → preferred moods
-PERSONA_MOODS: Dict[str, Set[str]] = {
+PERSONA_MOODS: dict[str, set[str]] = {
     "professional": {"professional", "minimal", "technical", "creative"},
     "personal": {"vibrant", "casual", "creative"},
     "ceo": {"professional", "dark", "minimal", "technical"},
@@ -35,9 +35,9 @@ class MediaMatcher:
         pillar: str,
         platform: str,
         count: int = 2,
-        exclude_ids: Optional[List[str]] = None,
+        exclude_ids: list[str] | None = None,
         persona: str = "professional",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Find the best-matching library images for a content slot.
 
         Args:
@@ -68,17 +68,17 @@ class MediaMatcher:
             if item["id"] in exclude:
                 continue
 
-            score, reasons = self._score_item(
-                item, pillar, platform, topic_words, persona
+            score, reasons = self._score_item(item, pillar, platform, topic_words, persona)
+            scored.append(
+                {
+                    "item_id": item["id"],
+                    "storage_url": item["storage_url"],
+                    "description": item["description"],
+                    "score": round(score, 3),
+                    "match_reasons": reasons,
+                    "filename": item["filename"],
+                }
             )
-            scored.append({
-                "item_id": item["id"],
-                "storage_url": item["storage_url"],
-                "description": item["description"],
-                "score": round(score, 3),
-                "match_reasons": reasons,
-                "filename": item["filename"],
-            })
 
         # Sort by score descending
         scored.sort(key=lambda x: x["score"], reverse=True)
@@ -86,18 +86,18 @@ class MediaMatcher:
 
     def _score_item(
         self,
-        item: Dict[str, Any],
+        item: dict[str, Any],
         pillar: str,
         platform: str,
-        topic_words: Set[str],
+        topic_words: set[str],
         persona: str,
-    ) -> tuple[float, List[str]]:
+    ) -> tuple[float, list[str]]:
         """Score a single item against the content slot.
 
         Returns (score, list_of_reasons).
         """
-        reasons: List[str] = []
-        scores: Dict[str, float] = {}
+        reasons: list[str] = []
+        scores: dict[str, float] = {}
 
         # 1. Pillar affinity (0.30)
         affinity = item.get("pillar_affinity", {})
@@ -112,7 +112,7 @@ class MediaMatcher:
             reasons.append(f"pillar match ({pillar_score:.1f})")
 
         # 2. Tag overlap (0.25)
-        tags = set(t.lower() for t in item.get("tags", []))
+        tags = {t.lower() for t in item.get("tags", [])}
         if tags and topic_words:
             overlap = len(tags & topic_words)
             tag_score = min(overlap / max(len(topic_words), 1), 1.0)
@@ -158,16 +158,58 @@ class MediaMatcher:
         return total, reasons
 
     @staticmethod
-    def _extract_keywords(text: str) -> Set[str]:
+    def _extract_keywords(text: str) -> set[str]:
         """Extract lowercase keywords from topic text."""
         # Remove common stop words for better matching
         stop_words = {
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to",
-            "for", "of", "with", "by", "from", "is", "are", "was", "were",
-            "be", "been", "being", "have", "has", "had", "do", "does",
-            "did", "will", "would", "could", "should", "may", "might",
-            "can", "this", "that", "these", "those", "it", "its",
-            "about", "how", "what", "which", "who", "when", "where",
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+            "from",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "can",
+            "this",
+            "that",
+            "these",
+            "those",
+            "it",
+            "its",
+            "about",
+            "how",
+            "what",
+            "which",
+            "who",
+            "when",
+            "where",
         }
         words = set()
         for word in text.lower().split():

@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +75,10 @@ class VisionAnalyzer:
 
     def _get_client(self):
         from google import genai
+
         return genai.Client(api_key=self._api_key)
 
-    def analyze_bytes(self, image_bytes: bytes, mime_type: str = "image/png") -> Dict[str, Any]:
+    def analyze_bytes(self, image_bytes: bytes, mime_type: str = "image/png") -> dict[str, Any]:
         """Analyze image from raw bytes.
 
         Args:
@@ -98,7 +99,7 @@ class VisionAnalyzer:
         response = client.models.generate_content(model=MODEL, contents=contents)
         return self._parse_response(response.text)
 
-    def analyze_file(self, file_path: str) -> Dict[str, Any]:
+    def analyze_file(self, file_path: str) -> dict[str, Any]:
         """Analyze image from a local file path.
 
         Args:
@@ -122,14 +123,14 @@ class VisionAnalyzer:
 
         return self.analyze_bytes(image_bytes, mime_type)
 
-    def _parse_response(self, text: str) -> Dict[str, Any]:
+    def _parse_response(self, text: str) -> dict[str, Any]:
         """Parse Gemini's JSON response, handling markdown code blocks."""
         cleaned = text.strip()
         # Strip markdown code fences if present
         if cleaned.startswith("```"):
             lines = cleaned.split("\n")
             # Remove first line (```json or ```) and last line (```)
-            lines = [l for l in lines if not l.strip().startswith("```")]
+            lines = [line for line in lines if not line.strip().startswith("```")]
             cleaned = "\n".join(lines)
 
         try:

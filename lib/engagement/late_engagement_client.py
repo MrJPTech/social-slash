@@ -10,7 +10,8 @@ Documentation: https://docs.getlate.dev/core/comments, /core/messages
 """
 
 import os
-from typing import Dict, List, Optional, Any
+from typing import Any
+
 import httpx
 
 
@@ -29,23 +30,26 @@ class LateEngagementClient:
 
     # Comment-supported platforms
     COMMENT_PLATFORMS = [
-        'facebook', 'instagram', 'youtube', 'linkedin',
-        'reddit', 'bluesky', 'tiktok'
+        "facebook",
+        "instagram",
+        "youtube",
+        "linkedin",
+        "reddit",
+        "bluesky",
+        "tiktok",
     ]
 
     # DM-supported platforms
-    DM_PLATFORMS = [
-        'facebook', 'instagram', 'bluesky', 'reddit', 'telegram'
-    ]
+    DM_PLATFORMS = ["facebook", "instagram", "bluesky", "reddit", "telegram"]
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """
         Initialize the Late engagement client.
 
         Args:
             api_key: Late API key. Defaults to LATE_API_KEY env var.
         """
-        self.api_key = api_key or os.getenv('LATE_API_KEY')
+        self.api_key = api_key or os.getenv("LATE_API_KEY")
 
         if not self.api_key:
             raise ValueError(
@@ -55,14 +59,10 @@ class LateEngagementClient:
 
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
-        self.client = httpx.Client(
-            base_url=self.BASE_URL,
-            headers=self.headers,
-            timeout=30.0
-        )
+        self.client = httpx.Client(base_url=self.BASE_URL, headers=self.headers, timeout=30.0)
 
         print("[INFO] Late engagement client initialized")
 
@@ -72,13 +72,13 @@ class LateEngagementClient:
 
     def list_posts_with_comments(
         self,
-        platform: Optional[str] = None,
+        platform: str | None = None,
         min_comments: int = 1,
         limit: int = 50,
-        cursor: Optional[str] = None,
+        cursor: str | None = None,
         sort_by: str = "date",
-        sort_order: str = "desc"
-    ) -> Dict[str, Any]:
+        sort_order: str = "desc",
+    ) -> dict[str, Any]:
         """
         List posts that have comments.
 
@@ -97,7 +97,7 @@ class LateEngagementClient:
             "minComments": min_comments,
             "limit": limit,
             "sortBy": sort_by,
-            "sortOrder": sort_order
+            "sortOrder": sort_order,
         }
 
         if platform:
@@ -119,11 +119,8 @@ class LateEngagementClient:
             raise
 
     def get_post_comments(
-        self,
-        post_id: str,
-        limit: int = 50,
-        cursor: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, post_id: str, limit: int = 50, cursor: str | None = None
+    ) -> dict[str, Any]:
         """
         Get comments for a specific post.
 
@@ -154,9 +151,9 @@ class LateEngagementClient:
         post_id: str,
         account_id: str,
         message: str,
-        comment_id: Optional[str] = None,
-        subreddit: Optional[str] = None
-    ) -> Dict[str, Any]:
+        comment_id: str | None = None,
+        subreddit: str | None = None,
+    ) -> dict[str, Any]:
         """
         Reply to a post or specific comment.
 
@@ -170,10 +167,7 @@ class LateEngagementClient:
         Returns:
             API response with reply details
         """
-        payload = {
-            "accountId": account_id,
-            "message": message
-        }
+        payload = {"accountId": account_id, "message": message}
 
         if comment_id:
             payload["commentId"] = comment_id
@@ -185,17 +179,13 @@ class LateEngagementClient:
             response = self.client.post(f"/inbox/comments/{post_id}", json=payload)
             response.raise_for_status()
             result = response.json()
-            print(f"[SUCCESS] Reply posted")
+            print("[SUCCESS] Reply posted")
             return result
         except httpx.HTTPStatusError as e:
             print(f"[ERROR] Failed to reply: {e.response.status_code} - {e.response.text}")
             raise
 
-    def delete_comment(
-        self,
-        post_id: str,
-        comment_id: str
-    ) -> Dict[str, Any]:
+    def delete_comment(self, post_id: str, comment_id: str) -> dict[str, Any]:
         """
         Delete a comment.
 
@@ -208,21 +198,16 @@ class LateEngagementClient:
         """
         try:
             response = self.client.delete(
-                f"/inbox/comments/{post_id}",
-                params={"commentId": comment_id}
+                f"/inbox/comments/{post_id}", params={"commentId": comment_id}
             )
             response.raise_for_status()
-            print(f"[SUCCESS] Comment deleted")
+            print("[SUCCESS] Comment deleted")
             return response.json()
         except httpx.HTTPStatusError as e:
             print(f"[ERROR] Failed to delete comment: {e.response.status_code}")
             raise
 
-    def hide_comment(
-        self,
-        post_id: str,
-        comment_id: str
-    ) -> Dict[str, Any]:
+    def hide_comment(self, post_id: str, comment_id: str) -> dict[str, Any]:
         """
         Hide a comment (Facebook/Instagram).
 
@@ -236,17 +221,13 @@ class LateEngagementClient:
         try:
             response = self.client.post(f"/inbox/comments/{post_id}/{comment_id}/hide")
             response.raise_for_status()
-            print(f"[SUCCESS] Comment hidden")
+            print("[SUCCESS] Comment hidden")
             return response.json()
         except httpx.HTTPStatusError as e:
             print(f"[ERROR] Failed to hide comment: {e.response.status_code}")
             raise
 
-    def like_comment(
-        self,
-        post_id: str,
-        comment_id: str
-    ) -> Dict[str, Any]:
+    def like_comment(self, post_id: str, comment_id: str) -> dict[str, Any]:
         """
         Like a comment.
 
@@ -260,19 +241,15 @@ class LateEngagementClient:
         try:
             response = self.client.post(f"/inbox/comments/{post_id}/{comment_id}/like")
             response.raise_for_status()
-            print(f"[SUCCESS] Comment liked")
+            print("[SUCCESS] Comment liked")
             return response.json()
         except httpx.HTTPStatusError as e:
             print(f"[ERROR] Failed to like comment: {e.response.status_code}")
             raise
 
     def private_reply(
-        self,
-        post_id: str,
-        comment_id: str,
-        account_id: str,
-        message: str
-    ) -> Dict[str, Any]:
+        self, post_id: str, comment_id: str, account_id: str, message: str
+    ) -> dict[str, Any]:
         """
         Send private reply to commenter (Instagram only).
 
@@ -285,18 +262,14 @@ class LateEngagementClient:
         Returns:
             API response
         """
-        payload = {
-            "accountId": account_id,
-            "message": message
-        }
+        payload = {"accountId": account_id, "message": message}
 
         try:
             response = self.client.post(
-                f"/inbox/comments/{post_id}/{comment_id}/private-reply",
-                json=payload
+                f"/inbox/comments/{post_id}/{comment_id}/private-reply", json=payload
             )
             response.raise_for_status()
-            print(f"[SUCCESS] Private reply sent")
+            print("[SUCCESS] Private reply sent")
             return response.json()
         except httpx.HTTPStatusError as e:
             print(f"[ERROR] Failed to send private reply: {e.response.status_code}")
@@ -308,11 +281,11 @@ class LateEngagementClient:
 
     def list_conversations(
         self,
-        platform: Optional[str] = None,
+        platform: str | None = None,
         status: str = "active",
         limit: int = 50,
-        cursor: Optional[str] = None
-    ) -> Dict[str, Any]:
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
         """
         List DM conversations across platforms.
 
@@ -325,11 +298,7 @@ class LateEngagementClient:
         Returns:
             Dictionary with 'data' (conversations) and 'cursor'
         """
-        params = {
-            "status": status,
-            "limit": limit,
-            "sortOrder": "desc"
-        }
+        params = {"status": status, "limit": limit, "sortOrder": "desc"}
 
         if platform:
             if platform not in self.DM_PLATFORMS:
@@ -349,11 +318,7 @@ class LateEngagementClient:
             print(f"[ERROR] Failed to list conversations: {e.response.status_code}")
             raise
 
-    def get_conversation(
-        self,
-        conversation_id: str,
-        account_id: str
-    ) -> Dict[str, Any]:
+    def get_conversation(self, conversation_id: str, account_id: str) -> dict[str, Any]:
         """
         Get conversation details.
 
@@ -366,8 +331,7 @@ class LateEngagementClient:
         """
         try:
             response = self.client.get(
-                f"/inbox/conversations/{conversation_id}",
-                params={"accountId": account_id}
+                f"/inbox/conversations/{conversation_id}", params={"accountId": account_id}
             )
             response.raise_for_status()
             return response.json()
@@ -376,12 +340,8 @@ class LateEngagementClient:
             raise
 
     def get_messages(
-        self,
-        conversation_id: str,
-        account_id: str,
-        limit: int = 50,
-        cursor: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, conversation_id: str, account_id: str, limit: int = 50, cursor: str | None = None
+    ) -> dict[str, Any]:
         """
         Get messages in a conversation.
 
@@ -394,17 +354,13 @@ class LateEngagementClient:
         Returns:
             Dictionary with 'data' (messages) and 'cursor'
         """
-        params = {
-            "accountId": account_id,
-            "limit": limit
-        }
+        params = {"accountId": account_id, "limit": limit}
         if cursor:
             params["cursor"] = cursor
 
         try:
             response = self.client.get(
-                f"/inbox/conversations/{conversation_id}/messages",
-                params=params
+                f"/inbox/conversations/{conversation_id}/messages", params=params
             )
             response.raise_for_status()
             result = response.json()
@@ -414,12 +370,7 @@ class LateEngagementClient:
             print(f"[ERROR] Failed to get messages: {e.response.status_code}")
             raise
 
-    def send_message(
-        self,
-        conversation_id: str,
-        account_id: str,
-        message: str
-    ) -> Dict[str, Any]:
+    def send_message(self, conversation_id: str, account_id: str, message: str) -> dict[str, Any]:
         """
         Send a DM reply.
 
@@ -431,29 +382,21 @@ class LateEngagementClient:
         Returns:
             API response with message details
         """
-        payload = {
-            "accountId": account_id,
-            "message": message
-        }
+        payload = {"accountId": account_id, "message": message}
 
         try:
             response = self.client.post(
-                f"/inbox/conversations/{conversation_id}/messages",
-                json=payload
+                f"/inbox/conversations/{conversation_id}/messages", json=payload
             )
             response.raise_for_status()
             result = response.json()
-            print(f"[SUCCESS] Message sent")
+            print("[SUCCESS] Message sent")
             return result
         except httpx.HTTPStatusError as e:
             print(f"[ERROR] Failed to send message: {e.response.status_code} - {e.response.text}")
             raise
 
-    def archive_conversation(
-        self,
-        conversation_id: str,
-        account_id: str
-    ) -> Dict[str, Any]:
+    def archive_conversation(self, conversation_id: str, account_id: str) -> dict[str, Any]:
         """
         Archive a conversation.
 
@@ -464,18 +407,12 @@ class LateEngagementClient:
         Returns:
             API response
         """
-        payload = {
-            "accountId": account_id,
-            "status": "archived"
-        }
+        payload = {"accountId": account_id, "status": "archived"}
 
         try:
-            response = self.client.put(
-                f"/inbox/conversations/{conversation_id}",
-                json=payload
-            )
+            response = self.client.put(f"/inbox/conversations/{conversation_id}", json=payload)
             response.raise_for_status()
-            print(f"[SUCCESS] Conversation archived")
+            print("[SUCCESS] Conversation archived")
             return response.json()
         except httpx.HTTPStatusError as e:
             print(f"[ERROR] Failed to archive conversation: {e.response.status_code}")
@@ -486,11 +423,8 @@ class LateEngagementClient:
     # ─────────────────────────────────────────────────────────────
 
     def register_webhook(
-        self,
-        url: str,
-        events: List[str],
-        secret: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, url: str, events: list[str], secret: str | None = None
+    ) -> dict[str, Any]:
         """
         Register a webhook for events.
 
@@ -502,10 +436,7 @@ class LateEngagementClient:
         Returns:
             Webhook registration details
         """
-        payload = {
-            "url": url,
-            "events": events
-        }
+        payload = {"url": url, "events": events}
         if secret:
             payload["secret"] = secret
 
@@ -519,7 +450,7 @@ class LateEngagementClient:
             print(f"[ERROR] Failed to register webhook: {e.response.status_code}")
             raise
 
-    def list_webhooks(self) -> Dict[str, Any]:
+    def list_webhooks(self) -> dict[str, Any]:
         """
         List registered webhooks.
 
@@ -534,7 +465,7 @@ class LateEngagementClient:
             print(f"[ERROR] Failed to list webhooks: {e.response.status_code}")
             raise
 
-    def delete_webhook(self, webhook_id: str) -> Dict[str, Any]:
+    def delete_webhook(self, webhook_id: str) -> dict[str, Any]:
         """
         Delete a webhook.
 
@@ -547,7 +478,7 @@ class LateEngagementClient:
         try:
             response = self.client.delete(f"/webhooks/{webhook_id}")
             response.raise_for_status()
-            print(f"[SUCCESS] Webhook deleted")
+            print("[SUCCESS] Webhook deleted")
             return response.json()
         except httpx.HTTPStatusError as e:
             print(f"[ERROR] Failed to delete webhook: {e.response.status_code}")
@@ -573,7 +504,7 @@ class LateEngagementClient:
             print(f"[ERROR] API connection failed: {e}")
             return False
 
-    def get_supported_platforms(self, feature: str = "comments") -> List[str]:
+    def get_supported_platforms(self, feature: str = "comments") -> list[str]:
         """
         Get platforms supported for a feature.
 
@@ -613,14 +544,14 @@ if __name__ == "__main__":
             posts = client.list_posts_with_comments(limit=5)
             print(f"\nPosts with comments: {len(posts.get('data', []))}")
 
-            for post in posts.get('data', [])[:3]:
+            for post in posts.get("data", [])[:3]:
                 print(f"  - {post.get('platform')}: {post.get('content', '')[:50]}...")
 
             # List conversations
             convos = client.list_conversations(limit=5)
             print(f"\nActive conversations: {len(convos.get('data', []))}")
 
-            for convo in convos.get('data', [])[:3]:
+            for convo in convos.get("data", [])[:3]:
                 print(f"  - {convo.get('platform')}: {convo.get('participantName', 'Unknown')}")
 
         client.close()

@@ -11,8 +11,8 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -26,19 +26,19 @@ class ContentBundle:
 
     slot_id: str
     platform: str
-    subreddit: Optional[str]
+    subreddit: str | None
     pillar: str
     topic: str
-    option_a: Dict[str, Any]   # {content, hashtags, persona_mode}
-    option_b: Dict[str, Any]   # {content, hashtags, persona_mode}
+    option_a: dict[str, Any]  # {content, hashtags, persona_mode}
+    option_b: dict[str, Any]  # {content, hashtags, persona_mode}
     image_1_url: str
     image_2_url: str
     scheduled_time: datetime
-    expires_at: datetime        # +2 hours from scheduled_time
+    expires_at: datetime  # +2 hours from scheduled_time
     posted: bool = False
-    choice: Optional[str] = None  # "A1"|"A2"|"B1"|"B2" after approval
+    choice: str | None = None  # "A1"|"A2"|"B1"|"B2" after approval
     image_source: str = "none"  # "library" | "ai_generated" | "none"
-    library_item_ids: List[str] = field(default_factory=list)
+    library_item_ids: list[str] = field(default_factory=list)
 
 
 class ContentPipeline:
@@ -53,8 +53,8 @@ class ContentPipeline:
         time_slot: str,
         pillar: str,
         base_persona: str = "professional",
-        subreddit: Optional[str] = None,
-    ) -> Optional[ContentBundle]:
+        subreddit: str | None = None,
+    ) -> ContentBundle | None:
         """Generate a full A/B content bundle for one scheduling slot.
 
         Prefers real library images over AI-generated ones. If the library is
@@ -73,7 +73,7 @@ class ContentPipeline:
             or None if a media-required platform has no library images.
         """
         slot_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(hours=2)
 
         logger.info(f"[pipeline] Generating bundle for {platform} @ {time_slot} — {pillar}")
@@ -92,12 +92,15 @@ class ContentPipeline:
 
             # Write copy ABOUT what's in the actual image
             option_a = self._generate_copy_for_image(
-                matches[0]["description"], topic, platform, base_persona,
-                tone="authentic", energy="high"
+                matches[0]["description"],
+                topic,
+                platform,
+                base_persona,
+                tone="authentic",
+                energy="high",
             )
             option_b = self._generate_copy_for_image(
-                matches[1]["description"], topic, platform, "ceo",
-                tone="direct", energy="medium"
+                matches[1]["description"], topic, platform, "ceo", tone="direct", energy="medium"
             )
 
         elif len(matches) == 1:
@@ -107,8 +110,12 @@ class ContentPipeline:
             image_source = "library"
 
             option_a = self._generate_copy_for_image(
-                matches[0]["description"], topic, platform, base_persona,
-                tone="authentic", energy="high"
+                matches[0]["description"],
+                topic,
+                platform,
+                base_persona,
+                tone="authentic",
+                energy="high",
             )
             option_b = self._generate_copy(topic, platform, "ceo", tone="direct", energy="medium")
 
@@ -126,7 +133,9 @@ class ContentPipeline:
             image_source = "none"
             logger.warning(f"[pipeline] No library images for {platform} — text-only bundle")
 
-            option_a = self._generate_copy(topic, platform, base_persona, tone="authentic", energy="high")
+            option_a = self._generate_copy(
+                topic, platform, base_persona, tone="authentic", energy="high"
+            )
             option_b = self._generate_copy(topic, platform, "ceo", tone="direct", energy="medium")
 
         self._slot_counter += 1
@@ -151,9 +160,7 @@ class ContentPipeline:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _find_library_images(
-        self, topic: str, pillar: str, platform: str, persona: str
-    ) -> list:
+    def _find_library_images(self, topic: str, pillar: str, platform: str, persona: str) -> list:
         """Find matching images from the media library."""
         try:
             from lib.media_library.matcher import MediaMatcher
@@ -170,13 +177,11 @@ class ContentPipeline:
             logger.warning(f"[pipeline] MediaMatcher failed: {exc}")
             return []
 
-    def _get_topic_variation(
-        self, pillar: str, platform: str, subreddit: Optional[str]
-    ) -> str:
+    def _get_topic_variation(self, pillar: str, platform: str, subreddit: str | None) -> str:
         """Use ResearchAgent to suggest a fresh topic angle for the pillar."""
         try:
-            from lib.mcp._client_helpers import build_agent_config, suppress_stdout
             from lib.agents.research_agent import ResearchAgent
+            from lib.mcp._client_helpers import build_agent_config, suppress_stdout
 
             config = build_agent_config("professional", platform)
             with suppress_stdout():
@@ -207,11 +212,11 @@ class ContentPipeline:
         persona_mode: str,
         tone: str,
         energy: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate post copy via WritingAgent and return a normalised dict."""
         try:
-            from lib.mcp._client_helpers import build_agent_config, suppress_stdout
             from lib.agents.writing_agent import WritingAgent
+            from lib.mcp._client_helpers import build_agent_config, suppress_stdout
 
             config = build_agent_config(persona_mode, platform)
             with suppress_stdout():
@@ -252,7 +257,7 @@ class ContentPipeline:
         persona_mode: str,
         tone: str,
         energy: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Write post copy that reacts to the REAL image content."""
         enriched_topic = (
             f"Write a {platform} post reacting to this screenshot/photo: "

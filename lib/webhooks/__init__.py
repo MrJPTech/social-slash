@@ -8,10 +8,6 @@ Provides FastAPI webhook server for real-time event handling:
 - post.failed - Handle posting failures
 """
 
-from lib.webhooks.late_webhook import app, verify_signature, WebhookHandler
+from lib.webhooks.late_webhook import WebhookHandler, app, verify_signature
 
-__all__ = [
-    'app',
-    'verify_signature',
-    'WebhookHandler'
-]
+__all__ = ["app", "verify_signature", "WebhookHandler"]
